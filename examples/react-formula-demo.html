@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberSheet - React Formula Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #f0f0f0;
+        }
+
+        #root {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2196F3;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Application Container */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #ffffff;
+        }
+
+        /* Header */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .app-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+
+        .app-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        /* Formula Bar Container */
+        .formula-bar-wrapper {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            background: #f9f9f9;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .info-item {
+            display: flex;
+            gap: 6px;
+        }
+
+        .info-label {
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #666;
+        }
+
+        .info-value.formula {
+            color: #1976d2;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        /* Spreadsheet Container */
+        .spreadsheet-wrapper {
+            flex: 1;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* Instructions Panel */
+        .instructions {
+            background: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+            padding: 12px 16px;
+        }
+
+        .instructions-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .example-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .example-formula {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .example-description {
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .toolbar-section {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding-right: 12px;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .toolbar-section:last-child {
+            border-right: none;
+        }
+
+        .toolbar-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .toolbar-btn {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toolbar-btn:hover {
+            background: #f0f0f0;
+            border-color: #999;
+        }
+
+        .toolbar-btn:active {
+            background: #e0e0e0;
+        }
+
+        .toolbar-btn.primary {
+            background: #2196F3;
+            color: white;
+            border-color: #1976D2;
+        }
+
+        .toolbar-btn.primary:hover {
+            background: #1976D2;
+        }
+
+        /* Sample Data Grid */
+        .sample-data {
+            margin: 16px;
+            padding: 16px;
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .sample-data-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .data-preview {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 8px 16px;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #f44336;
+        }
+
+        .status-message.info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #2196F3;
+        }
+
+        /* Feature Pills */
+        .features {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .feature-pill {
+            background: #e8eaf6;
+            color: #3f51b5;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading CyberSheet React Components...</p>
+        </div>
+    </div>
+
+    <!-- React App will mount here -->
+    <script type="module">
+        import React from 'https://esm.sh/react@18.2.0';
+        import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
+        import { Workbook, FormulaController } from './packages/core/dist/index.js';
+        
+        const { useState, useEffect, useRef } = React;
+
+        // FormulaBar Component
+        function FormulaBar({ selectedCell, cellValue, cellFormula, onFormulaSubmit, isEditing, onEditModeChange, validationError }) {
+            const [inputValue, setInputValue] = useState('');
+            const inputRef = useRef(null);
+
+            useEffect(() => {
+                if (!isEditing) {
+                    setInputValue(cellFormula || String(cellValue ?? ''));
+                }
+            }, [cellFormula, cellValue, isEditing]);
+
+            useEffect(() => {
+                if (isEditing && inputRef.current) {
+                    inputRef.current.focus();
+                    inputRef.current.select();
+                }
+            }, [isEditing]);
+
+            const handleInputChange = (e) => {
+                setInputValue(e.target.value);
+            };
+
+            const handleSubmit = () => {
+                if (inputValue.trim()) {
+                    onFormulaSubmit(inputValue);
+                }
+                onEditModeChange(false);
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setInputValue(cellFormula || String(cellValue ?? ''));
+                    onEditModeChange(false);
+                }
+            };
+
+            const formatCellReference = (addr) => {
+                if (!addr) return '';
+                let col = addr.col;
+                let letters = '';
+                while (col > 0) {
+                    const remainder = (col - 1) % 26;
+                    letters = String.fromCharCode(65 + remainder) + letters;
+                    col = Math.floor((col - 1) / 26);
+                }
+                return `${letters}${addr.row}`;
+            };
+
+            return React.createElement('div', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 12px',
+                    borderBottom: '1px solid #e0e0e0',
+                    backgroundColor: '#f5f5f5',
+                }
+            }, [
+                React.createElement('div', {
+                    key: 'cellref',
+                    style: {
+                        minWidth: '80px',
+                        padding: '4px 8px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        backgroundColor: '#fff',
+                        fontWeight: 600,
+                        textAlign: 'center',
+                    }
+                }, formatCellReference(selectedCell)),
+                React.createElement('input', {
+                    key: 'input',
+                    ref: inputRef,
+                    type: 'text',
+                    value: inputValue,
+                    onChange: handleInputChange,
+                    onKeyDown: handleKeyDown,
+                    onFocus: () => !isEditing && onEditModeChange(true),
+                    onBlur: () => isEditing && handleSubmit(),
+                    placeholder: 'Enter value or formula (=SUM(A1:A10))',
+                    style: {
+                        flex: 1,
+                        padding: '6px 10px',
+                        border: validationError ? '1px solid #f44336' : '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                        outline: 'none',
+                        backgroundColor: isEditing ? '#fff' : '#fafafa',
+                    }
+                }),
+                validationError && React.createElement('span', {
+                    key: 'error',
+                    style: {
+                        color: '#f44336',
+                        fontSize: '12px',
+                    }
+                }, validationError)
+            ]);
+        }
+
+        // Main App Component
+        function App() {
+            const [workbook] = useState(() => {
+                const wb = new Workbook();
+                const sheet = wb.addSheet('Sheet1', 20, 10);
+                
+                // Set sample data
+                sheet.setCellValue({ row: 1, col: 1 }, 10);
+                sheet.setCellValue({ row: 2, col: 1 }, 20);
+                sheet.setCellValue({ row: 3, col: 1 }, 30);
+                sheet.setCellValue({ row: 1, col: 2 }, 5);
+                sheet.setCellValue({ row: 2, col: 2 }, 15);
+                sheet.setCellValue({ row: 3, col: 2 }, 25);
+                
+                return wb;
+            });
+
+            const [activeSheet] = useState(() => workbook.getSheet('Sheet1'));
+            const [selectedCell, setSelectedCell] = useState({ row: 1, col: 1 });
+            const [isEditMode, setIsEditMode] = useState(false);
+            const [validationError, setValidationError] = useState();
+            const [controller] = useState(() => new FormulaController(activeSheet));
+            const [currentFormula, setCurrentFormula] = useState();
+            const [currentValue, setCurrentValue] = useState(null);
+            const [statusMessage, setStatusMessage] = useState();
+
+            // Update current cell data when selection changes
+            useEffect(() => {
+                if (selectedCell) {
+                    const formula = controller.getFormula(selectedCell);
+                    const value = activeSheet.getCellValue(selectedCell);
+                    setCurrentFormula(formula);
+                    setCurrentValue(value);
+                }
+            }, [selectedCell, controller, activeSheet]);
+
+            const handleFormulaSubmit = (formula) => {
+                if (!selectedCell) return;
+
+                if (!formula.trim()) {
+                    activeSheet.setCellValue(selectedCell, null);
+                    setValidationError(undefined);
+                    setStatusMessage({ type: 'info', text: 'Cell cleared' });
+                    return;
+                }
+
+                if (!formula.startsWith('=')) {
+                    const num = parseFloat(formula);
+                    activeSheet.setCellValue(selectedCell, !isNaN(num) ? num : formula);
+                    setValidationError(undefined);
+                    setStatusMessage({ type: 'success', text: `Value set: ${formula}` });
+                    return;
+                }
+
+                const validation = controller.validateFormula(formula, selectedCell);
+                if (!validation.isValid) {
+                    setValidationError(validation.error);
+                    setStatusMessage({ type: 'error', text: `Error: ${validation.error}` });
+                    return;
+                }
+
+                const result = controller.setFormula(selectedCell, formula);
+                if (result.success) {
+                    setValidationError(undefined);
+                    const value = activeSheet.getCellValue(selectedCell);
+                    setStatusMessage({ type: 'success', text: `Formula set: ${formula} = ${value}` });
+                    setCurrentFormula(formula);
+                    setCurrentValue(value);
+                } else {
+                    setValidationError(result.error);
+                    setStatusMessage({ type: 'error', text: `Error: ${result.error}` });
+                }
+            };
+
+            const insertSampleFormula = (formula, cell) => {
+                setSelectedCell(cell);
+                setTimeout(() => {
+                    handleFormulaSubmit(formula);
+                }, 100);
+            };
+
+            return React.createElement('div', { className: 'app-container' }, [
+                // Header
+                React.createElement('div', { key: 'header', className: 'app-header' }, [
+                    React.createElement('h1', { key: 'title', className: 'app-title' }, 'CyberSheet Formula Editor'),
+                    React.createElement('p', { key: 'subtitle', className: 'app-subtitle' }, 
+                        'Complete formula writing implementation with controlled React components'
+                    ),
+                    React.createElement('div', { key: 'features', className: 'features' }, [
+                        React.createElement('span', { key: 'f1', className: 'feature-pill' }, '✓ Formula Validation'),
+                        React.createElement('span', { key: 'f2', className: 'feature-pill' }, '✓ Auto-calculation'),
+                        React.createElement('span', { key: 'f3', className: 'feature-pill' }, '✓ 100+ Functions'),
+                        React.createElement('span', { key: 'f4', className: 'feature-pill' }, '✓ Error Handling'),
+                        React.createElement('span', { key: 'f5', className: 'feature-pill' }, '✓ Controlled Components'),
+                    ])
+                ]),
+
+                // Formula Bar
+                React.createElement('div', { key: 'formulabar', className: 'formula-bar-wrapper' },
+                    React.createElement(FormulaBar, {
+                        selectedCell,
+                        cellValue: currentValue,
+                        cellFormula: currentFormula,
+                        onFormulaSubmit: handleFormulaSubmit,
+                        isEditing: isEditMode,
+                        onEditModeChange: setIsEditMode,
+                        validationError,
+                    })
+                ),
+
+                // Info Panel
+                React.createElement('div', { key: 'info', className: 'info-panel' }, [
+                    React.createElement('div', { key: 'selected', className: 'info-item' }, [
+                        React.createElement('span', { key: 'label', className: 'info-label' }, 'Selected:'),
+                        React.createElement('span', { key: 'value', className: 'info-value' }, 
+                            selectedCell ? `Row ${selectedCell.row}, Col ${selectedCell.col}` : 'None'
+                        ),
+                    ]),
+                    React.createElement('div', { key: 'value', className: 'info-item' }, [
+                        React.createElement('span', { key: 'label', className: 'info-label' }, 'Value:'),
+                        React.createElement('span', { key: 'value', className: 'info-value' }, String(currentValue ?? '')),
+                    ]),
+                    currentFormula && React.createElement('div', { key: 'formula', className: 'info-item' }, [
+                        React.createElement('span', { key: 'label', className: 'info-label' }, 'Formula:'),
+                        React.createElement('span', { key: 'value', className: 'info-value formula' }, currentFormula),
+                    ]),
+                ]),
+
+                // Status Message
+                statusMessage && React.createElement('div', { 
+                    key: 'status', 
+                    className: `status-message ${statusMessage.type}` 
+                }, statusMessage.text),
+
+                // Toolbar with quick actions
+                React.createElement('div', { key: 'toolbar', className: 'toolbar' }, [
+                    React.createElement('div', { key: 'section1', className: 'toolbar-section' }, [
+                        React.createElement('span', { key: 'label', className: 'toolbar-label' }, 'Quick Examples:'),
+                        React.createElement('button', {
+                            key: 'btn1',
+                            className: 'toolbar-btn',
+                            onClick: () => insertSampleFormula('=SUM(A1:A3)', { row: 4, col: 1 })
+                        }, '=SUM(A1:A3)'),
+                        React.createElement('button', {
+                            key: 'btn2',
+                            className: 'toolbar-btn',
+                            onClick: () => insertSampleFormula('=AVERAGE(B1:B3)', { row: 4, col: 2 })
+                        }, '=AVERAGE(B1:B3)'),
+                        React.createElement('button', {
+                            key: 'btn3',
+                            className: 'toolbar-btn',
+                            onClick: () => insertSampleFormula('=A1*B1', { row: 1, col: 3 })
+                        }, '=A1*B1'),
+                    ]),
+                    React.createElement('div', { key: 'section2', className: 'toolbar-section' }, [
+                        React.createElement('span', { key: 'label', className: 'toolbar-label' }, 'Cell:'),
+                        React.createElement('button', {
+                            key: 'btn1',
+                            className: 'toolbar-btn',
+                            onClick: () => setSelectedCell({ row: 1, col: 1 })
+                        }, 'A1'),
+                        React.createElement('button', {
+                            key: 'btn2',
+                            className: 'toolbar-btn',
+                            onClick: () => setSelectedCell({ row: 4, col: 1 })
+                        }, 'A4'),
+                        React.createElement('button', {
+                            key: 'btn3',
+                            className: 'toolbar-btn',
+                            onClick: () => setSelectedCell({ row: 4, col: 2 })
+                        }, 'B4'),
+                    ]),
+                ]),
+
+                // Sample Data Display
+                React.createElement('div', { key: 'sample', className: 'sample-data' }, [
+                    React.createElement('div', { key: 'title', className: 'sample-data-title' }, 'Sample Data in Worksheet:'),
+                    React.createElement('div', { key: 'preview', className: 'data-preview' }, [
+                        React.createElement('div', { key: 'r1' }, 'A1: 10  |  B1: 5'),
+                        React.createElement('div', { key: 'r2' }, 'A2: 20  |  B2: 15'),
+                        React.createElement('div', { key: 'r3' }, 'A3: 30  |  B3: 25'),
+                    ])
+                ]),
+
+                // Instructions
+                React.createElement('div', { key: 'instructions', className: 'instructions' }, [
+                    React.createElement('div', { key: 'title', className: 'instructions-title' }, 'Formula Examples:'),
+                    React.createElement('div', { key: 'examples', className: 'examples-grid' }, [
+                        React.createElement('div', { key: 'ex1', className: 'example-item' }, [
+                            React.createElement('div', { key: 'formula', className: 'example-formula' }, '=SUM(A1:A3)'),
+                            React.createElement('div', { key: 'desc', className: 'example-description' }, 'Sum of A1 to A3'),
+                        ]),
+                        React.createElement('div', { key: 'ex2', className: 'example-item' }, [
+                            React.createElement('div', { key: 'formula', className: 'example-formula' }, '=AVERAGE(B1:B3)'),
+                            React.createElement('div', { key: 'desc', className: 'example-description' }, 'Average of B1 to B3'),
+                        ]),
+                        React.createElement('div', { key: 'ex3', className: 'example-item' }, [
+                            React.createElement('div', { key: 'formula', className: 'example-formula' }, '=A1*B1'),
+                            React.createElement('div', { key: 'desc', className: 'example-description' }, 'Multiply A1 and B1'),
+                        ]),
+                        React.createElement('div', { key: 'ex4', className: 'example-item' }, [
+                            React.createElement('div', { key: 'formula', className: 'example-formula' }, '=IF(A1>10, "High", "Low")'),
+                            React.createElement('div', { key: 'desc', className: 'example-description' }, 'Conditional logic'),
+                        ]),
+                        React.createElement('div', { key: 'ex5', className: 'example-item' }, [
+                            React.createElement('div', { key: 'formula', className: 'example-formula' }, '=MAX(A1:A3)'),
+                            React.createElement('div', { key: 'desc', className: 'example-description' }, 'Maximum value'),
+                        ]),
+                        React.createElement('div', { key: 'ex6', className: 'example-item' }, [
+                            React.createElement('div', { key: 'formula', className: 'example-formula' }, '=ROUND(A1/B1, 2)'),
+                            React.createElement('div', { key: 'desc', className: 'example-description' }, 'Division with rounding'),
+                        ]),
+                    ])
+                ])
+            ]);
+        }
+
+        // Mount the React app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>

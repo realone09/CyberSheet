@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel - Book1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Calibri', 'Segoe UI', sans-serif;
+            background-color: #ffffff;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #ffffff;
+        }
+
+        /* Title Bar */
+        .title-bar {
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 0 12px;
+            height: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .title-bar-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .title-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .title-btn:hover {
+            background: #f0f0f0;
+        }
+
+        /* Menu Bar */
+        .menu-bar {
+            background: #1d7545;
+            color: white;
+            padding: 0;
+            display: flex;
+            align-items: stretch;
+            height: 28px;
+            font-size: 11px;
+            border-bottom: 1px solid #5a8c3a;
+        }
+
+        .menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: white;
+            font-weight: 500;
+        }
+
+        .menu-item:hover {
+            background: #609240;
+        }
+
+        /* Ribbon */
+        .ribbon {
+            background: #f5f5f5;
+            border-bottom: 1px solid #d4d4d4;
+        }
+
+        .ribbon-tabs {
+            background: #1d7545;
+            border-bottom: 1px solid #1d7545;
+            display: flex;
+            gap: 0;
+            padding: 0 10px;
+        }
+
+        .ribbon-tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 11px;
+            border: none;
+            background: transparent;
+            color: white;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .ribbon-tab:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .ribbon-tab.active {
+            color: white;
+            background: white;
+            color: #1d7545;
+        }
+
+        .ribbon-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #1d7545;
+        }
+
+        .ribbon-content {
+            background: #f5f5f5;
+            padding: 6px 8px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: nowrap;
+            align-items: center;
+            min-height: 82px;
+            overflow-x: auto;
+        }
+
+        .ribbon-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 0 8px;
+            border-right: 1px solid #d4d4d4;
+            min-width: max-content;
+        }
+
+        .ribbon-group:last-child {
+            border-right: none;
+        }
+
+        .ribbon-group-label {
+            font-size: 9px;
+            color: #666;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .ribbon-buttons {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .ribbon-btn {
+            padding: 4px 8px;
+            border: 1px solid transparent;
+            background: transparent;
+            cursor: pointer;
+            font-size: 11px;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            color: #333;
+        }
+
+        .ribbon-btn:hover {
+            background: #e8e8e8;
+            border-color: #bfbfbf;
+        }
+
+        .ribbon-btn:active {
+            background: #d8d8d8;
+        }
+
+        .ribbon-btn.large {
+            flex-direction: column;
+            padding: 5px 10px;
+            min-width: 50px;
+            font-size: 10px;
+        }
+
+        .ribbon-btn .icon {
+            font-size: 14px;
+            display: inline-block;
+        }
+
+        /* Dropdown */
+        .dropdown-select {
+            padding: 4px 6px;
+            border: 1px solid #bfbfbf;
+            background: white;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        .dropdown-select:hover {
+            border-color: #9d9d9d;
+        }
+
+        /* Formula Bar */
+        .formula-bar-container {
+            background: white;
+            border-bottom: 1px solid #d4d4d4;
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .name-box {
+            font-size: 11px;
+            padding: 4px 6px;
+            border: 1px solid #bfbfbf;
+            min-width: 80px;
+            background: white;
+            font-family: 'Calibri', sans-serif;
+            border-radius: 2px;
+        }
+
+        .formula-label {
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+            padding: 0 4px;
+        }
+
+        .formula-input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border: 1px solid #bfbfbf;
+            background: white;
+            border-radius: 2px;
+        }
+
+        .formula-input {
+            flex: 1;
+            border: none;
+            padding: 4px 6px;
+            font-family: 'Calibri', sans-serif;
+            font-size: 11px;
+            outline: none;
+        }
+
+        /* Spreadsheet */
+        .spreadsheet-container {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .grid-wrapper {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        .grid-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+
+        .row-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #f0f0f0;
+            border-right: 1px solid #d4d4d4;
+            width: 40px;
+            z-index: 2;
+        }
+
+        .row-number {
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #666;
+            border-bottom: 1px solid #e0e0e0;
+            user-select: none;
+        }
+
+        .grid-table {
+            position: absolute;
+            left: 40px;
+            top: 0;
+            border-collapse: collapse;
+        }
+
+        .grid-header {
+            position: absolute;
+            top: 0;
+            left: 40px;
+            background: #f0f0f0;
+            border-bottom: 2px solid #333;
+            border-right: 1px solid #d4d4d4;
+            height: 22px;
+            z-index: 1;
+        }
+
+        .grid-header-cell {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 22px;
+            font-weight: 600;
+            font-size: 11px;
+            color: #333;
+            border-right: 1px solid #d4d4d4;
+            background: #f0f0f0;
+            user-select: none;
+            cursor: default;
+        }
+
+        .grid-cell {
+            width: 64px;
+            height: 22px;
+            border: 1px solid #e0e0e0;
+            padding: 2px 4px;
+            font-size: 11px;
+            background: white;
+            color: #333;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: cell;
+        }
+
+        .grid-cell:hover {
+            background: #f5f5f5;
+        }
+
+        .grid-cell.selected {
+            background: #d8e8f5;
+            border: 2px solid #1d7545;
+        }
+
+        .grid-cell.header-cell {
+            background: #f0f0f0;
+            font-weight: 600;
+            border-right: 1px solid #d4d4d4;
+            border-bottom: 2px solid #333;
+        }
+
+        /* Sheet Tabs */
+        .sheet-tabs-container {
+            background: #f5f5f5;
+            border-top: 1px solid #d4d4d4;
+            display: flex;
+            align-items: center;
+            height: 26px;
+        }
+
+        .sheet-nav {
+            display: flex;
+            align-items: center;
+            padding: 0 2px;
+            gap: 0;
+            border-right: 1px solid #d4d4d4;
+        }
+
+        .sheet-nav-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #666;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+        }
+
+        .sheet-nav-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .sheet-tabs {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            gap: 2px;
+            overflow-x: auto;
+        }
+
+        .sheet-tabs::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .sheet-tabs::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        .sheet-tabs::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .sheet-tab {
+            padding: 4px 16px;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            background: #f0f0f0;
+            cursor: pointer;
+            font-size: 11px;
+            white-space: nowrap;
+            color: #333;
+            border-radius: 4px 4px 0 0;
+            margin-right: 2px;
+        }
+
+        .sheet-tab:hover {
+            background: #e0e0e0;
+        }
+
+        .sheet-tab.active {
+            background: white;
+            color: #333;
+            font-weight: 600;
+            border-bottom: 1px solid white;
+        }
+
+        .sheet-add-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+            margin: 0 4px;
+        }
+
+        .sheet-add-btn:hover {
+            background: #e0e0e0;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: white;
+            border-top: 1px solid #d4d4d4;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 22px;
+        }
+
+        .status-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .status-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .zoom-slider {
+            width: 80px;
+            height: 4px;
+            cursor: pointer;
+        }
+
+        /* Comment Indicator - Red Triangle */
+        .comment-indicator {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 8px 8px 0;
+            border-color: transparent #ff0000 transparent transparent;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Comment Tooltip */
+        .comment-tooltip {
+            position: absolute;
+            background: #ffffe1;
+            border: 1px solid #c0c0c0;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+            padding: 8px 10px;
+            font-size: 11px;
+            max-width: 300px;
+            z-index: 1000;
+            display: none;
+            font-family: 'Calibri', sans-serif;
+        }
+
+        .comment-tooltip.visible {
+            display: block;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #c00000;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+
+        /* Filter Dropdown */
+        .filter-dropdown {
+            position: absolute;
+            background: white;
+            border: 1px solid #9d9d9d;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.15);
+            min-width: 220px;
+            max-height: 350px;
+            z-index: 1000;
+            display: none;
+            font-family: 'Calibri', sans-serif;
+        }
+
+        .filter-dropdown.visible {
+            display: block;
+        }
+
+        .filter-header {
+            padding: 8px 10px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #d4d4d4;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .filter-search {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .filter-search input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #bfbfbf;
+            font-size: 11px;
+            border-radius: 2px;
+        }
+
+        .filter-options {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .filter-option {
+            padding: 5px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+        }
+
+        .filter-option:hover {
+            background: #e5f3ff;
+        }
+
+        .filter-checkbox {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+
+        .filter-actions {
+            padding: 6px 8px;
+            border-top: 1px solid #d4d4d4;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .filter-btn {
+            padding: 4px 12px;
+            border: 1px solid #bfbfbf;
+            background: white;
+            cursor: pointer;
+            font-size: 11px;
+            border-radius: 2px;
+        }
+
+        .filter-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .filter-btn.primary {
+            background: #1d7545;
+            color: white;
+            border-color: #5a8c3a;
+        }
+
+        .filter-btn.primary:hover {
+            background: #609240;
+        }
+
+        /* Filter Icon in Header */
+        .filter-icon {
+            position: absolute;
+            right: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .filter-icon:hover {
+            color: #1d7545;
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #9d9d9d;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            z-index: 1000;
+            display: none;
+            font-family: 'Calibri', sans-serif;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu-item:hover {
+            background: #e5f3ff;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 2px 0;
+        }
+
+        /* Selection Range Highlight */
+        .grid-cell.in-range {
+            background: #d8e8f5;
+        }
+
+        .grid-cell.range-start {
+            border: 2px solid #1d7545;
+        }
+
+        /* Cell with formula */
+        .grid-cell.has-formula::before {
+            content: '=';
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            font-size: 9px;
+            color: #1d7545;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a6a6a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Title Bar -->
+        <div class="title-bar">
+            <span>Book1 - Excel</span>
+            <div class="title-bar-buttons">
+                <button class="title-btn">_</button>
+                <button class="title-btn">☐</button>
+                <button class="title-btn">✕</button>
+            </div>
+        </div>
+
+        <!-- Menu Bar -->
+        <div class="menu-bar">
+            <div class="menu-item">File</div>
+            <div class="menu-item">Home</div>
+            <div class="menu-item">Insert</div>
+            <div class="menu-item">Page Layout</div>
+            <div class="menu-item">Formulas</div>
+            <div class="menu-item">Data</div>
+            <div class="menu-item">Review</div>
+            <div class="menu-item">View</div>
+            <div style="margin-left: auto; margin-right: 12px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 10px; color: white;">Tell me...</span>
+                <span style="font-size: 11px; color: white;">Javier Flores</span>
+                <span style="font-size: 11px; color: white;">Share</span>
+            </div>
+        </div>
+
+        <!-- Ribbon -->
+        <div class="ribbon">
+            <div class="ribbon-tabs">
+                <button class="ribbon-tab active">Home</button>
+                <button class="ribbon-tab">Insert</button>
+                <button class="ribbon-tab">Page Layout</button>
+                <button class="ribbon-tab">Formulas</button>
+                <button class="ribbon-tab">Data</button>
+                <button class="ribbon-tab">Review</button>
+                <button class="ribbon-tab">View</button>
+            </div>
+            <div class="ribbon-content">
+                <!-- Clipboard Group -->
+                <div class="ribbon-group">
+                    <div class="ribbon-buttons">
+                        <button class="ribbon-btn large">
+                            <span class="icon">📋</span>
+                            <span>Paste</span>
+                        </button>
+                    </div>
+                    <div class="ribbon-group-label">Clipboard</div>
+                </div>
+
+                <!-- Font Group -->
+                <div class="ribbon-group">
+                    <select class="dropdown-select">
+                        <option>Calibri</option>
+                        <option>Arial</option>
+                        <option>Times New Roman</option>
+                    </select>
+                    <div class="ribbon-buttons">
+                        <button class="ribbon-btn">𝐁</button>
+                        <button class="ribbon-btn"><i>I</i></button>
+                        <button class="ribbon-btn"><u>U</u></button>
+                    </div>
+                    <div class="ribbon-group-label">Font</div>
+                </div>
+
+                <!-- Alignment Group -->
+                <div class="ribbon-group">
+                    <div class="ribbon-buttons">
+                        <button class="ribbon-btn">≡</button>
+                        <button class="ribbon-btn">≡</button>
+                        <button class="ribbon-btn">≡</button>
+                    </div>
+                    <div class="ribbon-group-label">Alignment</div>
+                </div>
+
+                <!-- Number Group -->
+                <div class="ribbon-group">
+                    <select class="dropdown-select">
+                        <option>General</option>
+                        <option>Number</option>
+                        <option>Currency</option>
+                    </select>
+                    <div class="ribbon-group-label">Number</div>
+                </div>
+
+                <!-- Cells Group -->
+                <div class="ribbon-group">
+                    <div class="ribbon-buttons">
+                        <button class="ribbon-btn">⊞</button>
+                        <button class="ribbon-btn">×</button>
+                    </div>
+                    <div class="ribbon-group-label">Cells</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formula Bar -->
+        <div class="formula-bar-container">
+            <div class="name-box" id="cell-ref">A1</div>
+            <button class="ribbon-btn" style="padding: 2px 6px;">ƒₓ</button>
+            <div class="formula-input-wrapper">
+                <input type="text" class="formula-input" id="formula-input" placeholder="">
+            </div>
+        </div>
+
+        <!-- Spreadsheet -->
+        <div class="spreadsheet-container">
+            <div class="grid-wrapper">
+                <div class="grid-container" id="grid-container">
+                    <!-- Row numbers -->
+                    <div class="row-numbers" id="row-numbers"></div>
+
+                    <!-- Grid header (columns) -->
+                    <div class="grid-header" id="grid-header"></div>
+
+                    <!-- Grid cells -->
+                    <table class="grid-table" id="grid-table"></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sheet Tabs -->
+        <div class="sheet-tabs-container">
+            <div class="sheet-nav">
+                <button class="sheet-nav-btn">⏮</button>
+                <button class="sheet-nav-btn">◀</button>
+                <button class="sheet-nav-btn">▶</button>
+                <button class="sheet-nav-btn">⏭</button>
+            </div>
+            <div class="sheet-tabs" id="sheet-tabs">
+                <div class="sheet-tab active">Sheet1</div>
+                <div class="sheet-tab">Sheet2</div>
+                <div class="sheet-tab">Sheet3</div>
+            </div>
+            <button class="sheet-add-btn">+</button>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span id="status-message">Ready</span>
+            </div>
+            <div class="status-right">
+                <span>|</span>
+                <span id="cell-info">Average: ; Sum: ;</span>
+                <span style="margin-left: auto;">100%</span>
+                <input type="range" class="zoom-slider" min="50" max="200" value="100">
+            </div>
+        </div>
+    </div>
+
+    <!-- Comment Tooltip -->
+    <div class="comment-tooltip" id="comment-tooltip"></div>
+
+    <!-- Filter Dropdown -->
+    <div class="filter-dropdown" id="filter-dropdown">
+        <div class="filter-header" id="filter-header">Filter</div>
+        <div class="filter-search">
+            <input type="text" id="filter-search" placeholder="Search...">
+        </div>
+        <div class="filter-options" id="filter-options"></div>
+        <div class="filter-actions">
+            <button class="filter-btn" id="filter-clear">Clear</button>
+            <button class="filter-btn primary" id="filter-apply">OK</button>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" data-action="cut">✂️ Cut</div>
+        <div class="context-menu-item" data-action="copy">📋 Copy</div>
+        <div class="context-menu-item" data-action="paste">📄 Paste</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="insert-comment">💬 Insert Comment</div>
+        <div class="context-menu-item" data-action="delete-comment">🗑️ Delete Comment</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="insert-row">⊞ Insert Row</div>
+        <div class="context-menu-item" data-action="delete-row">⊟ Delete Row</div>
+        <div class="context-menu-item" data-action="insert-column">⊞ Insert Column</div>
+        <div class="context-menu-item" data-action="delete-column">⊟ Delete Column</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="clear-contents">🗑️ Clear Contents</div>
+        <div class="context-menu-item" data-action="clear-formatting">✨ Clear Formatting</div>
+    </div>
+
+    <script type="module" src="/examples/url-load-example.ts"></script>
+</body>
+</html>

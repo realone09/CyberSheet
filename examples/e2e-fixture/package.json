@@ -1,0 +1,18 @@
+{
+  "name": "e2e-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@cyber-sheet/core": "^0.1.0",
+    "@cyber-sheet/renderer-canvas": "^0.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}

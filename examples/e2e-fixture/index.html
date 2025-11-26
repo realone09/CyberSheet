@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberSheet E2E Test Fixture</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      #app {
+        padding: 20px;
+      }
+      #sheet-container {
+        width: 800px;
+        height: 600px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      h1 {
+        margin-bottom: 16px;
+        color: #333;
+      }
+      .info {
+        margin-top: 16px;
+        padding: 12px;
+        background: #e8f4f8;
+        border-left: 4px solid #2196F3;
+        border-radius: 4px;
+      }
+      .info p {
+        margin: 4px 0;
+        color: #555;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>CyberSheet E2E Test Fixture</h1>
+      <div id="sheet-container"></div>
+      <div class="info">
+        <p><strong>Test Data:</strong></p>
+        <p>• Cell A1: "Product"</p>
+        <p>• Cell B1: "Price"</p>
+        <p>• Cell A2: "Widget"</p>
+        <p>• Cell B2: 100</p>
+        <p>• Cell A3: "Gadget"</p>
+        <p>• Cell B3: 200</p>
+        <p>• Cell B4: =SUM(B2:B3)</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
