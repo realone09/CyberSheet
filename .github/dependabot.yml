@@ -1,0 +1,114 @@
+version: 2
+updates:
+  # Enable version updates for npm packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "cyber-sheet/maintainers"
+    assignees:
+      - "cyber-sheet/maintainers"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    versioning-strategy: increase
+    # Group minor and patch updates together
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+
+  # Core package dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "core"
+
+  # Renderer Canvas package dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/renderer-canvas"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "renderer"
+
+  # React wrapper dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/react"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "react"
+
+  # Vue wrapper dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/vue"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "vue"
+
+  # Angular wrapper dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/angular"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "angular"
+
+  # Svelte wrapper dependencies
+  - package-ecosystem: "npm"
+    directory: "/packages/svelte"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "svelte"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+
+# Security-only updates for critical vulnerabilities
+# These will be created immediately when detected
