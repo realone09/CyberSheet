@@ -10,6 +10,8 @@ export type CyberSheetProps = {
   style?: any;
   physicsOptions?: PhysicsOptions;
   zoom?: number; // external zoom control (1 = 100%)
+  fontFamily?: string; // global font family configuration
+  fontSize?: number; // global font size configuration (in pixels)
   onRendererReady?: (renderer: CanvasRenderer) => void;
 };
 
@@ -29,7 +31,7 @@ export type PhysicsOptions = {
   snapIntervalMs?: number;           // how often to check snap (default 200)
 };
 
-export const CyberSheet = ({ workbook, sheetName, rendererOptions, style, physicsOptions, zoom, onRendererReady }: CyberSheetProps) => {
+export const CyberSheet = ({ workbook, sheetName, rendererOptions, style, physicsOptions, zoom, fontFamily, fontSize, onRendererReady }: CyberSheetProps) => {
   const containerRef = useRef(null as any);
   const rendererRef = useRef(null as any);
   const sheetRef = useRef(undefined as any);
@@ -82,6 +84,20 @@ export const CyberSheet = ({ workbook, sheetName, rendererOptions, style, physic
       (r as any).setZoom(zoom);
     }
   }, [zoom, rendererRef.current]);
+
+  // React to font configuration changes
+  useEffect(() => {
+    const r = rendererRef.current as CanvasRenderer | null;
+    if (!r || typeof r.setTheme !== 'function') return;
+    
+    const themeUpdate: any = {};
+    if (fontFamily !== undefined) themeUpdate.fontFamily = fontFamily;
+    if (fontSize !== undefined) themeUpdate.fontSize = fontSize;
+    
+    if (Object.keys(themeUpdate).length > 0) {
+      r.setTheme(themeUpdate);
+    }
+  }, [fontFamily, fontSize, rendererRef.current]);
 
   // Basic wheel scroll handler
   useEffect(() => {

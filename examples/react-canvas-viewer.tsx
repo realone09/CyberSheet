@@ -16,6 +16,8 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempted, setLoadAttempted] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [fontFamily, setFontFamily] = useState<string>('Segoe UI, Arial, sans-serif');
+  const [fontSize, setFontSize] = useState<number>(11);
   const [filterMenu, setFilterMenu] = useState<{ col: number; x: number; y: number; values: Array<{ value: string; count: number }>; apply: (sel: string[]) => void; clear: () => void } | null>(null);
   const [filterSel, setFilterSel] = useState<Set<string>>(new Set());
   const [filterSearch, setFilterSearch] = useState('');
@@ -380,6 +382,8 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
           workbook={workbook}
           sheetName={sheetName}
           zoom={zoom}
+          fontFamily={fontFamily}
+          fontSize={fontSize}
           onRendererReady={(r) => {
             rendererRef.current = r;
             console.log('✅ Renderer ready');
@@ -646,6 +650,43 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
           <span>{status}</span>
         </div>
         <div className="status-right">
+          <label style={{ marginRight: '8px' }}>Font</label>
+          <select 
+            value={fontFamily} 
+            onChange={e => setFontFamily(e.target.value)}
+            style={{ 
+              padding: '2px 6px', 
+              marginRight: '12px',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              fontSize: '11px'
+            }}
+          >
+            <option value="Segoe UI, Arial, sans-serif">Segoe UI</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Calibri, sans-serif">Calibri</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans MS</option>
+          </select>
+          <label style={{ marginRight: '8px' }}>Size</label>
+          <input 
+            type="number" 
+            min={8} 
+            max={24} 
+            value={fontSize} 
+            onChange={e => setFontSize(parseInt(e.target.value, 10))}
+            style={{ 
+              width: '50px', 
+              padding: '2px 6px',
+              marginRight: '12px',
+              border: '1px solid #ccc',
+              borderRadius: '3px',
+              fontSize: '11px'
+            }}
+          />
           <label>Zoom</label>
           <input className="zoom-slider" type="range" min={50} max={200} value={Math.round(zoom * 100)} onChange={e => setZoom(parseInt(e.target.value, 10) / 100)} />
           <span>{Math.round(zoom * 100)}%</span>
