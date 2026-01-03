@@ -1,9 +1,8 @@
-import { Worksheet, Address, CellStyle, CellEvent, resolveExcelColor, ExcelColorSpec } from '@cyber-sheet/core';
+import { Worksheet, Address, CellStyle, CellEvent, resolveExcelColor, ExcelColorSpec, Emitter } from '@cyber-sheet/core';
 import { TextMeasureCache } from './TextMeasureCache';
 import { Theme, ExcelLightTheme, mergeTheme, ThemePresetName, resolveThemePreset } from './Theme';
 import { FormatCache } from './FormatCache';
 import { RenderPlugin } from './plugins';
-import { Emitter } from '@cyber-sheet/core/dist/events';
 
 export type CanvasRendererOptions = {
   headerHeight?: number; // px
@@ -65,6 +64,7 @@ export class CanvasRenderer {
   private hoveredCell: Address | null = null;
   private clickStartTime = 0;
   private clickStartCell: Address | null = null;
+  private scrollEmitter = new Emitter<{ type: 'scroll'; scroll: { x: number; y: number; maxX: number; maxY: number } }>();
   // Distinct value cache per column for filter menus
 
   private clearValueCacheForColumn(col?: number) {
@@ -173,6 +173,12 @@ export class CanvasRenderer {
     this.scrollX = clampedX;
     this.scrollY = clampedY;
     
+    // Emit scroll event for adapters to listen
+    this.scrollEmitter.emit({
+      type: 'scroll',
+      scroll: { x: clampedX, y: clampedY, maxX: max.x, maxY: max.y }
+    });
+    
     // Schedule redraw via RAF to batch multiple scroll updates
     this.scheduleRedraw();
   }
@@ -189,6 +195,19 @@ export class CanvasRenderer {
   getSelections(): { start: Address; end: Address }[] { return this.selections.slice(); }
   getScroll() { return { x: this.scrollX, y: this.scrollY }; }
   scrollBy(dx: number, dy: number) { this.setScroll(this.scrollX + dx, this.scrollY + dy); }
+  
+  /**
+   * Subscribe to scroll change events. Returns a disposable to unsubscribe.
+   * This is the proper way for adapters to listen to scroll changes instead of polling.
+   */
+  onScrollChange(listener: (event: { x: number; y: number; maxX: number; maxY: number }) => void): { dispose: () => void } {
+    return this.scrollEmitter.on((event) => {
+      if (event.type === 'scroll') {
+        listener(event.scroll);
+      }
+    });
+  }
+  
   // Expose read-only handles for host wrappers (React) that need to align/snapping or edge checks
   get optionsReadonly(): Readonly<Required<CanvasRendererOptions>> { return this.options; }
   get sheetReadonly(): Worksheet { return this.sheet; }
