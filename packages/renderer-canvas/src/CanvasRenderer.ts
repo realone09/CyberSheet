@@ -777,13 +777,31 @@ export class CanvasRenderer {
     const y = clientY - rect.top;
     const { headerHeight, headerWidth } = this.options;
     if (x < headerWidth || y < headerHeight) return null;
-    let cx = headerWidth - this.scrollX;
-    let cy = headerHeight - this.scrollY;
-    let col = 1;
+    
+    // Use visibleRange to get the correct starting position accounting for scroll
+    const visible = this.visibleRange();
+    let cx = visible.xOffset;
+    let cy = visible.yOffset;
+    let col = visible.firstCol;
     const visRows = this.getVisibleRows();
-    let rowIndex = 0;
-    while (cx <= x && col <= this.sheet.colCount) { const w = this.sheet.getColumnWidth(col) * this.zoom; if (x < cx + w) break; cx += w; col++; }
-    while (cy <= y && rowIndex < visRows.length) { const h = this.sheet.getRowHeight(visRows[rowIndex]) * this.zoom; if (y < cy + h) break; cy += h; rowIndex++; }
+    let rowIndex = visible.firstRowIndex ?? 0;
+    
+    // Walk columns until we find the one containing x
+    while (cx <= x && col <= this.sheet.colCount) {
+      const w = this.sheet.getColumnWidth(col) * this.zoom;
+      if (x < cx + w) break;
+      cx += w;
+      col++;
+    }
+    
+    // Walk rows until we find the one containing y
+    while (cy <= y && rowIndex < visRows.length) {
+      const h = this.sheet.getRowHeight(visRows[rowIndex]) * this.zoom;
+      if (y < cy + h) break;
+      cy += h;
+      rowIndex++;
+    }
+    
     const row = visRows[rowIndex];
     if (col > this.sheet.colCount || row == null) return null;
     return { row, col };
