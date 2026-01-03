@@ -1071,6 +1071,48 @@ export class FormulaEngine {
       
       return new Error('#N/A');
     });
+
+    /**
+     * CHOOSE - Select value from list by index
+     * Syntax: CHOOSE(index_num, value1, [value2], ...)
+     * 
+     * Returns the value from a list of values based on the index number.
+     * Index is 1-based (first value is index 1).
+     * 
+     * index_num: Which value to return (1-based index)
+     * value1, value2, ...: List of values to choose from (1 to 254 values)
+     * 
+     * Returns #VALUE! if index_num < 1 or > number of values
+     * 
+     * Examples:
+     *   CHOOSE(2, "Red", "Green", "Blue") → "Green"
+     *   CHOOSE(1, 100, 200, 300) → 100
+     *   CHOOSE(0, "A", "B") → #VALUE!
+     *   CHOOSE(5, "A", "B") → #VALUE!
+     */
+    this.functions.set('CHOOSE', (...args) => {
+      if (args.length < 2) {
+        return new Error('#VALUE!');
+      }
+
+      const [indexNum, ...values] = args;
+
+      // Validate index is a number
+      if (typeof indexNum !== 'number') {
+        return new Error('#VALUE!');
+      }
+
+      // Index must be integer (Excel truncates decimals)
+      const index = Math.floor(indexNum);
+
+      // Index must be >= 1 and <= number of values
+      if (index < 1 || index > values.length) {
+        return new Error('#VALUE!');
+      }
+
+      // Return value at index (convert from 1-based to 0-based)
+      return values[index - 1];
+    });
   }
 
   /**
