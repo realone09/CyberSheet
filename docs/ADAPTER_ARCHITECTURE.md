@@ -1,20 +1,26 @@
 # Adapter Architecture Guide
 
+> **📖 See also**: [ADAPTER_PATTERN.md](./ADAPTER_PATTERN.md) for detailed guidelines on writing thin adapters
+
 ## Overview
 
 CyberSheet follows a **clean separation of concerns** architecture where the core engine is completely independent, and framework-specific adapters provide seamless integration.
+
+**Key Principle**: Adapters are thin API bindings. All logic belongs in the core.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Framework Adapters                       │
 │  (@cyber-sheet/react, vue, angular, svelte)                │
+│                  [Thin - API bindings only]                  │
 ├─────────────────────────────────────────────────────────────┤
 │                     Renderer Layer                           │
 │              (@cyber-sheet/renderer-canvas)                  │
+│        [Fat - Contains physics, scroll, rendering]          │
 ├─────────────────────────────────────────────────────────────┤
 │                     Core Engine                              │
 │                  (@cyber-sheet/core)                         │
-│  (Workbook, Worksheet, Formula Engine, Events, etc.)       │
+│  [Fat - Workbook, Worksheet, Formula Engine, Events]       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
