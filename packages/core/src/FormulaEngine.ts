@@ -1261,6 +1261,167 @@ export class FormulaEngine {
         return result;
       }
     });
+
+    /**
+     * INDIRECT - Return reference specified by text string
+     * Syntax: INDIRECT(ref_text, [a1])
+     * 
+     * Returns the reference specified by a text string as a formatted address string.
+     * 
+     * ref_text: Text string representing a cell reference
+     * a1: (Optional) Logical value - TRUE/1 for A1 style (default), FALSE/0 for R1C1 style
+     * 
+     * Returns #REF! if ref_text is not a valid cell reference
+     * Returns #VALUE! if ref_text is not a string
+     * 
+     * Returns: Validated and normalized cell/range reference string
+     * 
+     * A1 Style Examples:
+     *   INDIRECT("A1") → "A1"
+     *   INDIRECT("B5") → "B5"
+     *   INDIRECT("A1:C3") → "A1:C3"
+     *   INDIRECT("Sheet1!A1") → "Sheet1!A1"
+     *   INDIRECT("a1") → "A1" (normalized to uppercase)
+     * 
+     * R1C1 Style Examples:
+     *   INDIRECT("R1C1", FALSE) → "R1C1"
+     *   INDIRECT("R5C2", FALSE) → "R5C2"
+     *   INDIRECT("R1C1:R3C3", FALSE) → "R1C1:R3C3"
+     * 
+     * Style Conversion:
+     *   INDIRECT("R1C1", FALSE) → "R1C1" (R1C1 to R1C1)
+     *   INDIRECT("A1", TRUE) → "A1" (A1 to A1)
+     */
+    this.functions.set('INDIRECT', (...args) => {
+      if (args.length < 1) {
+        return new Error('#VALUE!');
+      }
+
+      const [refText, a1Style = true] = args;
+
+      // Validate ref_text is a string
+      if (typeof refText !== 'string') {
+        return new Error('#VALUE!');
+      }
+
+      const isA1 = a1Style === true || a1Style === 1;
+
+      // Helper: Parse A1-style reference (e.g., "A1", "B5", "AA100")
+      const parseA1Reference = (ref: string): { row: number; col: number } | null => {
+        const match = ref.match(/^([A-Z]+)(\d+)$/i);
+        if (!match) return null;
+
+        const colStr = match[1].toUpperCase();
+        const rowStr = match[2];
+
+        // Convert column letters to number (A=1, B=2, ..., Z=26, AA=27, etc.)
+        let col = 0;
+        for (let i = 0; i < colStr.length; i++) {
+          col = col * 26 + (colStr.charCodeAt(i) - 65 + 1);
+        }
+
+        const row = parseInt(rowStr, 10);
+
+        if (row < 1 || col < 1 || row > 1048576 || col > 16384) {
+          return null; // Excel limits: 1048576 rows, 16384 columns
+        }
+
+        return { row, col };
+      };
+
+      // Helper: Parse R1C1-style reference (e.g., "R1C1", "R5C10")
+      const parseR1C1Reference = (ref: string): { row: number; col: number } | null => {
+        const match = ref.match(/^R(\d+)C(\d+)$/i);
+        if (!match) return null;
+
+        const row = parseInt(match[1], 10);
+        const col = parseInt(match[2], 10);
+
+        if (row < 1 || col < 1 || row > 1048576 || col > 16384) {
+          return null;
+        }
+
+        return { row, col };
+      };
+
+      // Helper: Convert column number to letters (1=A, 2=B, ..., 27=AA)
+      const colToLetters = (col: number): string => {
+        let letters = '';
+        while (col > 0) {
+          const remainder = (col - 1) % 26;
+          letters = String.fromCharCode(65 + remainder) + letters;
+          col = Math.floor((col - 1) / 26);
+        }
+        return letters;
+      };
+
+      // Remove any whitespace
+      const cleanRef = refText.trim();
+
+      // Check for sheet name (e.g., "Sheet1!A1")
+      let sheetName: string | undefined;
+      let cellRef = cleanRef;
+      
+      const sheetSeparator = cleanRef.indexOf('!');
+      if (sheetSeparator > 0) {
+        sheetName = cleanRef.substring(0, sheetSeparator);
+        cellRef = cleanRef.substring(sheetSeparator + 1);
+      }
+
+      // Check for range reference (e.g., "A1:C3")
+      const rangeSeparator = cellRef.indexOf(':');
+      if (rangeSeparator > 0) {
+        const startRef = cellRef.substring(0, rangeSeparator);
+        const endRef = cellRef.substring(rangeSeparator + 1);
+
+        let start: { row: number; col: number } | null;
+        let end: { row: number; col: number } | null;
+
+        if (isA1) {
+          start = parseA1Reference(startRef);
+          end = parseA1Reference(endRef);
+        } else {
+          start = parseR1C1Reference(startRef);
+          end = parseR1C1Reference(endRef);
+        }
+
+        if (!start || !end) {
+          return new Error('#REF!');
+        }
+
+        // Validate range is valid (start before end)
+        if (start.row > end.row || start.col > end.col) {
+          return new Error('#REF!');
+        }
+
+        // Return normalized range string
+        const normalizedRange = isA1
+          ? `${colToLetters(start.col)}${start.row}:${colToLetters(end.col)}${end.row}`
+          : `R${start.row}C${start.col}:R${end.row}C${end.col}`;
+
+        return sheetName ? `${sheetName}!${normalizedRange}` : normalizedRange;
+      }
+
+      // Parse single cell reference
+      let parsed: { row: number; col: number } | null;
+
+      if (isA1) {
+        parsed = parseA1Reference(cellRef);
+      } else {
+        parsed = parseR1C1Reference(cellRef);
+      }
+
+      if (!parsed) {
+        return new Error('#REF!');
+      }
+
+      // Return normalized cell reference string
+      const normalizedCell = isA1
+        ? `${colToLetters(parsed.col)}${parsed.row}`
+        : `R${parsed.row}C${parsed.col}`;
+
+      return sheetName ? `${sheetName}!${normalizedCell}` : normalizedCell;
+    });
   }
 
   /**
