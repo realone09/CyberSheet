@@ -1121,8 +1121,10 @@ export const MINIFS: FormulaFunction = (...args: FormulaValue[]): number | Error
  * Helper function to validate two arrays have same length and extract numbers
  */
 function validatePairedArrays(array1: FormulaValue, array2: FormulaValue): { x: number[]; y: number[] } | Error {
-  const x = filterNumbers(flattenArray([array1]));
-  const y = filterNumbers(flattenArray([array2]));
+  // filterNumbers already calls flattenArray internally, so we don't need to wrap in extra array
+  // Just ensure we have arrays before passing to filterNumbers
+  const x = filterNumbers(Array.isArray(array1) ? array1 : [array1]);
+  const y = filterNumbers(Array.isArray(array2) ? array2 : [array2]);
   
   if (x.length === 0 || y.length === 0) {
     return new Error('#N/A');
@@ -1169,7 +1171,9 @@ export const RSQ: FormulaFunction = (knownYs, knownXs) => {
  * =SLOPE({2, 4, 6, 8}, {1, 2, 3, 4}) → 2.0
  */
 export const SLOPE: FormulaFunction = (knownYs, knownXs) => {
-  const validated = validatePairedArrays(knownYs, knownXs);
+  // NOTE: validatePairedArrays returns {x, y} from (param1, param2)
+  // So we need to pass (knownXs, knownYs) to get x from X and y from Y
+  const validated = validatePairedArrays(knownXs, knownYs);
   if (validated instanceof Error) return validated;
   
   const { x: xs, y: ys } = validated;
@@ -1210,7 +1214,9 @@ export const INTERCEPT: FormulaFunction = (knownYs, knownXs) => {
   const slope = SLOPE(knownYs, knownXs);
   if (slope instanceof Error) return slope;
   
-  const validated = validatePairedArrays(knownYs, knownXs);
+  // NOTE: validatePairedArrays returns {x, y} from (param1, param2)
+  // So we need to pass (knownXs, knownYs) to get x from X and y from Y
+  const validated = validatePairedArrays(knownXs, knownYs);
   if (validated instanceof Error) return validated;
   
   const { x: xs, y: ys } = validated;
@@ -1258,7 +1264,9 @@ export const FORECAST: FormulaFunction = (x, knownYs, knownXs) => {
  * =STEYX({2, 4, 6, 8}, {1, 2, 3, 4}) → 0.0 (perfect fit)
  */
 export const STEYX: FormulaFunction = (knownYs, knownXs) => {
-  const validated = validatePairedArrays(knownYs, knownXs);
+  // NOTE: validatePairedArrays returns {x, y} from (param1, param2)
+  // So we need to pass (knownXs, knownYs) to get x from X and y from Y
+  const validated = validatePairedArrays(knownXs, knownYs);
   if (validated instanceof Error) return validated;
   
   const { x: xs, y: ys } = validated;
@@ -1303,11 +1311,13 @@ export const TREND: FormulaFunction = (knownYs, knownXs, newXs?, constB?) => {
   // If no new X values provided, use known X values
   let xValues: number[];
   if (newXs === undefined || newXs === null) {
-    const validated = validatePairedArrays(knownYs, knownXs);
+    // NOTE: validatePairedArrays returns {x, y} from (param1, param2)
+    // So we need to pass (knownXs, knownYs) to get x from X and y from Y
+    const validated = validatePairedArrays(knownXs, knownYs);
     if (validated instanceof Error) return validated;
     xValues = validated.x;
   } else {
-    xValues = filterNumbers(flattenArray([newXs]));
+    xValues = filterNumbers(Array.isArray(newXs) ? newXs : [newXs]);
     if (xValues.length === 0) {
       return new Error('#VALUE!');
     }

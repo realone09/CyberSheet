@@ -260,9 +260,10 @@ export class FormulaEngine {
       }
     }
 
-    // Function call (e.g., SUM(A1:A10))
+    // Function call (e.g., SUM(A1:A10), STDEV.S(A1:A10))
     // Special handling for lambda invocation: LAMBDA(...)(args)
-    const functionMatch = expr.match(/^([A-Z_]+)\((.*)\)$/i);
+    // Updated regex to support dotted function names like STDEV.S, VAR.P, MODE.SNGL
+    const functionMatch = expr.match(/^([A-Z_][A-Z0-9_.]*)\((.*)\)$/i);
     if (functionMatch) {
       const [, funcName, argsStr] = functionMatch;
       
@@ -508,13 +509,13 @@ export class FormulaEngine {
 
     const values: FormulaValue[] = [];
 
-
     for (let row = startAddr.row; row <= endAddr.row; row++) {
       for (let col = startAddr.col; col <= endAddr.col; col++) {
         const addr = { row, col };
         this.dependencyGraph.addDependency(context.currentCell, addr);
         
         const cell = context.worksheet.getCell(addr);
+        
         if (cell) {
           if (cell.formula) {
             values.push(this.evaluate(cell.formula, { ...context, currentCell: addr }));
@@ -532,6 +533,7 @@ export class FormulaEngine {
 
   /**
    * Parses cell reference (e.g., "A1" -> {row: 0, col: 0})
+   * Converts Excel-style 1-based references (A1, B2) to 0-based internal addresses
    */
   private parseCellReference(ref: string): Address {
     const match = ref.match(/^([A-Z]+)(\d+)$/i);
@@ -544,8 +546,9 @@ export class FormulaEngine {
     for (let i = 0; i < colStr.length; i++) {
       col = col * 26 + (colStr.charCodeAt(i) - 65 + 1);
     }
-    // Addresses in this project are 1-based; do not convert to 0-based
-    const row = parseInt(rowStr, 10);
+    // Convert from 1-based Excel notation to 0-based internal storage
+    col = col - 1;
+    const row = parseInt(rowStr, 10) - 1;
 
     return { row, col };
   }
@@ -1103,7 +1106,19 @@ export class FormulaEngine {
                         'REDUCE', 'SCAN', 'BYROW', 'BYCOL', 'SUM', 'AVERAGE', 'COUNT',
                         'MAX', 'MIN', 'SUMIF', 'AVERAGEIF', 'COUNTIF',
                         'SUMIFS', 'AVERAGEIFS', 'COUNTIFS', 'MAXIFS', 'MINIFS',
-                        'TAKE', 'DROP', 'CHOOSECOLS', 'CHOOSEROWS', 'TEXTSPLIT', 'TEXTJOIN'];
+                        'TAKE', 'DROP', 'CHOOSECOLS', 'CHOOSEROWS', 'TEXTSPLIT', 'TEXTJOIN',
+                        // Statistical functions that aggregate arrays
+                        'AVERAGEA', 'MEDIAN', 'MODE', 'MODE.SNGL', 'MODE.MULT',
+                        'STDEV', 'STDEV.S', 'STDEV.P', 'STDEVPA', 'STDEVA',
+                        'VAR', 'VAR.S', 'VAR.P', 'VARPA', 'VARA',
+                        'QUARTILE', 'QUARTILE.INC', 'QUARTILE.EXC',
+                        'PERCENTILE', 'PERCENTILE.INC', 'PERCENTILE.EXC',
+                        'CORREL', 'COVARIANCE.P', 'COVARIANCE.S', 'RSQ',
+                        'FORECAST', 'FORECAST.LINEAR', 'SLOPE', 'INTERCEPT',
+                        'STEYX', 'TREND', 'PEARSON',
+                        // Financial functions (Week 8 Days 4-5)
+                        'NPV', 'XNPV', 'PV', 'FV', 'PMT', 'IPMT', 'PPMT',
+                        'IRR', 'XIRR', 'MIRR', 'NPER', 'RATE', 'EFFECT', 'NOMINAL'];
     return arrayFuncs.includes(name.toUpperCase());
   }
 

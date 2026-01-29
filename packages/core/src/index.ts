@@ -9,3 +9,4 @@ export * from './FormulaEngine';
 export * from './FormulaController';
 export * from './CollaborationEngine';
 export * from './PivotEngine';
+export * from './autocomplete';

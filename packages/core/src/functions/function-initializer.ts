@@ -17,6 +17,7 @@ import * as DateTimeFunctions from './datetime';
 import * as LookupFunctions from './lookup';
 import * as StatisticalFunctions from './statistical';
 import * as FunctionalFunctions from './functional';
+import * as FinancialFunctions from './financial';
 
 /**
  * Register all built-in functions
@@ -235,6 +236,23 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['MAKEARRAY', FunctionalFunctions.MAKEARRAY, { category: FunctionCategory.LAMBDA, minArgs: 3, maxArgs: 3, isSpecial: true }],
   ] as const;
 
+  // Financial functions (Week 8 Days 4-5)
+  const financialFunctions = [
+    ['NPV', FinancialFunctions.NPV, { category: FunctionCategory.FINANCIAL, minArgs: 2 }],
+    ['XNPV', FinancialFunctions.XNPV, { category: FunctionCategory.FINANCIAL, minArgs: 3, maxArgs: 3 }],
+    ['PV', FinancialFunctions.PV, { category: FunctionCategory.FINANCIAL, minArgs: 3, maxArgs: 5 }],
+    ['FV', FinancialFunctions.FV, { category: FunctionCategory.FINANCIAL, minArgs: 3, maxArgs: 5 }],
+    ['PMT', FinancialFunctions.PMT, { category: FunctionCategory.FINANCIAL, minArgs: 3, maxArgs: 5 }],
+    ['IPMT', FinancialFunctions.IPMT, { category: FunctionCategory.FINANCIAL, minArgs: 4, maxArgs: 6 }],
+    ['PPMT', FinancialFunctions.PPMT, { category: FunctionCategory.FINANCIAL, minArgs: 4, maxArgs: 6 }],
+    ['IRR', FinancialFunctions.IRR, { category: FunctionCategory.FINANCIAL, minArgs: 1, maxArgs: 2 }],
+    ['XIRR', FinancialFunctions.XIRR, { category: FunctionCategory.FINANCIAL, minArgs: 2, maxArgs: 3 }],
+    ['NPER', FinancialFunctions.NPER, { category: FunctionCategory.FINANCIAL, minArgs: 3, maxArgs: 5 }],
+    ['RATE', FinancialFunctions.RATE, { category: FunctionCategory.FINANCIAL, minArgs: 3, maxArgs: 6 }],
+    ['EFFECT', FinancialFunctions.EFFECT, { category: FunctionCategory.FINANCIAL, minArgs: 2, maxArgs: 2 }],
+    ['NOMINAL', FinancialFunctions.NOMINAL, { category: FunctionCategory.FINANCIAL, minArgs: 2, maxArgs: 2 }],
+  ] as const;
+
   // Batch register all functions
   registry.registerBatch(mathFunctions as any);
   registry.registerBatch(textFunctions as any);
@@ -244,4 +262,5 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
   registry.registerBatch(lookupFunctions as any);
   registry.registerBatch(statisticalFunctions as any);
   registry.registerBatch(functionalFunctions as any);
+  registry.registerBatch(financialFunctions as any);
 }

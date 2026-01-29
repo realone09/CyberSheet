@@ -57,7 +57,7 @@ describe('Statistical Functions - Week 8 Day 1', () => {
 
     test('handles negative numbers', () => {
       expect(evaluate('=AVERAGE(-10, -20, -30)')).toBe(-20);
-      expect(evaluate('=AVERAGE(-5, 5, 10)')).toBe(3.333333333333333);
+      expect(evaluate('=AVERAGE(-5, 5, 10)')).toBeCloseTo(3.333333333333333, 10);
     });
   });
 
