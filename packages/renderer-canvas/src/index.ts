@@ -14,3 +14,6 @@ export * from './AdvancedExportEngine';
 export * from './Theme';
 export * from './FormatCache';
 export * from './plugins';
+export * from './error-highlighter';
+export * from './error-solutions';
+export * from './error-tooltip';
