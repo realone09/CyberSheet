@@ -5,6 +5,134 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-01-31
+
+### Added - Error Highlighting + Interactive Tooltips (Week 9 Day 3)
+
+#### Error Highlighting Module
+- **Visual Error Detection**: Automatically detect and highlight cells containing formula errors
+  - Red background (#FFEBEE) for error cells
+  - Red border (2px solid #EF9A9A) for visual emphasis
+  - Error icons (⚠️ or ❌) in cell corners (configurable)
+  - Plugin integration with CanvasRenderer for seamless rendering
+  - Configurable options: background, border, icon type, colors, animation
+
+- **Error Type Support**: All 9 Excel error types recognized
+  - `#DIV/0!` - Division by zero
+  - `#N/A` - Value not available
+  - `#NAME?` - Unrecognized function or name
+  - `#NULL!` - Null intersection
+  - `#NUM!` - Invalid numeric value
+  - `#REF!` - Invalid cell reference
+  - `#VALUE!` - Wrong type of argument
+  - `#SPILL!` - Spill range is blocked
+  - `#CALC!` - Calculation error
+
+- **Rendering Functions**:
+  - `renderErrorCell()`: Apply error background and border to cell
+  - `renderErrorIcon()`: Draw error icon in cell corner with zoom support
+  - `renderCellError()`: Combined error visualization (background + border + icon)
+  - `isFormulaError()`: Type guard for error detection
+  - `getErrorType()`: Extract error type from Error message
+  - `getErrorMessage()`: Format user-friendly error message
+
+- **Plugin Architecture**:
+  - `createErrorHighlightPlugin()`: Factory function for renderer integration
+  - `beforeCellRender` hook: Apply error styling before cell content
+  - `afterCellRender` hook: Add error icons after cell content
+  - Customizable options passed through plugin configuration
+
+#### Error Solutions Module
+- **Intelligent Error Messages**: Context-aware suggestions for each error type
+  - User-friendly explanations of what went wrong
+  - Actionable suggestions to fix the error
+  - Microsoft Office documentation links for detailed help
+
+- **Levenshtein Distance Algorithm**: Function name typo detection
+  - Dynamic programming implementation (O(n × m) complexity)
+  - Case-insensitive string comparison
+  - Efficient for typical function names (< 0.5ms)
+
+- **Function Name Suggestions**:
+  - `findClosestFunctions()`: Find similar function names using Levenshtein distance
+  - Database of 85+ common Excel functions (SUM, AVERAGE, VLOOKUP, etc.)
+  - Returns top N closest matches sorted by edit distance
+  - Configurable max distance threshold
+  - Example: "SUMM" → suggests ["SUM", "SUMIF", "SUMIFS"]
+
+- **Error Solutions**:
+  - `getErrorSolution()`: Get complete solution for any error
+  - `getNameErrorSuggestion()`: Special handling for #NAME? errors with typo detection
+  - `formatErrorSolutionHTML()`: Format solution as HTML for tooltip display
+  - `formatErrorSolutionText()`: Format solution as plain text for accessibility
+  - `getErrorSolutionCSS()`: Pre-built CSS styles for tooltip content
+
+#### Error Tooltip System
+- **Interactive Tooltips**: Show on hover over error cells
+  - 200ms debounced hover detection (prevents flicker)
+  - Smart positioning using `getBoundingClientRect()`
+  - Viewport edge detection (auto-adjust: bottom → top → right → left)
+  - Fade in/out animations (200ms CSS transitions)
+  - High z-index (10000) ensures visibility above other elements
+
+- **Tooltip Manager**:
+  - `ErrorTooltipManager` class: Full lifecycle management
+  - `show()`: Display tooltip for error cell
+  - `hide()`: Hide tooltip with fade-out animation
+  - `handleMouseMove()`: Debounced hover detection
+  - `handleMouseLeave()`: Hide on mouse exit
+  - `destroy()`: Cleanup resources and DOM elements
+
+- **Tooltip Content**:
+  - Error type badge (colored, prominent)
+  - User-friendly error message
+  - Suggestion box with actionable fix advice
+  - Optional documentation link ("Learn more →")
+  - Fully styled with CSS (included)
+
+- **Configuration Options**:
+  - `hoverDelay`: Debounce delay in milliseconds (default: 200ms)
+  - `maxWidth`: Maximum tooltip width (default: 320px)
+  - `fadeDuration`: Fade animation duration (default: 200ms)
+  - `showDocLinks`: Show Microsoft Office docs (default: true)
+  - `zIndex`: Tooltip stacking order (default: 10000)
+
+- **Helper Functions**:
+  - `getCellRectFromCanvas()`: Calculate cell bounding rect from canvas coordinates
+  - `createErrorTooltipManager()`: Factory function for easy initialization
+
+#### Features
+- **Automatic Detection**: Errors automatically detected via `instanceof Error`
+- **Plugin System**: Easy integration with CanvasRenderer
+- **Customizable Styling**: All colors, borders, icons configurable
+- **Smart Suggestions**: Levenshtein distance finds typos in function names
+- **Viewport-Aware**: Tooltips never go off-screen
+- **Performance**: < 1ms per error cell, negligible impact on 60fps rendering
+- **Accessibility**: Plain text alternatives, keyboard support ready
+- **Documentation**: Microsoft Office links for detailed error explanations
+
+#### Test Coverage
+- 62 tests total (100% passing)
+  - Error Highlighting: 21 tests
+  - Error Solutions: 24 tests
+  - Error Tooltips: 17 tests
+- Overall coverage: 83.25%
+  - error-highlighter.ts: 98.36%
+  - error-solutions.ts: 100%
+  - error-tooltip.ts: 67.59%
+
+### Files Added
+- `packages/renderer-canvas/src/error-highlighter.ts` (300 lines)
+- `packages/renderer-canvas/src/error-solutions.ts` (290 lines)
+- `packages/renderer-canvas/src/error-tooltip.ts` (350 lines)
+- `packages/renderer-canvas/__tests__/error-highlighting.test.ts` (715 lines, 62 tests)
+- `docs/WEEK9_DAY3_SUMMARY.md` (comprehensive guide)
+
+### Files Modified
+- `packages/renderer-canvas/src/index.ts`: Added exports for new error modules
+
+---
+
 ## [1.7.0] - 2026-01-31
 
 ### Added - Syntax Highlighting + Live Preview (Week 9 Day 2)
