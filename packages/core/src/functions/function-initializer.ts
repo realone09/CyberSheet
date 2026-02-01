@@ -19,6 +19,7 @@ import * as StatisticalFunctions from './statistical';
 import * as FunctionalFunctions from './functional';
 import * as FinancialFunctions from './financial';
 import * as InformationFunctions from './information';
+import * as EngineeringFunctions from './engineering';
 
 /**
  * Register all built-in functions
@@ -265,6 +266,26 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['INFO', InformationFunctions.INFO, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
   ] as const;
 
+  // Engineering functions (Week 10 Day 3)
+  const engineeringFunctions = [
+    // Binary conversions
+    ['BIN2DEC', EngineeringFunctions.BIN2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['BIN2HEX', EngineeringFunctions.BIN2HEX, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['BIN2OCT', EngineeringFunctions.BIN2OCT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Decimal conversions
+    ['DEC2BIN', EngineeringFunctions.DEC2BIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['DEC2HEX', EngineeringFunctions.DEC2HEX, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['DEC2OCT', EngineeringFunctions.DEC2OCT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Hexadecimal conversions
+    ['HEX2BIN', EngineeringFunctions.HEX2BIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['HEX2DEC', EngineeringFunctions.HEX2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['HEX2OCT', EngineeringFunctions.HEX2OCT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Octal conversions
+    ['OCT2BIN', EngineeringFunctions.OCT2BIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['OCT2DEC', EngineeringFunctions.OCT2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['OCT2HEX', EngineeringFunctions.OCT2HEX, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+  ] as const;
+
   // Batch register all functions
   registry.registerBatch(mathFunctions as any);
   registry.registerBatch(textFunctions as any);
@@ -276,4 +297,5 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
   registry.registerBatch(functionalFunctions as any);
   registry.registerBatch(financialFunctions as any);
   registry.registerBatch(informationFunctions as any);
+  registry.registerBatch(engineeringFunctions as any);
 }
