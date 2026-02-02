@@ -661,3 +661,207 @@ export function BITRSHIFT(number: any, shiftAmount: any): FormulaValue {
   const result = BigInt(num) >> BigInt(shift);
   return Number(result);
 }
+
+// ============================================================================
+// COMPLEX NUMBER FUNCTIONS
+// ============================================================================
+
+/**
+ * Helper to parse complex number string
+ * Supports formats: "3+4i", "3-4i", "3+4j", "5i", "-2j", "7"
+ */
+function parseComplex(complexText: string): { real: number; imag: number } | Error {
+  if (typeof complexText !== 'string') {
+    return new Error('#VALUE!');
+  }
+
+  const text = complexText.trim();
+  
+  // Handle pure real number
+  if (/^-?\d+\.?\d*$/.test(text)) {
+    return { real: parseFloat(text), imag: 0 };
+  }
+
+  // Handle pure imaginary (just "i", "j", "-i", "5i", etc.)
+  const pureImagMatch = text.match(/^([+-]?\d*\.?\d*)([ij])$/);
+  if (pureImagMatch) {
+    let imagPart = pureImagMatch[1];
+    if (imagPart === '' || imagPart === '+') imagPart = '1';
+    if (imagPart === '-') imagPart = '-1';
+    return { real: 0, imag: parseFloat(imagPart) };
+  }
+
+  // Handle full complex number "a+bi" or "a-bi"
+  const complexMatch = text.match(/^([+-]?\d+\.?\d*)([+-])(\d*\.?\d*)([ij])$/);
+  if (complexMatch) {
+    const real = parseFloat(complexMatch[1]);
+    const sign = complexMatch[2];
+    let imagPart = complexMatch[3];
+    if (imagPart === '') imagPart = '1';
+    const imag = parseFloat(sign + imagPart);
+    return { real, imag };
+  }
+
+  return new Error('#NUM!');
+}
+
+/**
+ * Helper to format complex number
+ */
+function formatComplex(real: number, imag: number, suffix: string = 'i'): string {
+  if (suffix !== 'i' && suffix !== 'j') {
+    suffix = 'i';
+  }
+
+  // Pure real
+  if (imag === 0) {
+    return String(real);
+  }
+
+  // Pure imaginary
+  if (real === 0) {
+    if (imag === 1) return suffix;
+    if (imag === -1) return '-' + suffix;
+    return imag + suffix;
+  }
+
+  // Complex number
+  const imagAbs = Math.abs(imag);
+  const sign = imag >= 0 ? '+' : '-';
+  
+  if (imagAbs === 1) {
+    return `${real}${sign}${suffix}`;
+  }
+  
+  return `${real}${sign}${imagAbs}${suffix}`;
+}
+
+/**
+ * COMPLEX - Create a complex number from real and imaginary parts
+ * 
+ * @param realNum - Real coefficient
+ * @param iNum - Imaginary coefficient
+ * @param suffix - (Optional) "i" or "j" suffix (default: "i")
+ * @returns Complex number string like "3+4i"
+ * 
+ * @example
+ * COMPLEX(3, 4) → "3+4i"
+ * COMPLEX(3, -4) → "3-4i"
+ * COMPLEX(0, 1) → "i"
+ * COMPLEX(5, 0) → "5"
+ * COMPLEX(3, 4, "j") → "3+4j"
+ */
+export function COMPLEX(realNum: any, iNum: any, suffix?: any): FormulaValue {
+  // Validate inputs
+  const real = Number(realNum);
+  const imag = Number(iNum);
+  
+  if (!Number.isFinite(real) || !Number.isFinite(imag)) {
+    return new Error('#VALUE!');
+  }
+
+  // Validate suffix
+  const suffixStr = suffix !== undefined ? String(suffix).toLowerCase() : 'i';
+  if (suffixStr !== 'i' && suffixStr !== 'j') {
+    return new Error('#VALUE!');
+  }
+
+  return formatComplex(real, imag, suffixStr);
+}
+
+/**
+ * IMREAL - Extract real part from complex number
+ * 
+ * @param inumber - Complex number string
+ * @returns Real coefficient
+ * 
+ * @example
+ * IMREAL("3+4i") → 3
+ * IMREAL("5-2j") → 5
+ * IMREAL("7") → 7
+ * IMREAL("2i") → 0
+ */
+export function IMREAL(inumber: any): FormulaValue {
+  const parsed = parseComplex(String(inumber));
+  if (parsed instanceof Error) return parsed;
+  return parsed.real;
+}
+
+/**
+ * IMAGINARY - Extract imaginary part from complex number
+ * 
+ * @param inumber - Complex number string
+ * @returns Imaginary coefficient
+ * 
+ * @example
+ * IMAGINARY("3+4i") → 4
+ * IMAGINARY("5-2j") → -2
+ * IMAGINARY("7") → 0
+ * IMAGINARY("2i") → 2
+ */
+export function IMAGINARY(inumber: any): FormulaValue {
+  const parsed = parseComplex(String(inumber));
+  if (parsed instanceof Error) return parsed;
+  return parsed.imag;
+}
+
+/**
+ * IMABS - Calculate absolute value (magnitude) of complex number
+ * 
+ * @param inumber - Complex number string
+ * @returns Magnitude = sqrt(real² + imag²)
+ * 
+ * @example
+ * IMABS("3+4i") → 5
+ * IMABS("1+i") → 1.414213562...
+ * IMABS("5") → 5
+ */
+export function IMABS(inumber: any): FormulaValue {
+  const parsed = parseComplex(String(inumber));
+  if (parsed instanceof Error) return parsed;
+  
+  return Math.sqrt(parsed.real * parsed.real + parsed.imag * parsed.imag);
+}
+
+/**
+ * IMARGUMENT - Calculate argument (angle in radians) of complex number
+ * 
+ * @param inumber - Complex number string
+ * @returns Angle in radians (-π to π)
+ * 
+ * @example
+ * IMARGUMENT("1+i") → 0.785398... (π/4)
+ * IMARGUMENT("1+0i") → 0
+ * IMARGUMENT("0+i") → 1.570796... (π/2)
+ * IMARGUMENT("-1+0i") → 3.141592... (π)
+ */
+export function IMARGUMENT(inumber: any): FormulaValue {
+  const parsed = parseComplex(String(inumber));
+  if (parsed instanceof Error) return parsed;
+  
+  // atan2 returns angle in radians
+  return Math.atan2(parsed.imag, parsed.real);
+}
+
+/**
+ * IMCONJUGATE - Calculate complex conjugate
+ * 
+ * @param inumber - Complex number string
+ * @returns Conjugate (real - imag*i)
+ * 
+ * @example
+ * IMCONJUGATE("3+4i") → "3-4i"
+ * IMCONJUGATE("5-2i") → "5+2i"
+ * IMCONJUGATE("7") → "7"
+ * IMCONJUGATE("2i") → "-2i"
+ */
+export function IMCONJUGATE(inumber: any): FormulaValue {
+  const text = String(inumber);
+  const parsed = parseComplex(text);
+  if (parsed instanceof Error) return parsed;
+  
+  // Detect suffix from input
+  const suffix = text.includes('j') ? 'j' : 'i';
+  
+  return formatComplex(parsed.real, -parsed.imag, suffix);
+}

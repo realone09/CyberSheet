@@ -266,7 +266,7 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['INFO', InformationFunctions.INFO, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
   ] as const;
 
-  // Engineering functions (Week 10 Days 3-4)
+  // Engineering functions (Week 10 Days 3-5)
   const engineeringFunctions = [
     // Binary conversions (Day 3)
     ['BIN2DEC', EngineeringFunctions.BIN2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
@@ -290,6 +290,13 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['BITXOR', EngineeringFunctions.BITXOR, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
     ['BITLSHIFT', EngineeringFunctions.BITLSHIFT, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
     ['BITRSHIFT', EngineeringFunctions.BITRSHIFT, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    // Complex numbers (Day 5)
+    ['COMPLEX', EngineeringFunctions.COMPLEX, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 3 }],
+    ['IMREAL', EngineeringFunctions.IMREAL, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMAGINARY', EngineeringFunctions.IMAGINARY, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMABS', EngineeringFunctions.IMABS, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMARGUMENT', EngineeringFunctions.IMARGUMENT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCONJUGATE', EngineeringFunctions.IMCONJUGATE, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
   ] as const;
 
   // Batch register all functions

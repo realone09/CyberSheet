@@ -15,6 +15,7 @@ const {
   HEX2BIN, HEX2DEC, HEX2OCT,
   OCT2BIN, OCT2DEC, OCT2HEX,
   BITAND, BITOR, BITXOR, BITLSHIFT, BITRSHIFT,
+  COMPLEX, IMREAL, IMAGINARY, IMABS, IMARGUMENT, IMCONJUGATE,
 } = EngineeringFunctions;
 
 // Helper for evaluating formulas with engine
@@ -674,6 +675,345 @@ describe('Bitwise Engineering Functions', () => {
       const masked = evaluate(`=BITAND(${shifted}, 7)`);
       
       expect(masked).toBe(5); // bits 2-4 are 101 = 5
+    });
+  });
+});
+
+// ============================================================================
+// COMPLEX NUMBER FUNCTIONS TESTS (Week 10 Day 5)
+// ============================================================================
+
+describe('Complex Number Engineering Functions', () => {
+  describe('COMPLEX', () => {
+    test('should create complex number from real and imaginary parts', () => {
+      expect(COMPLEX(3, 4)).toBe('3+4i');
+    });
+
+    test('should handle negative imaginary part', () => {
+      expect(COMPLEX(3, -4)).toBe('3-4i');
+    });
+
+    test('should handle pure real number', () => {
+      expect(COMPLEX(5, 0)).toBe('5');
+    });
+
+    test('should handle pure imaginary number', () => {
+      expect(COMPLEX(0, 3)).toBe('3i');
+    });
+
+    test('should handle imaginary coefficient of 1', () => {
+      expect(COMPLEX(3, 1)).toBe('3+i');
+    });
+
+    test('should handle imaginary coefficient of -1', () => {
+      expect(COMPLEX(3, -1)).toBe('3-i');
+    });
+
+    test('should handle zero', () => {
+      expect(COMPLEX(0, 0)).toBe('0');
+    });
+
+    test('should support "j" suffix', () => {
+      expect(COMPLEX(3, 4, 'j')).toBe('3+4j');
+    });
+
+    test('should default to "i" suffix', () => {
+      expect(COMPLEX(3, 4)).toBe('3+4i');
+    });
+
+    test('should return #VALUE! for invalid suffix', () => {
+      const result = COMPLEX(3, 4, 'k');
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#VALUE!');
+    });
+
+    test('should return #VALUE! for non-numeric inputs', () => {
+      const result = COMPLEX('abc', 4);
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#VALUE!');
+    });
+
+    test('should handle decimal values', () => {
+      expect(COMPLEX(3.5, 4.7)).toBe('3.5+4.7i');
+    });
+  });
+
+  describe('IMREAL', () => {
+    test('should extract real part from complex number', () => {
+      expect(IMREAL('3+4i')).toBe(3);
+    });
+
+    test('should extract real part with negative imaginary', () => {
+      expect(IMREAL('5-2i')).toBe(5);
+    });
+
+    test('should handle pure real number', () => {
+      expect(IMREAL('7')).toBe(7);
+    });
+
+    test('should return 0 for pure imaginary', () => {
+      expect(IMREAL('2i')).toBe(0);
+      expect(IMREAL('i')).toBe(0);
+    });
+
+    test('should handle "j" suffix', () => {
+      expect(IMREAL('3+4j')).toBe(3);
+    });
+
+    test('should handle negative real part', () => {
+      expect(IMREAL('-3+4i')).toBe(-3);
+    });
+
+    test('should return #NUM! for invalid format', () => {
+      const result = IMREAL('invalid');
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#NUM!');
+    });
+
+    test('should handle decimal values', () => {
+      expect(IMREAL('3.5+4.7i')).toBe(3.5);
+    });
+  });
+
+  describe('IMAGINARY', () => {
+    test('should extract imaginary part from complex number', () => {
+      expect(IMAGINARY('3+4i')).toBe(4);
+    });
+
+    test('should extract negative imaginary part', () => {
+      expect(IMAGINARY('5-2i')).toBe(-2);
+    });
+
+    test('should return 0 for pure real number', () => {
+      expect(IMAGINARY('7')).toBe(0);
+    });
+
+    test('should handle pure imaginary', () => {
+      expect(IMAGINARY('2i')).toBe(2);
+      expect(IMAGINARY('i')).toBe(1);
+      expect(IMAGINARY('-i')).toBe(-1);
+    });
+
+    test('should handle "j" suffix', () => {
+      expect(IMAGINARY('3+4j')).toBe(4);
+    });
+
+    test('should handle negative values', () => {
+      expect(IMAGINARY('-3-4i')).toBe(-4);
+    });
+
+    test('should return #NUM! for invalid format', () => {
+      const result = IMAGINARY('invalid');
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#NUM!');
+    });
+
+    test('should handle decimal values', () => {
+      expect(IMAGINARY('3.5+4.7i')).toBe(4.7);
+    });
+  });
+
+  describe('IMABS', () => {
+    test('should calculate magnitude of complex number', () => {
+      const result = IMABS('3+4i');
+      expect(result).toBe(5); // 3-4-5 triangle
+    });
+
+    test('should calculate magnitude with 1+i', () => {
+      const result = IMABS('1+i');
+      expect(result).toBeCloseTo(Math.sqrt(2), 10);
+    });
+
+    test('should handle pure real number', () => {
+      expect(IMABS('5')).toBe(5);
+    });
+
+    test('should handle pure imaginary', () => {
+      expect(IMABS('3i')).toBe(3);
+    });
+
+    test('should handle negative values', () => {
+      const result = IMABS('-3-4i');
+      expect(result).toBe(5);
+    });
+
+    test('should return 0 for zero', () => {
+      expect(IMABS('0')).toBe(0);
+    });
+
+    test('should handle "j" suffix', () => {
+      expect(IMABS('3+4j')).toBe(5);
+    });
+
+    test('should return #NUM! for invalid format', () => {
+      const result = IMABS('invalid');
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#NUM!');
+    });
+
+    test('should handle decimal values', () => {
+      const result = IMABS('6+8i');
+      expect(result).toBe(10);
+    });
+  });
+
+  describe('IMARGUMENT', () => {
+    test('should calculate argument of 1+i (π/4)', () => {
+      const result = IMARGUMENT('1+i');
+      expect(result).toBeCloseTo(Math.PI / 4, 10);
+    });
+
+    test('should return 0 for positive real number', () => {
+      expect(IMARGUMENT('5')).toBe(0);
+    });
+
+    test('should return π/2 for positive imaginary', () => {
+      const result = IMARGUMENT('i');
+      expect(result).toBeCloseTo(Math.PI / 2, 10);
+    });
+
+    test('should return π for negative real number', () => {
+      const result = IMARGUMENT('-1');
+      expect(result).toBeCloseTo(Math.PI, 10);
+    });
+
+    test('should return -π/2 for negative imaginary', () => {
+      const result = IMARGUMENT('-i');
+      expect(result).toBeCloseTo(-Math.PI / 2, 10);
+    });
+
+    test('should handle complex in quadrant 1', () => {
+      const result = IMARGUMENT('1+1i');
+      expect(result).toBeCloseTo(Math.PI / 4, 10);
+    });
+
+    test('should handle complex in quadrant 2', () => {
+      const result = IMARGUMENT('-1+1i');
+      expect(result).toBeCloseTo(3 * Math.PI / 4, 10);
+    });
+
+    test('should handle complex in quadrant 3', () => {
+      const result = IMARGUMENT('-1-1i');
+      expect(result).toBeCloseTo(-3 * Math.PI / 4, 10);
+    });
+
+    test('should handle complex in quadrant 4', () => {
+      const result = IMARGUMENT('1-1i');
+      expect(result).toBeCloseTo(-Math.PI / 4, 10);
+    });
+
+    test('should handle "j" suffix', () => {
+      const result = IMARGUMENT('1+1j');
+      expect(result).toBeCloseTo(Math.PI / 4, 10);
+    });
+
+    test('should return #NUM! for invalid format', () => {
+      const result = IMARGUMENT('invalid');
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#NUM!');
+    });
+  });
+
+  describe('IMCONJUGATE', () => {
+    test('should calculate conjugate of complex number', () => {
+      expect(IMCONJUGATE('3+4i')).toBe('3-4i');
+    });
+
+    test('should calculate conjugate with negative imaginary', () => {
+      expect(IMCONJUGATE('5-2i')).toBe('5+2i');
+    });
+
+    test('should handle pure real number', () => {
+      expect(IMCONJUGATE('7')).toBe('7');
+    });
+
+    test('should handle pure imaginary', () => {
+      expect(IMCONJUGATE('2i')).toBe('-2i');
+      expect(IMCONJUGATE('i')).toBe('-i');
+    });
+
+    test('should preserve suffix type', () => {
+      expect(IMCONJUGATE('3+4j')).toBe('3-4j');
+      expect(IMCONJUGATE('3+4i')).toBe('3-4i');
+    });
+
+    test('should handle negative real part', () => {
+      expect(IMCONJUGATE('-3+4i')).toBe('-3-4i');
+    });
+
+    test('should handle both negative parts', () => {
+      expect(IMCONJUGATE('-3-4i')).toBe('-3+4i');
+    });
+
+    test('should return #NUM! for invalid format', () => {
+      const result = IMCONJUGATE('invalid');
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toBe('#NUM!');
+    });
+
+    test('should handle decimal values', () => {
+      expect(IMCONJUGATE('3.5+4.7i')).toBe('3.5-4.7i');
+    });
+  });
+
+  describe('Complex number integration tests', () => {
+    test('COMPLEX then IMREAL/IMAGINARY should extract parts', () => {
+      const complex = COMPLEX(3, 4);
+      expect(IMREAL(complex as string)).toBe(3);
+      expect(IMAGINARY(complex as string)).toBe(4);
+    });
+
+    test('magnitude of conjugate equals magnitude of original', () => {
+      const original = '3+4i';
+      const conjugate = IMCONJUGATE(original);
+      expect(IMABS(original)).toBe(IMABS(conjugate as string));
+    });
+
+    test('argument of conjugate is negative of original', () => {
+      const original = '3+4i';
+      const conjugate = IMCONJUGATE(original) as string;
+      const argOriginal = IMARGUMENT(original) as number;
+      const argConjugate = IMARGUMENT(conjugate) as number;
+      expect(argConjugate).toBeCloseTo(-argOriginal, 10);
+    });
+
+    test('double conjugate returns original', () => {
+      const original = '3+4i';
+      const conj1 = IMCONJUGATE(original) as string;
+      const conj2 = IMCONJUGATE(conj1);
+      expect(conj2).toBe(original);
+    });
+
+    test('Pythagorean theorem: 3-4-5 triangle', () => {
+      const complex = '3+4i';
+      const real = IMREAL(complex) as number;
+      const imag = IMAGINARY(complex) as number;
+      const magnitude = IMABS(complex) as number;
+      
+      expect(Math.sqrt(real * real + imag * imag)).toBe(magnitude);
+      expect(magnitude).toBe(5);
+    });
+
+    test('argument and magnitude conversion', () => {
+      // For 1+i: magnitude = √2, argument = π/4
+      const complex = '1+i';
+      const mag = IMABS(complex) as number;
+      const arg = IMARGUMENT(complex) as number;
+      
+      // Verify: real = mag * cos(arg), imag = mag * sin(arg)
+      const real = mag * Math.cos(arg);
+      const imag = mag * Math.sin(arg);
+      
+      expect(real).toBeCloseTo(1, 10);
+      expect(imag).toBeCloseTo(1, 10);
+    });
+
+    test('all formats parse correctly', () => {
+      expect(IMREAL('3+4i')).toBe(3);
+      expect(IMREAL('3+4j')).toBe(3);
+      expect(IMREAL('3-4i')).toBe(3);
+      expect(IMREAL('-3+4i')).toBe(-3);
+      expect(IMREAL('-3-4i')).toBe(-3);
     });
   });
 });
