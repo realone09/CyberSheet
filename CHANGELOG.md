@@ -7,7 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Week 11 Days 1-3: Information, Math, and Text Enhancement Functions
+### Added - Week 11 Days 1-4: Information, Math, Text, and Engineering Functions
+
+#### Week 11 Day 4: Engineering Advanced Functions - Complex Number Operations (20 functions, 74 tests)
+- **Complex Number Arithmetic (4 functions)**:
+  - **IMADD**: Add two complex numbers `(a+bi) + (c+di)`
+  - **IMSUB**: Subtract two complex numbers `(a+bi) - (c+di)`
+  - **IMMULT**: Multiply two complex numbers `(a+bi) × (c+di)`
+  - **IMDIV**: Divide two complex numbers `(a+bi) / (c+di)`
+- **Power and Root Operations (2 functions)**:
+  - **IMPOWER**: Raise complex number to a power using polar form
+  - **IMSQRT**: Calculate square root of complex number
+- **Exponential and Logarithmic Functions (4 functions)**:
+  - **IMEXP**: Exponential of complex number (e^z using Euler's formula)
+  - **IMLN**: Natural logarithm of complex number
+  - **IMLOG10**: Base-10 logarithm of complex number
+  - **IMLOG2**: Base-2 logarithm of complex number
+- **Trigonometric Functions (6 functions)**:
+  - **IMSIN**: Sine of complex number
+  - **IMCOS**: Cosine of complex number
+  - **IMTAN**: Tangent of complex number (sin/cos)
+  - **IMSEC**: Secant of complex number (1/cos)
+  - **IMCSC**: Cosecant of complex number (1/sin)
+  - **IMCOT**: Cotangent of complex number (cos/sin)
+- **Hyperbolic Functions (4 functions)**:
+  - **IMSINH**: Hyperbolic sine of complex number
+  - **IMCOSH**: Hyperbolic cosine of complex number
+  - **IMSECH**: Hyperbolic secant of complex number (1/cosh)
+  - **IMCSCH**: Hyperbolic cosecant of complex number (1/sinh)
+- All 74 tests passing (100%)
+- Full Excel compatibility with 'i' and 'j' suffix support
+- Proper error handling for division by zero and invalid inputs
+- Uses standard complex number mathematical formulas
+- Complete JSDoc documentation with examples
 
 #### Week 11 Day 1: Information & Type Checking Functions (8 functions, 54 tests)
 - **ISNUMBER**: Check if value is a number

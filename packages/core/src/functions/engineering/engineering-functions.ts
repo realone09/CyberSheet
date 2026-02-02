@@ -865,3 +865,655 @@ export function IMCONJUGATE(inumber: any): FormulaValue {
   
   return formatComplex(parsed.real, -parsed.imag, suffix);
 }
+
+// ============================================================================
+// Week 11 Day 4: Complex Number Arithmetic Operations
+// ============================================================================
+
+/**
+ * IMADD - Add two complex numbers
+ * 
+ * Syntax: IMADD(inumber1, inumber2)
+ * 
+ * @param inumber1 - First complex number
+ * @param inumber2 - Second complex number
+ * @returns Sum of complex numbers
+ * 
+ * Examples:
+ * - IMADD("3+4i", "1+2i") → "4+6i"
+ * - IMADD("5-2i", "1+3i") → "6+i"
+ * - IMADD("2+3i", "4") → "6+3i"
+ * - IMADD("1+i", "-1-i") → "0"
+ * 
+ * Notes:
+ * - (a+bi) + (c+di) = (a+c) + (b+d)i
+ * - Handles both 'i' and 'j' suffixes
+ * - Result uses suffix from first number
+ */
+export function IMADD(inumber1: any, inumber2: any): FormulaValue {
+  const num1 = parseComplex(String(inumber1));
+  const num2 = parseComplex(String(inumber2));
+  
+  if (num1 instanceof Error) return num1;
+  if (num2 instanceof Error) return num2;
+  
+  // Detect suffix from first input
+  const suffix = String(inumber1).includes('j') ? 'j' : 'i';
+  
+  const realPart = num1.real + num2.real;
+  const imagPart = num1.imag + num2.imag;
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMSUB - Subtract two complex numbers
+ * 
+ * Syntax: IMSUB(inumber1, inumber2)
+ * 
+ * @param inumber1 - Complex number to subtract from
+ * @param inumber2 - Complex number to subtract
+ * @returns Difference of complex numbers
+ * 
+ * Examples:
+ * - IMSUB("5+7i", "2+3i") → "3+4i"
+ * - IMSUB("4+2i", "1-3i") → "3+5i"
+ * - IMSUB("6", "2+3i") → "4-3i"
+ * - IMSUB("3+4i", "3+4i") → "0"
+ * 
+ * Notes:
+ * - (a+bi) - (c+di) = (a-c) + (b-d)i
+ * - Result uses suffix from first number
+ */
+export function IMSUB(inumber1: any, inumber2: any): FormulaValue {
+  const num1 = parseComplex(String(inumber1));
+  const num2 = parseComplex(String(inumber2));
+  
+  if (num1 instanceof Error) return num1;
+  if (num2 instanceof Error) return num2;
+  
+  const suffix = String(inumber1).includes('j') ? 'j' : 'i';
+  
+  const realPart = num1.real - num2.real;
+  const imagPart = num1.imag - num2.imag;
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMMULT - Multiply two complex numbers
+ * 
+ * Syntax: IMMULT(inumber1, inumber2)
+ * 
+ * @param inumber1 - First complex number
+ * @param inumber2 - Second complex number
+ * @returns Product of complex numbers
+ * 
+ * Examples:
+ * - IMMULT("3+4i", "2+i") → "2+11i"
+ * - IMMULT("1+i", "1-i") → "2"
+ * - IMMULT("2+3i", "4") → "8+12i"
+ * - IMMULT("i", "i") → "-1"
+ * 
+ * Notes:
+ * - (a+bi) × (c+di) = (ac-bd) + (ad+bc)i
+ * - Remember: i² = -1
+ * - Result uses suffix from first number
+ */
+export function IMMULT(inumber1: any, inumber2: any): FormulaValue {
+  const num1 = parseComplex(String(inumber1));
+  const num2 = parseComplex(String(inumber2));
+  
+  if (num1 instanceof Error) return num1;
+  if (num2 instanceof Error) return num2;
+  
+  const suffix = String(inumber1).includes('j') ? 'j' : 'i';
+  
+  // (a+bi)(c+di) = (ac-bd) + (ad+bc)i
+  const realPart = num1.real * num2.real - num1.imag * num2.imag;
+  const imagPart = num1.real * num2.imag + num1.imag * num2.real;
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMDIV - Divide two complex numbers
+ * 
+ * Syntax: IMDIV(inumber1, inumber2)
+ * 
+ * @param inumber1 - Numerator (complex number)
+ * @param inumber2 - Denominator (complex number)
+ * @returns Quotient of complex numbers
+ * 
+ * Examples:
+ * - IMDIV("6+8i", "2") → "3+4i"
+ * - IMDIV("2+3i", "1+i") → "2.5+0.5i"
+ * - IMDIV("1", "i") → "-i"
+ * - IMDIV("5+5i", "2-i") → "1+3i"
+ * 
+ * Notes:
+ * - (a+bi) / (c+di) = [(ac+bd) + (bc-ad)i] / (c²+d²)
+ * - Returns #NUM! if divisor is zero
+ * - Result uses suffix from first number
+ */
+export function IMDIV(inumber1: any, inumber2: any): FormulaValue {
+  const num1 = parseComplex(String(inumber1));
+  const num2 = parseComplex(String(inumber2));
+  
+  if (num1 instanceof Error) return num1;
+  if (num2 instanceof Error) return num2;
+  
+  const suffix = String(inumber1).includes('j') ? 'j' : 'i';
+  
+  // Check for division by zero
+  const denominator = num2.real * num2.real + num2.imag * num2.imag;
+  if (denominator === 0) {
+    return new Error('#NUM!');
+  }
+  
+  // (a+bi) / (c+di) = [(ac+bd) + (bc-ad)i] / (c²+d²)
+  const realPart = (num1.real * num2.real + num1.imag * num2.imag) / denominator;
+  const imagPart = (num1.imag * num2.real - num1.real * num2.imag) / denominator;
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMPOWER - Raise complex number to a power
+ * 
+ * Syntax: IMPOWER(inumber, number)
+ * 
+ * @param inumber - Complex number base
+ * @param number - Real number exponent
+ * @returns Complex number raised to power
+ * 
+ * Examples:
+ * - IMPOWER("2+3i", 2) → "-5+12i"
+ * - IMPOWER("i", 2) → "-1"
+ * - IMPOWER("1+i", 0) → "1"
+ * - IMPOWER("2+2i", 0.5) → "1.55377...+0.64359...i"
+ * 
+ * Notes:
+ * - Uses polar form: (r·e^(iθ))^n = r^n·e^(inθ)
+ * - For integer powers, equivalent to repeated multiplication
+ * - Result uses suffix from input number
+ */
+export function IMPOWER(inumber: any, number: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const power = Number(number);
+  if (!Number.isFinite(power)) {
+    return new Error('#VALUE!');
+  }
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // Special case: power of 0
+  if (power === 0) {
+    return formatComplex(1, 0, suffix);
+  }
+  
+  // Convert to polar form
+  const r = Math.sqrt(complex.real * complex.real + complex.imag * complex.imag);
+  const theta = Math.atan2(complex.imag, complex.real);
+  
+  // Apply power: (r·e^(iθ))^n = r^n·e^(inθ)
+  const newR = Math.pow(r, power);
+  const newTheta = theta * power;
+  
+  // Convert back to rectangular form
+  const realPart = newR * Math.cos(newTheta);
+  const imagPart = newR * Math.sin(newTheta);
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMSQRT - Calculate square root of complex number
+ * 
+ * Syntax: IMSQRT(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Principal square root
+ * 
+ * Examples:
+ * - IMSQRT("-1") → "i"
+ * - IMSQRT("4") → "2"
+ * - IMSQRT("3+4i") → "2+i"
+ * - IMSQRT("-4") → "2i"
+ * 
+ * Notes:
+ * - Returns principal (positive real part) square root
+ * - Equivalent to IMPOWER(inumber, 0.5)
+ * - Result uses suffix from input number
+ */
+export function IMSQRT(inumber: any): FormulaValue {
+  return IMPOWER(inumber, 0.5);
+}
+
+/**
+ * IMEXP - Calculate exponential of complex number (e^z)
+ * 
+ * Syntax: IMEXP(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns e raised to the complex number
+ * 
+ * Examples:
+ * - IMEXP("0") → "1"
+ * - IMEXP("1") → "2.71828..." (e)
+ * - IMEXP("i") → "0.54030...+0.84147...i" (cos(1)+i·sin(1))
+ * - IMEXP("1+i") → "1.46869...+2.28736...i"
+ * 
+ * Notes:
+ * - e^(a+bi) = e^a · (cos(b) + i·sin(b))
+ * - Euler's formula: e^(iθ) = cos(θ) + i·sin(θ)
+ * - Result uses suffix from input number
+ */
+export function IMEXP(inumber: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // e^(a+bi) = e^a · (cos(b) + i·sin(b))
+  const expReal = Math.exp(complex.real);
+  const realPart = expReal * Math.cos(complex.imag);
+  const imagPart = expReal * Math.sin(complex.imag);
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMLN - Calculate natural logarithm of complex number
+ * 
+ * Syntax: IMLN(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Natural logarithm (principal value)
+ * 
+ * Examples:
+ * - IMLN("1") → "0"
+ * - IMLN("e") → "1"  (where e ≈ 2.71828)
+ * - IMLN("i") → "1.57079...i" (i·π/2)
+ * - IMLN("2+2i") → "1.03972...+0.78539...i"
+ * 
+ * Notes:
+ * - ln(a+bi) = ln(r) + i·θ where r=|a+bi|, θ=arg(a+bi)
+ * - Returns principal value (−π < Im(result) ≤ π)
+ * - Returns #NUM! for zero
+ * - Result uses suffix from input number
+ */
+export function IMLN(inumber: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // Check for zero
+  if (complex.real === 0 && complex.imag === 0) {
+    return new Error('#NUM!');
+  }
+  
+  // ln(a+bi) = ln(r) + i·θ
+  const r = Math.sqrt(complex.real * complex.real + complex.imag * complex.imag);
+  const theta = Math.atan2(complex.imag, complex.real);
+  
+  const realPart = Math.log(r);
+  const imagPart = theta;
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMLOG10 - Calculate base-10 logarithm of complex number
+ * 
+ * Syntax: IMLOG10(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Base-10 logarithm
+ * 
+ * Examples:
+ * - IMLOG10("10") → "1"
+ * - IMLOG10("100") → "2"
+ * - IMLOG10("i") → "0.68218...i"
+ * - IMLOG10("1+i") → "0.15051...+0.34109...i"
+ * 
+ * Notes:
+ * - log₁₀(z) = ln(z) / ln(10)
+ * - Returns #NUM! for zero
+ * - Result uses suffix from input number
+ */
+export function IMLOG10(inumber: any): FormulaValue {
+  const lnResult = IMLN(inumber);
+  if (lnResult instanceof Error) return lnResult;
+  
+  // Parse the ln result and divide by ln(10)
+  const complex = parseComplex(String(lnResult));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  const ln10 = Math.log(10);
+  
+  return formatComplex(complex.real / ln10, complex.imag / ln10, suffix);
+}
+
+/**
+ * IMLOG2 - Calculate base-2 logarithm of complex number
+ * 
+ * Syntax: IMLOG2(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Base-2 logarithm
+ * 
+ * Examples:
+ * - IMLOG2("2") → "1"
+ * - IMLOG2("8") → "3"
+ * - IMLOG2("i") → "0+2.26618...i"
+ * - IMLOG2("1+i") → "0.5+1.13309...i"
+ * 
+ * Notes:
+ * - log₂(z) = ln(z) / ln(2)
+ * - Returns #NUM! for zero
+ * - Result uses suffix from input number
+ */
+export function IMLOG2(inumber: any): FormulaValue {
+  const lnResult = IMLN(inumber);
+  if (lnResult instanceof Error) return lnResult;
+  
+  const complex = parseComplex(String(lnResult));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  const ln2 = Math.log(2);
+  
+  return formatComplex(complex.real / ln2, complex.imag / ln2, suffix);
+}
+
+/**
+ * IMSIN - Calculate sine of complex number
+ * 
+ * Syntax: IMSIN(inumber)
+ * 
+ * @param inumber - Complex number (angle in radians)
+ * @returns Sine of complex number
+ * 
+ * Examples:
+ * - IMSIN("0") → "0"
+ * - IMSIN("1.5707963...") → "1" (sin(π/2))
+ * - IMSIN("i") → "1.17520...i"
+ * - IMSIN("1+i") → "1.29846...+0.63496...i"
+ * 
+ * Notes:
+ * - sin(a+bi) = sin(a)cosh(b) + i·cos(a)sinh(b)
+ * - Result uses suffix from input number
+ */
+export function IMSIN(inumber: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // sin(a+bi) = sin(a)cosh(b) + i·cos(a)sinh(b)
+  const realPart = Math.sin(complex.real) * Math.cosh(complex.imag);
+  const imagPart = Math.cos(complex.real) * Math.sinh(complex.imag);
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMCOS - Calculate cosine of complex number
+ * 
+ * Syntax: IMCOS(inumber)
+ * 
+ * @param inumber - Complex number (angle in radians)
+ * @returns Cosine of complex number
+ * 
+ * Examples:
+ * - IMCOS("0") → "1"
+ * - IMCOS("3.14159...") → "-1" (cos(π))
+ * - IMCOS("i") → "1.54308..."
+ * - IMCOS("1+i") → "0.83373...-0.98889...i"
+ * 
+ * Notes:
+ * - cos(a+bi) = cos(a)cosh(b) - i·sin(a)sinh(b)
+ * - Result uses suffix from input number
+ */
+export function IMCOS(inumber: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // cos(a+bi) = cos(a)cosh(b) - i·sin(a)sinh(b)
+  const realPart = Math.cos(complex.real) * Math.cosh(complex.imag);
+  const imagPart = -Math.sin(complex.real) * Math.sinh(complex.imag);
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMTAN - Calculate tangent of complex number
+ * 
+ * Syntax: IMTAN(inumber)
+ * 
+ * @param inumber - Complex number (angle in radians)
+ * @returns Tangent of complex number
+ * 
+ * Examples:
+ * - IMTAN("0") → "0"
+ * - IMTAN("0.78539...") → "1" (tan(π/4))
+ * - IMTAN("i") → "0.76159...i"
+ * - IMTAN("1+i") → "0.27175...+1.08392...i"
+ * 
+ * Notes:
+ * - tan(z) = sin(z) / cos(z)
+ * - Result uses suffix from input number
+ */
+export function IMTAN(inumber: any): FormulaValue {
+  const sinResult = IMSIN(inumber);
+  const cosResult = IMCOS(inumber);
+  
+  if (sinResult instanceof Error) return sinResult;
+  if (cosResult instanceof Error) return cosResult;
+  
+  return IMDIV(sinResult, cosResult);
+}
+
+/**
+ * IMSEC - Calculate secant of complex number
+ * 
+ * Syntax: IMSEC(inumber)
+ * 
+ * @param inumber - Complex number (angle in radians)
+ * @returns Secant of complex number (1/cos(z))
+ * 
+ * Examples:
+ * - IMSEC("0") → "1"
+ * - IMSEC("1") → "1.85081..."
+ * - IMSEC("i") → "0.64805..."
+ * - IMSEC("1+i") → "0.49833...+0.59108...i"
+ * 
+ * Notes:
+ * - sec(z) = 1 / cos(z)
+ * - Returns #NUM! when cos(z) = 0
+ * - Result uses suffix from input number
+ */
+export function IMSEC(inumber: any): FormulaValue {
+  const cosResult = IMCOS(inumber);
+  if (cosResult instanceof Error) return cosResult;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  return IMDIV(formatComplex(1, 0, suffix), cosResult);
+}
+
+/**
+ * IMCSC - Calculate cosecant of complex number
+ * 
+ * Syntax: IMCSC(inumber)
+ * 
+ * @param inumber - Complex number (angle in radians)
+ * @returns Cosecant of complex number (1/sin(z))
+ * 
+ * Examples:
+ * - IMCSC("1.5707963...") → "1" (csc(π/2))
+ * - IMCSC("1") → "1.18839..."
+ * - IMCSC("i") → "-0.85091...i"
+ * - IMCSC("1+i") → "0.62151...-0.30393...i"
+ * 
+ * Notes:
+ * - csc(z) = 1 / sin(z)
+ * - Returns #NUM! when sin(z) = 0
+ * - Result uses suffix from input number
+ */
+export function IMCSC(inumber: any): FormulaValue {
+  const sinResult = IMSIN(inumber);
+  if (sinResult instanceof Error) return sinResult;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  return IMDIV(formatComplex(1, 0, suffix), sinResult);
+}
+
+/**
+ * IMCOT - Calculate cotangent of complex number
+ * 
+ * Syntax: IMCOT(inumber)
+ * 
+ * @param inumber - Complex number (angle in radians)
+ * @returns Cotangent of complex number (cos(z)/sin(z))
+ * 
+ * Examples:
+ * - IMCOT("0.78539...") → "1" (cot(π/4))
+ * - IMCOT("1") → "0.64209..."
+ * - IMCOT("i") → "-1.31303...i"
+ * - IMCOT("1+i") → "0.21762...-0.86801...i"
+ * 
+ * Notes:
+ * - cot(z) = cos(z) / sin(z) = 1 / tan(z)
+ * - Returns #NUM! when sin(z) = 0
+ * - Result uses suffix from input number
+ */
+export function IMCOT(inumber: any): FormulaValue {
+  const cosResult = IMCOS(inumber);
+  const sinResult = IMSIN(inumber);
+  
+  if (cosResult instanceof Error) return cosResult;
+  if (sinResult instanceof Error) return sinResult;
+  
+  return IMDIV(cosResult, sinResult);
+}
+
+/**
+ * IMSINH - Calculate hyperbolic sine of complex number
+ * 
+ * Syntax: IMSINH(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Hyperbolic sine
+ * 
+ * Examples:
+ * - IMSINH("0") → "0"
+ * - IMSINH("1") → "1.17520..."
+ * - IMSINH("i") → "0.84147...i"
+ * - IMSINH("1+i") → "0.63496...+1.29846...i"
+ * 
+ * Notes:
+ * - sinh(a+bi) = sinh(a)cos(b) + i·cosh(a)sin(b)
+ * - Result uses suffix from input number
+ */
+export function IMSINH(inumber: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // sinh(a+bi) = sinh(a)cos(b) + i·cosh(a)sin(b)
+  const realPart = Math.sinh(complex.real) * Math.cos(complex.imag);
+  const imagPart = Math.cosh(complex.real) * Math.sin(complex.imag);
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMCOSH - Calculate hyperbolic cosine of complex number
+ * 
+ * Syntax: IMCOSH(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Hyperbolic cosine
+ * 
+ * Examples:
+ * - IMCOSH("0") → "1"
+ * - IMCOSH("1") → "1.54308..."
+ * - IMCOSH("i") → "0.54030..."
+ * - IMCOSH("1+i") → "0.83373...+0.98889...i"
+ * 
+ * Notes:
+ * - cosh(a+bi) = cosh(a)cos(b) + i·sinh(a)sin(b)
+ * - Result uses suffix from input number
+ */
+export function IMCOSH(inumber: any): FormulaValue {
+  const complex = parseComplex(String(inumber));
+  if (complex instanceof Error) return complex;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  
+  // cosh(a+bi) = cosh(a)cos(b) + i·sinh(a)sin(b)
+  const realPart = Math.cosh(complex.real) * Math.cos(complex.imag);
+  const imagPart = Math.sinh(complex.real) * Math.sin(complex.imag);
+  
+  return formatComplex(realPart, imagPart, suffix);
+}
+
+/**
+ * IMSECH - Calculate hyperbolic secant of complex number
+ * 
+ * Syntax: IMSECH(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Hyperbolic secant (1/cosh(z))
+ * 
+ * Examples:
+ * - IMSECH("0") → "1"
+ * - IMSECH("1") → "0.64805..."
+ * - IMSECH("i") → "1.85081..."
+ * - IMSECH("1+i") → "0.49833...-0.59108...i"
+ * 
+ * Notes:
+ * - sech(z) = 1 / cosh(z)
+ * - Result uses suffix from input number
+ */
+export function IMSECH(inumber: any): FormulaValue {
+  const coshResult = IMCOSH(inumber);
+  if (coshResult instanceof Error) return coshResult;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  return IMDIV(formatComplex(1, 0, suffix), coshResult);
+}
+
+/**
+ * IMCSCH - Calculate hyperbolic cosecant of complex number
+ * 
+ * Syntax: IMCSCH(inumber)
+ * 
+ * @param inumber - Complex number
+ * @returns Hyperbolic cosecant (1/sinh(z))
+ * 
+ * Examples:
+ * - IMCSCH("1") → "0.85091..."
+ * - IMCSCH("i") → "-1.18839...i"
+ * - IMCSCH("1+i") → "0.30393...-0.62151...i"
+ * 
+ * Notes:
+ * - csch(z) = 1 / sinh(z)
+ * - Returns #NUM! when sinh(z) = 0
+ * - Result uses suffix from input number
+ */
+export function IMCSCH(inumber: any): FormulaValue {
+  const sinhResult = IMSINH(inumber);
+  if (sinhResult instanceof Error) return sinhResult;
+  
+  const suffix = String(inumber).includes('j') ? 'j' : 'i';
+  return IMDIV(formatComplex(1, 0, suffix), sinhResult);
+}

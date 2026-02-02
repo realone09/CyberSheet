@@ -325,6 +325,27 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['IMABS', EngineeringFunctions.IMABS, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
     ['IMARGUMENT', EngineeringFunctions.IMARGUMENT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
     ['IMCONJUGATE', EngineeringFunctions.IMCONJUGATE, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    // Week 11 Day 4: Complex Number Arithmetic
+    ['IMADD', EngineeringFunctions.IMADD, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMSUB', EngineeringFunctions.IMSUB, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMMULT', EngineeringFunctions.IMMULT, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMDIV', EngineeringFunctions.IMDIV, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMPOWER', EngineeringFunctions.IMPOWER, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMSQRT', EngineeringFunctions.IMSQRT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMEXP', EngineeringFunctions.IMEXP, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMLN', EngineeringFunctions.IMLN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMLOG10', EngineeringFunctions.IMLOG10, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMLOG2', EngineeringFunctions.IMLOG2, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSIN', EngineeringFunctions.IMSIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCOS', EngineeringFunctions.IMCOS, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMTAN', EngineeringFunctions.IMTAN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSEC', EngineeringFunctions.IMSEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCSC', EngineeringFunctions.IMCSC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCOT', EngineeringFunctions.IMCOT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSINH', EngineeringFunctions.IMSINH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCOSH', EngineeringFunctions.IMCOSH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSECH', EngineeringFunctions.IMSECH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCSCH', EngineeringFunctions.IMCSCH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
   ] as const;
 
   // Batch register all functions
