@@ -102,6 +102,16 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['REPT', TextFunctions.REPT, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 2 }],
     ['TEXTJOIN', TextFunctions.TEXTJOIN, { category: FunctionCategory.TEXT, minArgs: 2 }],
     ['TEXTSPLIT', TextFunctions.TEXTSPLIT, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 6 }],
+    // Week 11 Day 3: Text Enhancement Functions
+    ['CONCAT', TextFunctions.CONCAT, { category: FunctionCategory.TEXT }],
+    ['PROPER', TextFunctions.PROPER, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['CLEAN', TextFunctions.CLEAN, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['UNICHAR', TextFunctions.UNICHAR, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['UNICODE', TextFunctions.UNICODE, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['DOLLAR', TextFunctions.DOLLAR, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 2 }],
+    ['FIXED', TextFunctions.FIXED, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 3 }],
+    ['TEXTBEFORE', TextFunctions.TEXTBEFORE, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 6 }],
+    ['TEXTAFTER', TextFunctions.TEXTAFTER, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 6 }],
   ] as const;
 
   // Logical functions

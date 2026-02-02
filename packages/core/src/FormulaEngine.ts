@@ -1130,7 +1130,9 @@ export class FormulaEngine {
                         'NPV', 'XNPV', 'PV', 'FV', 'PMT', 'IPMT', 'PPMT',
                         'IRR', 'XIRR', 'MIRR', 'NPER', 'RATE', 'EFFECT', 'NOMINAL',
                         // Math array functions (Week 11 Day 2)
-                        'PRODUCT', 'SUMPRODUCT', 'SUMX2MY2', 'SUMX2PY2', 'SUMXMY2'];
+                        'PRODUCT', 'SUMPRODUCT', 'SUMX2MY2', 'SUMX2PY2', 'SUMXMY2',
+                        // Text array functions (Week 11 Day 3)
+                        'CONCAT', 'CONCATENATE'];
     return arrayFuncs.includes(name.toUpperCase());
   }
 
