@@ -20,6 +20,7 @@ import * as FunctionalFunctions from './functional';
 import * as FinancialFunctions from './financial';
 import * as InformationFunctions from './information';
 import * as EngineeringFunctions from './engineering';
+import * as DatabaseFunctions from './database';
 
 /**
  * Register all built-in functions
@@ -248,6 +249,19 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['POISSON', StatisticalFunctions.POISSON, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
     ['EXPON.DIST', StatisticalFunctions.EXPON_DIST, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
     ['EXPONDIST', StatisticalFunctions.EXPONDIST, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+
+    // Database functions (Week 11 Day 6)
+    ['DSUM', DatabaseFunctions.DSUM, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DAVERAGE', DatabaseFunctions.DAVERAGE, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DCOUNT', DatabaseFunctions.DCOUNT, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DCOUNTA', DatabaseFunctions.DCOUNTA, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DMAX', DatabaseFunctions.DMAX, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DMIN', DatabaseFunctions.DMIN, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DGET', DatabaseFunctions.DGET, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DSTDEV', DatabaseFunctions.DSTDEV, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DSTDEVP', DatabaseFunctions.DSTDEVP, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DVAR', DatabaseFunctions.DVAR, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+
     ['COUNTBLANK', StatisticalFunctions.COUNTBLANK, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
     ['COUNTIF', StatisticalFunctions.COUNTIF, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
     ['SUMIF', StatisticalFunctions.SUMIF, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],

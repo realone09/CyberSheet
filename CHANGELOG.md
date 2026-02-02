@@ -7,7 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Week 11 Days 1-5: Information, Math, Text, Engineering, and Statistical Distribution Functions
+### Added - Week 11 Days 1-6: Information, Math, Text, Engineering, Statistical, and Database Functions
+
+#### Week 11 Day 6: Database Functions (10 functions, 60 tests, 100% pass rate)
+- **Aggregation Functions (2 functions)**:
+  - **DSUM**: Sum values in database column matching criteria (conditional sum with wildcards/operators)
+  - **DAVERAGE**: Average values in database column matching criteria (ignores non-numeric)
+- **Counting Functions (2 functions)**:
+  - **DCOUNT**: Count numeric values matching criteria (excludes text and empty cells)
+  - **DCOUNTA**: Count all non-empty values matching criteria (includes text and numbers)
+- **Min/Max Functions (2 functions)**:
+  - **DMAX**: Find maximum value matching criteria (returns 0 if no numeric matches)
+  - **DMIN**: Find minimum value matching criteria (returns 0 if no numeric matches)
+- **Extraction Function (1 function)**:
+  - **DGET**: Extract single value matching criteria (#NUM! if multiple, #VALUE! if none)
+- **Statistical Functions (3 functions)**:
+  - **DSTDEV**: Sample standard deviation (n-1 denominator, requires ≥2 values)
+  - **DSTDEVP**: Population standard deviation (n denominator, requires ≥1 value)
+  - **DVAR**: Sample variance (n-1 denominator, requires ≥2 values)
+- **Implementation Highlights**:
+  - Helper functions: validateDatabase, resolveField, matchesCriterion, matchesCriteriaRow, filterDatabase
+  - **Criteria Matching Features**:
+    * Wildcards: `*` (any characters), `?` (single character)
+    * Comparison operators: `>`, `<`, `>=`, `<=`, `<>`, `=`
+    * Case-insensitive text matching
+    * AND logic within criteria row (multiple columns)
+    * OR logic between criteria rows (multiple rows)
+    * Field specification by name (string) or 1-based index (number)
+  - Database structure: First row = headers, subsequent rows = data
+  - Criteria structure: First row = field names, subsequent rows = values
+  - Excel-compatible behavior: DCOUNT excludes empty strings, DCOUNTA includes all non-empty
+  - 60 comprehensive tests: unit tests, integration tests, wildcard patterns, operator combinations
+  - All tests passing (100% pass rate maintained across Week 11)
+  - Added DATABASE category to FunctionCategory enum
 
 #### Week 11 Day 5: Statistical Distribution Functions (10 functions, 58 tests, 100% pass rate)
 - **Normal Distribution Functions (4 functions)**:

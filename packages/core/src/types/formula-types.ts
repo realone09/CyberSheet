@@ -85,6 +85,7 @@ export enum FunctionCategory {
   LOGICAL = 'LOGICAL',
   ARRAY = 'ARRAY',
   STATISTICAL = 'STATISTICAL',
+  DATABASE = 'DATABASE',
   LOOKUP = 'LOOKUP',
   LAMBDA = 'LAMBDA',
   DATE_TIME = 'DATE_TIME',
