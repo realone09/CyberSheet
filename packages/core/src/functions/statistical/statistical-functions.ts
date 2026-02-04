@@ -2078,3 +2078,417 @@ export function EXPON_DIST(x: any, lambda: any, cumulative: any): FormulaValue {
 export function EXPONDIST(x: any, lambda: any, cumulative: any): FormulaValue {
   return EXPON_DIST(x, lambda, cumulative);
 }
+
+// ============================================================================
+// Week 11 Day 7: A-Variant Statistical Functions
+// ============================================================================
+
+/**
+ * Helper to convert value to number with A-variant logic
+ * TRUE → 1, FALSE → 0, text → 0, empty → skip
+ */
+function toNumberA(value: FormulaValue): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (typeof value === 'string') return 0; // Text treated as 0
+  if (typeof value === 'number') return value;
+  return null;
+}
+
+/**
+ * MAXA - Maximum value including text and logical values
+ * 
+ * Syntax: MAXA(value1, [value2], ...)
+ * 
+ * @param values - Values to find maximum from
+ * @returns Maximum value (TRUE=1, FALSE/text=0, empty=ignored)
+ * 
+ * Examples:
+ * - MAXA(5, 10, TRUE, FALSE, "text", 3) → 10
+ * - MAXA(TRUE, TRUE, TRUE) → 1
+ * - MAXA(FALSE, "text", -1) → 0
+ * 
+ * Notes:
+ * - Unlike MAX, includes logical and text values
+ * - TRUE counted as 1, FALSE and text as 0
+ * - Empty cells ignored
+ */
+export const MAXA: FormulaFunction = (...values) => {
+  const flattened = flattenArray(values);
+  const nums: number[] = [];
+  
+  for (const val of flattened) {
+    const num = toNumberA(val);
+    if (num !== null) nums.push(num);
+  }
+  
+  if (nums.length === 0) {
+    return new Error('#VALUE!');
+  }
+  
+  return Math.max(...nums);
+};
+
+/**
+ * MINA - Minimum value including text and logical values
+ * 
+ * Syntax: MINA(value1, [value2], ...)
+ * 
+ * @param values - Values to find minimum from
+ * @returns Minimum value (TRUE=1, FALSE/text=0, empty=ignored)
+ * 
+ * Examples:
+ * - MINA(5, 10, TRUE, FALSE, "text", 3) → 0
+ * - MINA(10, 20, TRUE) → 1
+ * - MINA(5, 10, 15) → 5
+ * 
+ * Notes:
+ * - Unlike MIN, includes logical and text values
+ * - TRUE counted as 1, FALSE and text as 0
+ */
+export const MINA: FormulaFunction = (...values) => {
+  const flattened = flattenArray(values);
+  const nums: number[] = [];
+  
+  for (const val of flattened) {
+    const num = toNumberA(val);
+    if (num !== null) nums.push(num);
+  }
+  
+  if (nums.length === 0) {
+    return new Error('#VALUE!');
+  }
+  
+  return Math.min(...nums);
+};
+
+/**
+ * STDEVA - Sample standard deviation including text and logical values
+ * 
+ * Syntax: STDEVA(value1, [value2], ...)
+ * 
+ * @param values - Sample values
+ * @returns Sample standard deviation (TRUE=1, FALSE/text=0)
+ * 
+ * Examples:
+ * - STDEVA(1, 2, 3, TRUE, FALSE) → calculates with {1, 2, 3, 1, 0}
+ * 
+ * Notes:
+ * - Uses n-1 denominator (sample)
+ * - Includes logical and text values
+ */
+export const STDEVA: FormulaFunction = (...values) => {
+  const flattened = flattenArray(values);
+  const nums: number[] = [];
+  
+  for (const val of flattened) {
+    const num = toNumberA(val);
+    if (num !== null) nums.push(num);
+  }
+  
+  if (nums.length < 2) {
+    return new Error('#DIV/0!');
+  }
+  
+  const { m2, count } = welfordVariance(nums);
+  return Math.sqrt(m2 / (count - 1));
+};
+
+/**
+ * STDEVPA - Population standard deviation including text and logical values
+ * 
+ * Syntax: STDEVPA(value1, [value2], ...)
+ * 
+ * @param values - Population values
+ * @returns Population standard deviation (TRUE=1, FALSE/text=0)
+ * 
+ * Examples:
+ * - STDEVPA(1, 2, 3, TRUE, FALSE) → calculates with {1, 2, 3, 1, 0}
+ * 
+ * Notes:
+ * - Uses n denominator (population)
+ * - Includes logical and text values
+ */
+export const STDEVPA: FormulaFunction = (...values) => {
+  const flattened = flattenArray(values);
+  const nums: number[] = [];
+  
+  for (const val of flattened) {
+    const num = toNumberA(val);
+    if (num !== null) nums.push(num);
+  }
+  
+  if (nums.length === 0) {
+    return new Error('#DIV/0!');
+  }
+  
+  const { m2, count } = welfordVariance(nums);
+  return Math.sqrt(m2 / count);
+};
+
+/**
+ * VARA - Sample variance including text and logical values
+ * 
+ * Syntax: VARA(value1, [value2], ...)
+ * 
+ * @param values - Sample values
+ * @returns Sample variance (TRUE=1, FALSE/text=0)
+ * 
+ * Examples:
+ * - VARA(1, 2, 3, TRUE, FALSE) → calculates with {1, 2, 3, 1, 0}
+ * 
+ * Notes:
+ * - Uses n-1 denominator (sample)
+ * - Includes logical and text values
+ */
+export const VARA: FormulaFunction = (...values) => {
+  const flattened = flattenArray(values);
+  const nums: number[] = [];
+  
+  for (const val of flattened) {
+    const num = toNumberA(val);
+    if (num !== null) nums.push(num);
+  }
+  
+  if (nums.length < 2) {
+    return new Error('#DIV/0!');
+  }
+  
+  const { m2, count } = welfordVariance(nums);
+  return m2 / (count - 1);
+};
+
+/**
+ * VARPA - Population variance including text and logical values
+ * 
+ * Syntax: VARPA(value1, [value2], ...)
+ * 
+ * @param values - Population values
+ * @returns Population variance (TRUE=1, FALSE/text=0)
+ * 
+ * Examples:
+ * - VARPA(1, 2, 3, TRUE, FALSE) → calculates with {1, 2, 3, 1, 0}
+ * 
+ * Notes:
+ * - Uses n denominator (population)
+ * - Includes logical and text values
+ */
+export const VARPA: FormulaFunction = (...values) => {
+  const flattened = flattenArray(values);
+  const nums: number[] = [];
+  
+  for (const val of flattened) {
+    const num = toNumberA(val);
+    if (num !== null) nums.push(num);
+  }
+  
+  if (nums.length === 0) {
+    return new Error('#DIV/0!');
+  }
+  
+  const { m2, count } = welfordVariance(nums);
+  return m2 / count;
+};
+
+// ============================================================================
+// Week 11 Day 7: Additional Statistical Functions
+// ============================================================================
+
+/**
+ * DEVSQ - Sum of squares of deviations
+ * 
+ * Syntax: DEVSQ(number1, [number2], ...)
+ * 
+ * Formula: Σ(x - x̄)²
+ * 
+ * @param values - Numeric values
+ * @returns Sum of squared deviations from mean
+ * 
+ * Examples:
+ * - DEVSQ(1, 2, 3, 4, 5) → 10
+ *   // Mean=3, deviations: -2,-1,0,1,2; squares: 4,1,0,1,4; sum=10
+ * 
+ * Notes:
+ * - Related to variance: DEVSQ/n = VAR.P, DEVSQ/(n-1) = VAR.S
+ * - Used in ANOVA and regression analysis
+ */
+export const DEVSQ: FormulaFunction = (...values) => {
+  const nums = filterNumbers(flattenArray(values));
+  
+  if (nums.length === 0) {
+    return new Error('#NUM!');
+  }
+  
+  const mean = nums.reduce((sum, val) => sum + val, 0) / nums.length;
+  const sumSquares = nums.reduce((sum, val) => {
+    const dev = val - mean;
+    return sum + dev * dev;
+  }, 0);
+  
+  return sumSquares;
+};
+
+/**
+ * AVEDEV - Average of absolute deviations
+ * 
+ * Syntax: AVEDEV(number1, [number2], ...)
+ * 
+ * Formula: Σ|x - x̄| / n
+ * 
+ * @param values - Numeric values
+ * @returns Average absolute deviation from mean
+ * 
+ * Examples:
+ * - AVEDEV(1, 2, 3, 4, 5) → 1.2
+ *   // Mean=3, |deviations|: 2,1,0,1,2; sum=6; avg=6/5=1.2
+ * 
+ * Notes:
+ * - Measures variability (like stdev but uses absolute values)
+ * - Less sensitive to outliers than standard deviation
+ */
+export const AVEDEV: FormulaFunction = (...values) => {
+  const nums = filterNumbers(flattenArray(values));
+  
+  if (nums.length === 0) {
+    return new Error('#NUM!');
+  }
+  
+  const mean = nums.reduce((sum, val) => sum + val, 0) / nums.length;
+  const sumAbsDev = nums.reduce((sum, val) => sum + Math.abs(val - mean), 0);
+  
+  return sumAbsDev / nums.length;
+};
+
+/**
+ * GEOMEAN - Geometric mean
+ * 
+ * Syntax: GEOMEAN(number1, [number2], ...)
+ * 
+ * Formula: (x₁ * x₂ * ... * xₙ)^(1/n)
+ * 
+ * @param values - Numeric values (must be positive)
+ * @returns Geometric mean
+ * 
+ * Examples:
+ * - GEOMEAN(2, 8) → 4  // √(2*8) = √16 = 4
+ * - GEOMEAN(1, 3, 9, 27) → 5.196  // ⁴√(1*3*9*27) = ⁴√729
+ * 
+ * Notes:
+ * - All values must be positive
+ * - Geometric mean ≤ Arithmetic mean (AM-GM inequality)
+ * - Used for growth rates and ratios
+ */
+export const GEOMEAN: FormulaFunction = (...values) => {
+  const nums = filterNumbers(flattenArray(values));
+  
+  if (nums.length === 0) {
+    return new Error('#NUM!');
+  }
+  
+  // Check all positive
+  for (const num of nums) {
+    if (num <= 0) {
+      return new Error('#NUM!');
+    }
+  }
+  
+  // Use log for numerical stability: exp(Σln(x) / n)
+  const sumLogs = nums.reduce((sum, val) => sum + Math.log(val), 0);
+  return Math.exp(sumLogs / nums.length);
+};
+
+/**
+ * HARMEAN - Harmonic mean
+ * 
+ * Syntax: HARMEAN(number1, [number2], ...)
+ * 
+ * Formula: n / Σ(1/x)
+ * 
+ * @param values - Numeric values (must be positive)
+ * @returns Harmonic mean
+ * 
+ * Examples:
+ * - HARMEAN(2, 4) → 2.667  // 2 / (1/2 + 1/4) = 2 / 0.75
+ * - HARMEAN(1, 2, 4) → 1.714  // 3 / (1 + 0.5 + 0.25)
+ * 
+ * Notes:
+ * - All values must be positive
+ * - Harmonic ≤ Geometric ≤ Arithmetic (means inequality)
+ * - Used for rates and ratios (e.g., average speed)
+ */
+export const HARMEAN: FormulaFunction = (...values) => {
+  const nums = filterNumbers(flattenArray(values));
+  
+  if (nums.length === 0) {
+    return new Error('#NUM!');
+  }
+  
+  // Check all positive
+  for (const num of nums) {
+    if (num <= 0) {
+      return new Error('#NUM!');
+    }
+  }
+  
+  const sumReciprocals = nums.reduce((sum, val) => sum + 1 / val, 0);
+  return nums.length / sumReciprocals;
+};
+
+/**
+ * FISHER - Fisher transformation
+ * 
+ * Syntax: FISHER(x)
+ * 
+ * Formula: 0.5 * ln((1 + x) / (1 - x))
+ * 
+ * @param x - Correlation coefficient (-1 < x < 1)
+ * @returns Fisher transformed value
+ * 
+ * Examples:
+ * - FISHER(0.5) → 0.5493
+ * - FISHER(0.75) → 0.9730
+ * - FISHER(0) → 0
+ * 
+ * Notes:
+ * - Transforms correlation to approximately normal distribution
+ * - Used in hypothesis testing for correlations
+ * - Inverse: FISHERINV
+ */
+export const FISHER: FormulaFunction = (x) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  if (xNum <= -1 || xNum >= 1) {
+    return new Error('#NUM!');
+  }
+  
+  return 0.5 * Math.log((1 + xNum) / (1 - xNum));
+};
+
+/**
+ * FISHERINV - Inverse Fisher transformation
+ * 
+ * Syntax: FISHERINV(y)
+ * 
+ * Formula: (e^(2y) - 1) / (e^(2y) + 1)
+ * 
+ * @param y - Fisher transformed value
+ * @returns Correlation coefficient
+ * 
+ * Examples:
+ * - FISHERINV(0.5493) → 0.5
+ * - FISHERINV(FISHER(0.75)) → 0.75  // Round-trip
+ * - FISHERINV(0) → 0
+ * 
+ * Notes:
+ * - Inverse of FISHER transformation
+ * - Result always between -1 and 1
+ * - Used to convert back to correlation scale
+ */
+export const FISHERINV: FormulaFunction = (y) => {
+  const yNum = toNumber(y);
+  if (yNum instanceof Error) return yNum;
+  
+  const e2y = Math.exp(2 * yNum);
+  return (e2y - 1) / (e2y + 1);
+};

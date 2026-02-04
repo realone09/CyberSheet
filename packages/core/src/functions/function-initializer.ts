@@ -262,6 +262,27 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['DSTDEVP', DatabaseFunctions.DSTDEVP, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
     ['DVAR', DatabaseFunctions.DVAR, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
 
+    // Week 11 Day 7: Regression Functions
+    ['LINEST', StatisticalFunctions.LINEST, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 4 }],
+    ['LOGEST', StatisticalFunctions.LOGEST, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 4 }],
+    ['GROWTH', StatisticalFunctions.GROWTH, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 4 }],
+    
+    // Week 11 Day 7: A-Variant Statistical Functions
+    ['MAXA', StatisticalFunctions.MAXA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['MINA', StatisticalFunctions.MINA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['STDEVA', StatisticalFunctions.STDEVA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['STDEVPA', StatisticalFunctions.STDEVPA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['VARA', StatisticalFunctions.VARA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['VARPA', StatisticalFunctions.VARPA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    
+    // Week 11 Day 7: Additional Statistical Functions
+    ['DEVSQ', StatisticalFunctions.DEVSQ, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['AVEDEV', StatisticalFunctions.AVEDEV, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['GEOMEAN', StatisticalFunctions.GEOMEAN, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['HARMEAN', StatisticalFunctions.HARMEAN, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['FISHER', StatisticalFunctions.FISHER, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
+    ['FISHERINV', StatisticalFunctions.FISHERINV, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
+
     ['COUNTBLANK', StatisticalFunctions.COUNTBLANK, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
     ['COUNTIF', StatisticalFunctions.COUNTIF, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
     ['SUMIF', StatisticalFunctions.SUMIF, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],

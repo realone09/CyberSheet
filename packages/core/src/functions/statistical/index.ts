@@ -4,4 +4,5 @@
  */
 
 export * from './statistical-functions';
+export * from './regression-functions';
 
