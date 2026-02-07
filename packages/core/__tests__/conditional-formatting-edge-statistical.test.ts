@@ -23,10 +23,21 @@ import { Address, CellValue } from '../src/types';
 describe('Phase 3 Wave 3.1: Statistical Rules with Real Context', () => {
 	const engine = new ConditionalFormattingEngine();
 
+	// Helper: Convert column number to letter (1 = A, 2 = B, etc.)
+	const colToLetter = (col: number): string => {
+		let letter = '';
+		while (col > 0) {
+			const remainder = (col - 1) % 26;
+			letter = String.fromCharCode(65 + remainder) + letter;
+			col = Math.floor((col - 1) / 26);
+		}
+		return letter;
+	};
+
 	// Helper: Create getValue callback from dataset
 	const createGetValue = (dataset: Map<string, CellValue>) => {
 		return (address: Address): CellValue => {
-			const key = `${address.col}${address.row}`;
+			const key = `${colToLetter(address.col)}${address.row}`;
 			return dataset.get(key) ?? null;
 		};
 	};
@@ -442,7 +453,7 @@ describe('Phase 3 Wave 3.1: Statistical Rules with Real Context', () => {
 					mode: 'top' as const,
 					rankType: 'number' as const,
 					rank: 3,
-					priority: 1,
+					priority: 2, // Higher priority (runs first)
 					stopIfTrue: true, // STOP after this matches
 					style: { fillColor: '#00FF00' }
 				},
@@ -450,7 +461,7 @@ describe('Phase 3 Wave 3.1: Statistical Rules with Real Context', () => {
 					type: 'value' as const,
 					operator: '>' as const,
 					value: 90,
-					priority: 2,
+					priority: 1, // Lower priority (blocked by stopIfTrue)
 					style: { fillColor: '#FF0000' }
 				}
 			];

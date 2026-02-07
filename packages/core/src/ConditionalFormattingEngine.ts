@@ -556,14 +556,24 @@ export class ConditionalFormattingEngine {
 	/**
 	 * Evaluates Top/Bottom N or Top/Bottom N% rule.
 	 * Requires range context with all values to compute rank/percentile.
+	 * If ranges not provided, attempts to scan current column (cells 1-100).
 	 */
 	private evaluateTopBottomRule(value: CellValue, rule: TopBottomRule, ctx: ConditionalFormattingContext): boolean {
 		if (typeof value !== 'number') return false;
-		if (!ctx.getValue || !rule.ranges || rule.ranges.length === 0) return false;
+		if (!ctx.getValue) return false;
+
+		// Determine ranges to scan
+		const ranges = rule.ranges && rule.ranges.length > 0
+			? rule.ranges
+			: ctx.address
+			? [{ start: { row: 1, col: ctx.address.col }, end: { row: 100, col: ctx.address.col } }]
+			: null;
+		
+		if (!ranges) return false;
 
 		// Collect all numeric values from the range(s)
 		const values: number[] = [];
-		for (const range of rule.ranges) {
+		for (const range of ranges) {
 			for (let row = range.start.row; row <= range.end.row; row++) {
 				for (let col = range.start.col; col <= range.end.col; col++) {
 					const cellValue = ctx.getValue({ row, col });
@@ -604,14 +614,24 @@ export class ConditionalFormattingEngine {
 	/**
 	 * Evaluates Above/Below Average rule.
 	 * Computes average from range, handles empty/error cells, supports standard deviations.
+	 * If ranges not provided, attempts to scan current column (cells 1-100).
 	 */
 	private evaluateAboveAverageRule(value: CellValue, rule: AboveAverageRule, ctx: ConditionalFormattingContext): boolean {
 		if (typeof value !== 'number') return false;
-		if (!ctx.getValue || !rule.ranges || rule.ranges.length === 0) return false;
+		if (!ctx.getValue) return false;
+
+		// Determine ranges to scan
+		const ranges = rule.ranges && rule.ranges.length > 0
+			? rule.ranges
+			: ctx.address
+			? [{ start: { row: 1, col: ctx.address.col }, end: { row: 100, col: ctx.address.col } }]
+			: null;
+		
+		if (!ranges) return false;
 
 		// Collect numeric values from range(s)
 		const values: number[] = [];
-		for (const range of rule.ranges) {
+		for (const range of ranges) {
 			for (let row = range.start.row; row <= range.end.row; row++) {
 				for (let col = range.start.col; col <= range.end.col; col++) {
 					const cellValue = ctx.getValue({ row, col });
@@ -636,16 +656,18 @@ export class ConditionalFormattingEngine {
 			threshold = average + rule.standardDeviations * stdDev;
 		}
 
-		// Compare value to threshold
+		// Compare value to threshold (use threshold when standardDeviations set, otherwise average)
+		const compareValue = (rule.standardDeviations != null && rule.standardDeviations > 0) ? threshold : average;
+		
 		switch (rule.mode) {
 			case 'above':
-				return value > average;
+				return value > compareValue;
 			case 'below':
-				return value < average;
+				return value < compareValue;
 			case 'equal-or-above':
-				return value >= (rule.standardDeviations != null ? threshold : average);
+				return value >= compareValue;
 			case 'equal-or-below':
-				return value <= (rule.standardDeviations != null ? threshold : average);
+				return value <= compareValue;
 			default:
 				return false;
 		}
@@ -654,10 +676,20 @@ export class ConditionalFormattingEngine {
 	/**
 	 * Evaluates Duplicate/Unique Values rule.
 	 * Case-insensitive by default (Excel parity), handles mixed text/number types.
+	 * If ranges not provided, attempts to scan current column (cells 1-100).
 	 */
 	private evaluateDuplicateUniqueRule(value: CellValue, rule: DuplicateUniqueRule, ctx: ConditionalFormattingContext): boolean {
 		if (value === null || value === undefined || value === '') return false;
-		if (!ctx.getValue || !rule.ranges || rule.ranges.length === 0) return false;
+		if (!ctx.getValue) return false;
+
+		// Determine ranges to scan
+		const ranges = rule.ranges && rule.ranges.length > 0
+			? rule.ranges
+			: ctx.address
+			? [{ start: { row: 1, col: ctx.address.col }, end: { row: 100, col: ctx.address.col } }]
+			: null;
+		
+		if (!ranges) return false;
 
 		const caseSensitive = rule.caseSensitive ?? false;
 
@@ -672,7 +704,7 @@ export class ConditionalFormattingEngine {
 
 		// Count occurrences of this value in range(s)
 		let count = 0;
-		for (const range of rule.ranges) {
+		for (const range of ranges) {
 			for (let row = range.start.row; row <= range.end.row; row++) {
 				for (let col = range.start.col; col <= range.end.col; col++) {
 					const cellValue = ctx.getValue({ row, col });
