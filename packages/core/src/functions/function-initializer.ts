@@ -18,6 +18,9 @@ import * as LookupFunctions from './lookup';
 import * as StatisticalFunctions from './statistical';
 import * as FunctionalFunctions from './functional';
 import * as FinancialFunctions from './financial';
+import * as InformationFunctions from './information';
+import * as EngineeringFunctions from './engineering';
+import * as DatabaseFunctions from './database';
 
 /**
  * Register all built-in functions
@@ -66,6 +69,15 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['FACT', MathFunctions.FACT, { category: FunctionCategory.MATH, minArgs: 1, maxArgs: 1 }],
     ['COMBIN', MathFunctions.COMBIN, { category: FunctionCategory.MATH, minArgs: 2, maxArgs: 2 }],
     ['SUMPRODUCT', MathFunctions.SUMPRODUCT, { category: FunctionCategory.MATH }],
+    // Week 11 Day 2: Advanced Math Functions
+    ['MROUND', MathFunctions.MROUND, { category: FunctionCategory.MATH, minArgs: 2, maxArgs: 2 }],
+    ['QUOTIENT', MathFunctions.QUOTIENT, { category: FunctionCategory.MATH, minArgs: 2, maxArgs: 2 }],
+    ['PRODUCT', MathFunctions.PRODUCT, { category: FunctionCategory.MATH }],
+    ['SQRTPI', MathFunctions.SQRTPI, { category: FunctionCategory.MATH, minArgs: 1, maxArgs: 1 }],
+    ['MULTINOMIAL', MathFunctions.MULTINOMIAL, { category: FunctionCategory.MATH }],
+    ['SUMX2MY2', MathFunctions.SUMX2MY2, { category: FunctionCategory.MATH }],
+    ['SUMX2PY2', MathFunctions.SUMX2PY2, { category: FunctionCategory.MATH }],
+    ['SUMXMY2', MathFunctions.SUMXMY2, { category: FunctionCategory.MATH }],
   ] as const;
 
   // Text functions
@@ -91,6 +103,16 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['REPT', TextFunctions.REPT, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 2 }],
     ['TEXTJOIN', TextFunctions.TEXTJOIN, { category: FunctionCategory.TEXT, minArgs: 2 }],
     ['TEXTSPLIT', TextFunctions.TEXTSPLIT, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 6 }],
+    // Week 11 Day 3: Text Enhancement Functions
+    ['CONCAT', TextFunctions.CONCAT, { category: FunctionCategory.TEXT }],
+    ['PROPER', TextFunctions.PROPER, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['CLEAN', TextFunctions.CLEAN, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['UNICHAR', TextFunctions.UNICHAR, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['UNICODE', TextFunctions.UNICODE, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 1 }],
+    ['DOLLAR', TextFunctions.DOLLAR, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 2 }],
+    ['FIXED', TextFunctions.FIXED, { category: FunctionCategory.TEXT, minArgs: 1, maxArgs: 3 }],
+    ['TEXTBEFORE', TextFunctions.TEXTBEFORE, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 6 }],
+    ['TEXTAFTER', TextFunctions.TEXTAFTER, { category: FunctionCategory.TEXT, minArgs: 2, maxArgs: 6 }],
   ] as const;
 
   // Logical functions
@@ -199,6 +221,9 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['RANK', StatisticalFunctions.RANK, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
     ['RANK.EQ', StatisticalFunctions.RANK_EQ, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
     ['RANK.AVG', StatisticalFunctions.RANK_AVG, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
+    ['PERCENTRANK', StatisticalFunctions.PERCENTRANK, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
+    ['PERCENTRANK.INC', StatisticalFunctions.PERCENTRANK_INC, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
+    ['PERCENTRANK.EXC', StatisticalFunctions.PERCENTRANK_EXC, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
     ['LARGE', StatisticalFunctions.LARGE, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
     ['SMALL', StatisticalFunctions.SMALL, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
     ['CORREL', StatisticalFunctions.CORREL, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
@@ -213,6 +238,51 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['STEYX', StatisticalFunctions.STEYX, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
     ['TREND', StatisticalFunctions.TREND, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 4 }],
     ['FREQUENCY', StatisticalFunctions.FREQUENCY, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
+    // Week 11 Day 5: Statistical Distribution Functions
+    ['NORM.DIST', StatisticalFunctions.NORM_DIST, { category: FunctionCategory.STATISTICAL, minArgs: 4, maxArgs: 4 }],
+    ['NORM.INV', StatisticalFunctions.NORM_INV, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+    ['NORM.S.DIST', StatisticalFunctions.NORM_S_DIST, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
+    ['NORM.S.INV', StatisticalFunctions.NORM_S_INV, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
+    ['BINOM.DIST', StatisticalFunctions.BINOM_DIST, { category: FunctionCategory.STATISTICAL, minArgs: 4, maxArgs: 4 }],
+    ['BINOM.INV', StatisticalFunctions.BINOM_INV, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+    ['POISSON.DIST', StatisticalFunctions.POISSON_DIST, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+    ['POISSON', StatisticalFunctions.POISSON, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+    ['EXPON.DIST', StatisticalFunctions.EXPON_DIST, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+    ['EXPONDIST', StatisticalFunctions.EXPONDIST, { category: FunctionCategory.STATISTICAL, minArgs: 3, maxArgs: 3 }],
+
+    // Database functions (Week 11 Day 6)
+    ['DSUM', DatabaseFunctions.DSUM, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DAVERAGE', DatabaseFunctions.DAVERAGE, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DCOUNT', DatabaseFunctions.DCOUNT, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DCOUNTA', DatabaseFunctions.DCOUNTA, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DMAX', DatabaseFunctions.DMAX, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DMIN', DatabaseFunctions.DMIN, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DGET', DatabaseFunctions.DGET, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DSTDEV', DatabaseFunctions.DSTDEV, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DSTDEVP', DatabaseFunctions.DSTDEVP, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+    ['DVAR', DatabaseFunctions.DVAR, { category: FunctionCategory.DATABASE, minArgs: 3, maxArgs: 3 }],
+
+    // Week 11 Day 7: Regression Functions
+    ['LINEST', StatisticalFunctions.LINEST, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 4 }],
+    ['LOGEST', StatisticalFunctions.LOGEST, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 4 }],
+    ['GROWTH', StatisticalFunctions.GROWTH, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 4 }],
+    
+    // Week 11 Day 7: A-Variant Statistical Functions
+    ['MAXA', StatisticalFunctions.MAXA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['MINA', StatisticalFunctions.MINA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['STDEVA', StatisticalFunctions.STDEVA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['STDEVPA', StatisticalFunctions.STDEVPA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['VARA', StatisticalFunctions.VARA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['VARPA', StatisticalFunctions.VARPA, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    
+    // Week 11 Day 7: Additional Statistical Functions
+    ['DEVSQ', StatisticalFunctions.DEVSQ, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['AVEDEV', StatisticalFunctions.AVEDEV, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['GEOMEAN', StatisticalFunctions.GEOMEAN, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['HARMEAN', StatisticalFunctions.HARMEAN, { category: FunctionCategory.STATISTICAL, minArgs: 1 }],
+    ['FISHER', StatisticalFunctions.FISHER, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
+    ['FISHERINV', StatisticalFunctions.FISHERINV, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
+
     ['COUNTBLANK', StatisticalFunctions.COUNTBLANK, { category: FunctionCategory.STATISTICAL, minArgs: 1, maxArgs: 1 }],
     ['COUNTIF', StatisticalFunctions.COUNTIF, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 2 }],
     ['SUMIF', StatisticalFunctions.SUMIF, { category: FunctionCategory.STATISTICAL, minArgs: 2, maxArgs: 3 }],
@@ -253,6 +323,77 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['NOMINAL', FinancialFunctions.NOMINAL, { category: FunctionCategory.FINANCIAL, minArgs: 2, maxArgs: 2 }],
   ] as const;
 
+  // Information functions (Week 10 Day 2, Week 11 Day 1)
+  const informationFunctions = [
+    ['ISFORMULA', InformationFunctions.ISFORMULA, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1, needsContext: true }],
+    ['ISREF', InformationFunctions.ISREF, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['CELL', InformationFunctions.CELL, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 2, needsContext: true }],
+    ['INFO', InformationFunctions.INFO, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    // Week 11 Day 1: Type checking functions
+    ['ISNUMBER', InformationFunctions.ISNUMBER, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['ISTEXT', InformationFunctions.ISTEXT, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['ISBLANK', InformationFunctions.ISBLANK, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['ISLOGICAL', InformationFunctions.ISLOGICAL, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['ISNONTEXT', InformationFunctions.ISNONTEXT, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['TYPE', InformationFunctions.TYPE, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['N', InformationFunctions.N, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+    ['T', InformationFunctions.T, { category: FunctionCategory.INFORMATION, minArgs: 1, maxArgs: 1 }],
+  ] as const;
+
+  // Engineering functions (Week 10 Days 3-5)
+  const engineeringFunctions = [
+    // Binary conversions (Day 3)
+    ['BIN2DEC', EngineeringFunctions.BIN2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['BIN2HEX', EngineeringFunctions.BIN2HEX, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['BIN2OCT', EngineeringFunctions.BIN2OCT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Decimal conversions (Day 3)
+    ['DEC2BIN', EngineeringFunctions.DEC2BIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['DEC2HEX', EngineeringFunctions.DEC2HEX, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['DEC2OCT', EngineeringFunctions.DEC2OCT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Hexadecimal conversions (Day 3)
+    ['HEX2BIN', EngineeringFunctions.HEX2BIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['HEX2DEC', EngineeringFunctions.HEX2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['HEX2OCT', EngineeringFunctions.HEX2OCT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Octal conversions (Day 3)
+    ['OCT2BIN', EngineeringFunctions.OCT2BIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    ['OCT2DEC', EngineeringFunctions.OCT2DEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['OCT2HEX', EngineeringFunctions.OCT2HEX, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 2 }],
+    // Bitwise operations (Day 4)
+    ['BITAND', EngineeringFunctions.BITAND, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['BITOR', EngineeringFunctions.BITOR, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['BITXOR', EngineeringFunctions.BITXOR, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['BITLSHIFT', EngineeringFunctions.BITLSHIFT, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['BITRSHIFT', EngineeringFunctions.BITRSHIFT, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    // Complex numbers (Day 5)
+    ['COMPLEX', EngineeringFunctions.COMPLEX, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 3 }],
+    ['IMREAL', EngineeringFunctions.IMREAL, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMAGINARY', EngineeringFunctions.IMAGINARY, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMABS', EngineeringFunctions.IMABS, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMARGUMENT', EngineeringFunctions.IMARGUMENT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCONJUGATE', EngineeringFunctions.IMCONJUGATE, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    // Week 11 Day 4: Complex Number Arithmetic
+    ['IMADD', EngineeringFunctions.IMADD, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMSUB', EngineeringFunctions.IMSUB, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMMULT', EngineeringFunctions.IMMULT, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMDIV', EngineeringFunctions.IMDIV, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMPOWER', EngineeringFunctions.IMPOWER, { category: FunctionCategory.ENGINEERING, minArgs: 2, maxArgs: 2 }],
+    ['IMSQRT', EngineeringFunctions.IMSQRT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMEXP', EngineeringFunctions.IMEXP, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMLN', EngineeringFunctions.IMLN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMLOG10', EngineeringFunctions.IMLOG10, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMLOG2', EngineeringFunctions.IMLOG2, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSIN', EngineeringFunctions.IMSIN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCOS', EngineeringFunctions.IMCOS, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMTAN', EngineeringFunctions.IMTAN, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSEC', EngineeringFunctions.IMSEC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCSC', EngineeringFunctions.IMCSC, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCOT', EngineeringFunctions.IMCOT, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSINH', EngineeringFunctions.IMSINH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCOSH', EngineeringFunctions.IMCOSH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMSECH', EngineeringFunctions.IMSECH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+    ['IMCSCH', EngineeringFunctions.IMCSCH, { category: FunctionCategory.ENGINEERING, minArgs: 1, maxArgs: 1 }],
+  ] as const;
+
   // Batch register all functions
   registry.registerBatch(mathFunctions as any);
   registry.registerBatch(textFunctions as any);
@@ -263,4 +404,6 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
   registry.registerBatch(statisticalFunctions as any);
   registry.registerBatch(functionalFunctions as any);
   registry.registerBatch(financialFunctions as any);
+  registry.registerBatch(informationFunctions as any);
+  registry.registerBatch(engineeringFunctions as any);
 }

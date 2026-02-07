@@ -795,3 +795,486 @@ export const TEXTSPLIT: FormulaFunction = (
 
   return result;
 };
+
+// ============================================================================
+// Week 11 Day 3: Text Enhancement Functions
+// ============================================================================
+
+/**
+ * CONCAT - Concatenates text from multiple ranges and/or strings
+ * Modern replacement for CONCATENATE with enhanced array support
+ * 
+ * Syntax: CONCAT(text1, [text2], ...)
+ * 
+ * @param {...FormulaValue[]} args - Text items to join (can be ranges, arrays, or strings)
+ * @returns {string | Error} - Concatenated string
+ * 
+ * Examples:
+ * - CONCAT("Hello", " ", "World") → "Hello World"
+ * - CONCAT(A1:A3) → Joins all values from A1 to A3
+ * - CONCAT(A1:A2, " - ", B1:B2) → "A1 - B1A2 - B2"
+ * 
+ * Notes:
+ * - Unlike CONCATENATE, CONCAT accepts ranges and flattens them automatically
+ * - Empty cells are treated as empty strings
+ * - Errors in arguments are ignored (converted to empty string)
+ * - More flexible and modern than CONCATENATE
+ */
+export const CONCAT: FormulaFunction = (...args) => {
+  // Recursive flatten function to handle nested arrays
+  const flatten = (arr: FormulaValue[]): FormulaValue[] => {
+    const result: FormulaValue[] = [];
+    for (const item of arr) {
+      if (Array.isArray(item)) {
+        result.push(...flatten(item));
+      } else {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
+  const flat = flatten(args);
+  const strings = flat.map(v => {
+    // Skip errors
+    if (v instanceof Error) return '';
+    
+    // Handle null/undefined as empty string
+    if (v === null || v === undefined) return '';
+    
+    // Convert to string
+    const str = toString(v);
+    return str instanceof Error ? '' : str;
+  });
+
+  return strings.join('');
+};
+
+/**
+ * PROPER - Capitalizes the first letter of each word
+ * 
+ * Syntax: PROPER(text)
+ * 
+ * @param {FormulaValue} text - Text to convert to proper case
+ * @returns {string | Error} - Text with first letter of each word capitalized
+ * 
+ * Examples:
+ * - PROPER("hello world") → "Hello World"
+ * - PROPER("JOHN SMITH") → "John Smith"
+ * - PROPER("2-way street") → "2-Way Street"
+ * - PROPER("alice's book") → "Alice'S Book"
+ * 
+ * Notes:
+ * - First letter after any non-letter character is capitalized
+ * - Numbers and symbols separate words
+ * - Compatible with Excel's PROPER behavior
+ */
+export const PROPER: FormulaFunction = (text) => {
+  const str = toString(text);
+  if (str instanceof Error) return str;
+
+  // Capitalize first letter after any non-letter character
+  return str.toLowerCase().replace(/(^|[^a-zA-Z])([a-zA-Z])/g, (match, separator, letter) => {
+    return separator + letter.toUpperCase();
+  });
+};
+
+/**
+ * CLEAN - Removes non-printable characters from text
+ * 
+ * Syntax: CLEAN(text)
+ * 
+ * @param {FormulaValue} text - Text to clean
+ * @returns {string | Error} - Text with non-printable characters removed
+ * 
+ * Examples:
+ * - CLEAN("Hello" + CHAR(7) + "World") → "HelloWorld"
+ * - CLEAN("Line1" + CHAR(10) + "Line2") → "Line1Line2"
+ * - CLEAN("Text" + CHAR(13) + CHAR(10)) → "Text" (removes CRLF)
+ * 
+ * Notes:
+ * - Removes characters 0-31 (ASCII control characters)
+ * - CHAR(32) (space) and above are preserved
+ * - Useful for data imported from other systems or web sources
+ */
+export const CLEAN: FormulaFunction = (text) => {
+  const str = toString(text);
+  if (str instanceof Error) return str;
+
+  // Remove ASCII control characters (0-31)
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/[\x00-\x1F]/g, '');
+};
+
+/**
+ * UNICHAR - Returns Unicode character by code point
+ * 
+ * Syntax: UNICHAR(number)
+ * 
+ * @param {FormulaValue} number - Unicode code point (0 to 1,114,111)
+ * @returns {string | Error} - Unicode character
+ * 
+ * Examples:
+ * - UNICHAR(65) → "A"
+ * - UNICHAR(9733) → "★"
+ * - UNICHAR(128515) → "😃"
+ * - UNICHAR(8364) → "€"
+ * 
+ * Notes:
+ * - Supports full Unicode range (up to 0x10FFFF = 1,114,111)
+ * - Returns #VALUE! for invalid code points
+ * - More powerful than CHAR (which is limited to 1-255)
+ * - Handles surrogate pairs correctly for emoji and special characters
+ */
+export const UNICHAR: FormulaFunction = (number) => {
+  const num = toNumber(number);
+  if (num instanceof Error) return num;
+
+  // Unicode range: 0 to 0x10FFFF (1,114,111)
+  if (num < 0 || num > 0x10FFFF || Math.floor(num) !== num) {
+    return new Error('#VALUE!');
+  }
+
+  // Handle surrogate pairs for code points > 0xFFFF
+  try {
+    return String.fromCodePoint(num);
+  } catch {
+    return new Error('#VALUE!');
+  }
+};
+
+/**
+ * UNICODE - Returns Unicode code point of first character
+ * 
+ * Syntax: UNICODE(text)
+ * 
+ * @param {FormulaValue} text - Text whose first character code point you want
+ * @returns {number | Error} - Unicode code point of first character
+ * 
+ * Examples:
+ * - UNICODE("A") → 65
+ * - UNICODE("★") → 9733
+ * - UNICODE("😃") → 128515
+ * - UNICODE("€100") → 8364
+ * 
+ * Notes:
+ * - Returns code point for first character only
+ * - Returns #VALUE! for empty string
+ * - Handles surrogate pairs correctly for emoji and special characters
+ * - Inverse of UNICHAR function
+ */
+export const UNICODE: FormulaFunction = (text) => {
+  const str = toString(text);
+  if (str instanceof Error) return str;
+
+  if (str.length === 0) return new Error('#VALUE!');
+
+  // Handle surrogate pairs correctly
+  const codePoint = str.codePointAt(0);
+  if (codePoint === undefined) return new Error('#VALUE!');
+
+  return codePoint;
+};
+
+/**
+ * DOLLAR - Formats number as currency text
+ * 
+ * Syntax: DOLLAR(number, [decimals])
+ * 
+ * @param {FormulaValue} number - Number to format
+ * @param {FormulaValue} decimals - Number of decimal places (default: 2)
+ * @returns {string | Error} - Formatted currency string
+ * 
+ * Examples:
+ * - DOLLAR(1234.567) → "$1,234.57"
+ * - DOLLAR(1234.567, 4) → "$1,234.5670"
+ * - DOLLAR(-1234.567) → "($1,234.57)"
+ * - DOLLAR(1234.567, 0) → "$1,235"
+ * 
+ * Notes:
+ * - Negative numbers shown in parentheses
+ * - Includes thousands separator (comma)
+ * - Rounds to specified decimal places
+ * - Default is 2 decimal places
+ */
+export const DOLLAR: FormulaFunction = (number, decimals = 2) => {
+  const num = toNumber(number);
+  const dec = toNumber(decimals);
+
+  if (num instanceof Error) return num;
+  if (dec instanceof Error) return dec;
+
+  // Validate decimals is non-negative integer
+  if (dec < 0 || Math.floor(dec) !== dec) {
+    return new Error('#VALUE!');
+  }
+
+  const isNegative = num < 0;
+  const absNum = Math.abs(num);
+
+  // Round to specified decimal places
+  const rounded = Number(absNum.toFixed(dec));
+
+  // Split into integer and decimal parts
+  const parts = rounded.toFixed(dec).split('.');
+  const integerPart = parts[0];
+  const decimalPart = parts[1] || '';
+
+  // Add thousands separators
+  const withCommas = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  // Format result
+  const formatted = dec > 0 ? `${withCommas}.${decimalPart}` : withCommas;
+
+  // Return with currency symbol and handle negatives
+  return isNegative ? `($${formatted})` : `$${formatted}`;
+};
+
+/**
+ * FIXED - Formats number as text with fixed decimal places
+ * 
+ * Syntax: FIXED(number, [decimals], [no_commas])
+ * 
+ * @param {FormulaValue} number - Number to format
+ * @param {FormulaValue} decimals - Number of decimal places (default: 2)
+ * @param {FormulaValue} noCommas - TRUE to omit commas, FALSE to include (default: FALSE)
+ * @returns {string | Error} - Formatted number string
+ * 
+ * Examples:
+ * - FIXED(1234.567) → "1,234.57"
+ * - FIXED(1234.567, 1) → "1,234.6"
+ * - FIXED(1234.567, -1) → "1,230"
+ * - FIXED(1234.567, 1, TRUE) → "1234.6"
+ * 
+ * Notes:
+ * - Rounds to specified decimal places
+ * - Can round to left of decimal point with negative decimals
+ * - Includes thousands separator unless no_commas is TRUE
+ * - Always returns string
+ */
+export const FIXED: FormulaFunction = (number, decimals = 2, noCommas = false) => {
+  const num = toNumber(number);
+  const dec = toNumber(decimals);
+
+  if (num instanceof Error) return num;
+  if (dec instanceof Error) return dec;
+
+  // Validate decimals is integer
+  if (Math.floor(dec) !== dec) {
+    return new Error('#VALUE!');
+  }
+
+  // Handle negative decimals (round to left of decimal point)
+  let rounded: number;
+  if (dec < 0) {
+    const factor = Math.pow(10, -dec);
+    rounded = Math.round(num / factor) * factor;
+  } else {
+    rounded = Number(num.toFixed(dec));
+  }
+
+  // Format with appropriate decimal places
+  const formatted = dec >= 0 ? rounded.toFixed(dec) : rounded.toString();
+
+  // Add thousands separators if requested
+  if (!noCommas) {
+    const parts = formatted.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    // Handle negative sign
+    const isNegative = integerPart.startsWith('-');
+    const absInteger = isNegative ? integerPart.slice(1) : integerPart;
+
+    const withCommas = absInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const result = decimalPart !== undefined ? `${withCommas}.${decimalPart}` : withCommas;
+
+    return isNegative ? `-${result}` : result;
+  }
+
+  return formatted;
+};
+
+/**
+ * TEXTBEFORE - Extracts text before a delimiter
+ * 
+ * Syntax: TEXTBEFORE(text, delimiter, [instance_num], [match_mode], [match_end], [if_not_found])
+ * 
+ * @param {FormulaValue} text - Text to search
+ * @param {FormulaValue} delimiter - Delimiter to search for
+ * @param {FormulaValue} instanceNum - Which occurrence (default: 1)
+ * @param {FormulaValue} matchMode - 0 = case-sensitive, 1 = case-insensitive (default: 0)
+ * @param {FormulaValue} matchEnd - Return text before end if delimiter not found (default: error)
+ * @param {FormulaValue} ifNotFound - Value to return if not found (default: #N/A)
+ * @returns {string | Error} - Text before delimiter
+ * 
+ * Examples:
+ * - TEXTBEFORE("Hello-World", "-") → "Hello"
+ * - TEXTBEFORE("A:B:C", ":", 2) → "A:B"
+ * - TEXTBEFORE("test@example.com", "@") → "test"
+ * 
+ * Notes:
+ * - Returns text before the specified occurrence of delimiter
+ * - Negative instance_num counts from end
+ * - Case-sensitive by default
+ */
+export const TEXTBEFORE: FormulaFunction = (
+  text,
+  delimiter,
+  instanceNum = 1,
+  matchMode = 0,
+  matchEnd = 0,
+  ifNotFound?: FormulaValue
+) => {
+  const str = toString(text);
+  const delim = toString(delimiter);
+  const instance = toNumber(instanceNum);
+  const mode = toNumber(matchMode);
+  const end = toNumber(matchEnd);
+
+  if (str instanceof Error) return str;
+  if (delim instanceof Error) return delim;
+  if (instance instanceof Error) return instance;
+  if (mode instanceof Error) return mode;
+  if (end instanceof Error) return end;
+
+  // Validate instance number
+  if (instance === 0 || Math.floor(instance) !== instance) {
+    return new Error('#VALUE!');
+  }
+
+  // Prepare search strings based on match mode
+  const searchStr = mode === 0 ? str : str.toLowerCase();
+  const searchDelim = mode === 0 ? delim : delim.toLowerCase();
+
+  // Find all occurrences
+  const occurrences: number[] = [];
+  let pos = 0;
+  while ((pos = searchStr.indexOf(searchDelim, pos)) !== -1) {
+    occurrences.push(pos);
+    pos += searchDelim.length;
+  }
+
+  // Handle not found
+  if (occurrences.length === 0) {
+    if (end !== 0) {
+      return str; // Return full text
+    }
+    if (ifNotFound !== undefined) {
+      const result = toString(ifNotFound);
+      return result instanceof Error ? result : result;
+    }
+    return new Error('#N/A');
+  }
+
+  // Get the target occurrence
+  let targetIndex: number;
+  if (instance > 0) {
+    targetIndex = instance - 1;
+  } else {
+    targetIndex = occurrences.length + instance;
+  }
+
+  // Check if instance exists
+  if (targetIndex < 0 || targetIndex >= occurrences.length) {
+    if (ifNotFound !== undefined) {
+      const result = toString(ifNotFound);
+      return result instanceof Error ? result : result;
+    }
+    return new Error('#N/A');
+  }
+
+  return str.substring(0, occurrences[targetIndex]);
+};
+
+/**
+ * TEXTAFTER - Extracts text after a delimiter
+ * 
+ * Syntax: TEXTAFTER(text, delimiter, [instance_num], [match_mode], [match_end], [if_not_found])
+ * 
+ * @param {FormulaValue} text - Text to search
+ * @param {FormulaValue} delimiter - Delimiter to search for
+ * @param {FormulaValue} instanceNum - Which occurrence (default: 1)
+ * @param {FormulaValue} matchMode - 0 = case-sensitive, 1 = case-insensitive (default: 0)
+ * @param {FormulaValue} matchEnd - Return text after start if delimiter not found (default: error)
+ * @param {FormulaValue} ifNotFound - Value to return if not found (default: #N/A)
+ * @returns {string | Error} - Text after delimiter
+ * 
+ * Examples:
+ * - TEXTAFTER("Hello-World", "-") → "World"
+ * - TEXTAFTER("A:B:C", ":", -1) → "C" (last occurrence)
+ * - TEXTAFTER("user@example.com", "@") → "example.com"
+ * 
+ * Notes:
+ * - Returns text after the specified occurrence of delimiter
+ * - Negative instance_num counts from end
+ * - Case-sensitive by default
+ */
+export const TEXTAFTER: FormulaFunction = (
+  text,
+  delimiter,
+  instanceNum = 1,
+  matchMode = 0,
+  matchEnd = 0,
+  ifNotFound?: FormulaValue
+) => {
+  const str = toString(text);
+  const delim = toString(delimiter);
+  const instance = toNumber(instanceNum);
+  const mode = toNumber(matchMode);
+  const end = toNumber(matchEnd);
+
+  if (str instanceof Error) return str;
+  if (delim instanceof Error) return delim;
+  if (instance instanceof Error) return instance;
+  if (mode instanceof Error) return mode;
+  if (end instanceof Error) return end;
+
+  // Validate instance number
+  if (instance === 0 || Math.floor(instance) !== instance) {
+    return new Error('#VALUE!');
+  }
+
+  // Prepare search strings based on match mode
+  const searchStr = mode === 0 ? str : str.toLowerCase();
+  const searchDelim = mode === 0 ? delim : delim.toLowerCase();
+
+  // Find all occurrences
+  const occurrences: number[] = [];
+  let pos = 0;
+  while ((pos = searchStr.indexOf(searchDelim, pos)) !== -1) {
+    occurrences.push(pos);
+    pos += searchDelim.length;
+  }
+
+  // Handle not found
+  if (occurrences.length === 0) {
+    if (end !== 0) {
+      return str; // Return full text
+    }
+    if (ifNotFound !== undefined) {
+      const result = toString(ifNotFound);
+      return result instanceof Error ? result : result;
+    }
+    return new Error('#N/A');
+  }
+
+  // Get the target occurrence
+  let targetIndex: number;
+  if (instance > 0) {
+    targetIndex = instance - 1;
+  } else {
+    targetIndex = occurrences.length + instance;
+  }
+
+  // Check if instance exists
+  if (targetIndex < 0 || targetIndex >= occurrences.length) {
+    if (ifNotFound !== undefined) {
+      const result = toString(ifNotFound);
+      return result instanceof Error ? result : result;
+    }
+    return new Error('#N/A');
+  }
+
+  return str.substring(occurrences[targetIndex] + delim.length);
+};
