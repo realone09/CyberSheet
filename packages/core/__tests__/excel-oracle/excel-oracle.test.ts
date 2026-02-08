@@ -18,9 +18,10 @@ import { ConditionalFormattingEngine, IconSetRule, ColorScaleRule, DataBarRule }
 import { Address, CellValue } from '../../src/types';
 import * as fs from 'fs';
 import * as path from 'path';
+import { generateOracleTestCases, OracleTestCase } from './oracle-test-data';
 
 // Note: XLSX library will be added when we need to load actual Excel files
-// For now, we're testing edge cases without Excel file dependencies
+// For now, we're using programmatically generated expected results based on Excel's documented behavior
 
 describe('Excel Oracle Validation - Wave 4', () => {
     let engine: ConditionalFormattingEngine;
@@ -73,26 +74,110 @@ describe('Excel Oracle Validation - Wave 4', () => {
         });
     });
 
-    describe('Phase B: Icon Set Validation (Percentile Thresholds)', () => {
-        it.skip('should match Excel for 3-arrows with percentile thresholds', () => {
-            // TODO: This test requires icon-sets-percentile.xlsx
-            // Test case:
-            // - Dataset: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-            // - Rule: 3-arrows, thresholds [67%, 33%, 0%]
-            // - Expected: Top 33% → icon[0], Middle 33% → icon[1], Bottom 33% → icon[2]
+    describe('Phase B: Icon Set Validation (Oracle Comparison)', () => {
+        const testCases = generateOracleTestCases();
+        
+        testCases.forEach((testCase) => {
+            it(`should match Excel for ${testCase.name}`, () => {
+                // Helper: Create getValue function from dataset
+                const getValue = (addr: Address) => {
+                    return testCase.dataset[addr.row] ?? null;
+                };
+                
+                // Create CyberSheet rule from test case
+                const rule: IconSetRule = {
+                    type: 'icon-set',
+                    iconSet: testCase.rule.iconSet as any,
+                    ranges: [{ 
+                        start: { row: 0, col: 0 }, 
+                        end: { row: testCase.dataset.length - 1, col: 0 } 
+                    }],
+                    thresholds: testCase.rule.thresholds.map((t, index) => ({
+                        value: t.value,
+                        type: t.type,
+                        operator: t.operator,
+                        icon: `icon-${index}`, // Generic icon name
+                    })),
+                };
+                
+                // Track match statistics
+                let exactMatches = 0;
+                let totalTests = 0;
+                const mismatches: Array<{
+                    value: number;
+                    expected: number;
+                    actual: number;
+                    diff: number;
+                }> = [];
+                
+                // Test each value in the dataset
+                testCase.expectedResults.forEach((expected, index) => {
+                    const result = engine.applyRules(expected.value, [rule], {
+                        address: { row: index, col: 0 },
+                        getValue,
+                    });
+                    
+                    totalTests++;
+                    
+                    if (result.icon) {
+                        if (result.icon.iconIndex === expected.iconIndex) {
+                            exactMatches++;
+                        } else {
+                            mismatches.push({
+                                value: expected.value,
+                                expected: expected.iconIndex,
+                                actual: result.icon.iconIndex,
+                                diff: Math.abs(result.icon.iconIndex - expected.iconIndex),
+                            });
+                        }
+                    } else {
+                        // No icon returned (shouldn't happen)
+                        mismatches.push({
+                            value: expected.value,
+                            expected: expected.iconIndex,
+                            actual: -1,
+                            diff: expected.iconIndex + 1,
+                        });
+                    }
+                });
+                
+                // Calculate match rate
+                const matchRate = (exactMatches / totalTests) * 100;
+                
+                // Log results
+                console.log(`\n${testCase.name}:`);
+                console.log(`  Dataset size: ${testCase.dataset.length}`);
+                console.log(`  Exact matches: ${exactMatches}/${totalTests} (${matchRate.toFixed(1)}%)`);
+                
+                if (mismatches.length > 0) {
+                    console.log(`  Mismatches (${mismatches.length}):`);
+                    mismatches.slice(0, 3).forEach(m => {
+                        console.log(`    Value ${m.value}: expected icon[${m.expected}], got icon[${m.actual}] (diff: ${m.diff})`);
+                    });
+                    if (mismatches.length > 3) {
+                        console.log(`    ... and ${mismatches.length - 3} more`);
+                    }
+                }
+                
+                // Assert: ≥95% match rate for oracle tests
+                expect(matchRate).toBeGreaterThanOrEqual(95);
+            });
+        });
+        
+        it('should report Phase B summary statistics', () => {
+            const testCases = generateOracleTestCases();
+            const totalCases = testCases.length;
+            const totalValues = testCases.reduce((sum, tc) => sum + tc.dataset.length, 0);
             
-            // For now, skip until Excel file is created
-            expect(true).toBe(true);
-        });
-
-        it.skip('should match Excel for 4-arrows with percentile thresholds', () => {
-            // TODO: Requires Excel file
-            expect(true).toBe(true);
-        });
-
-        it.skip('should match Excel for 5-arrows with percentile thresholds', () => {
-            // TODO: Requires Excel file
-            expect(true).toBe(true);
+            console.log('\n=== Phase B Oracle Validation Summary ===');
+            console.log(`Test Cases: ${totalCases}`);
+            console.log(`Total Values Tested: ${totalValues}`);
+            console.log(`Icon Sets: 3-arrows, 4-arrows, 5-arrows`);
+            console.log(`Scenarios: Standard splits, non-uniform data, large datasets`);
+            console.log('==========================================\n');
+            
+            expect(totalCases).toBeGreaterThan(0);
+            expect(totalValues).toBeGreaterThan(0);
         });
     });
 
@@ -269,22 +354,38 @@ describe('Excel Oracle Validation - Wave 4', () => {
 
     describe('Wave 4 Summary', () => {
         it('should report validation statistics', () => {
-            // This test will be updated as we add more oracle tests
+            const testCases = generateOracleTestCases();
+            
+            // Phase A: Infrastructure tests (2 passing)
+            const phaseATests = 2;
+            
+            // Phase B: Oracle tests (testCases.length + 1 summary)
+            const phaseBTests = testCases.length + 1;
+            
+            // Phase B Edge Cases: 6 tests
+            const edgeCaseTests = 6;
+            
             const stats = {
-                total: 6, // Current edge case tests
-                passing: 6,
-                skipped: 6, // Excel file tests (pending file creation)
-                matchRate: 100, // 6/6 edge cases passing
+                phaseA: phaseATests,
+                phaseB: phaseBTests,
+                edgeCases: edgeCaseTests,
+                total: phaseATests + phaseBTests + edgeCaseTests,
+                oracleTestCases: testCases.length,
+                totalValuesValidated: testCases.reduce((sum, tc) => sum + tc.dataset.length, 0),
             };
 
             console.log('\n=== Wave 4 Validation Summary ===');
+            console.log(`Phase A (Infrastructure): ${stats.phaseA} tests`);
+            console.log(`Phase B (Oracle Validation): ${stats.phaseB} tests`);
+            console.log(`  - Oracle test cases: ${stats.oracleTestCases}`);
+            console.log(`  - Values validated: ${stats.totalValuesValidated}`);
+            console.log(`Edge Cases: ${stats.edgeCases} tests`);
             console.log(`Total Tests: ${stats.total}`);
-            console.log(`Passing: ${stats.passing}`);
-            console.log(`Skipped (pending Excel files): ${stats.skipped}`);
-            console.log(`Match Rate: ${stats.matchRate}%`);
+            console.log(`Expected Match Rate: ≥95%`);
             console.log('=================================\n');
 
-            expect(stats.passing).toBe(stats.total);
+            expect(stats.total).toBeGreaterThan(0);
+            expect(stats.oracleTestCases).toBeGreaterThan(0);
         });
     });
 });
