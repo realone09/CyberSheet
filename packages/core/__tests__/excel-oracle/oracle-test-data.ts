@@ -470,3 +470,161 @@ export function generateColorScaleTestCases(): ColorScaleTestCase[] {
     
     return testCases;
 }
+
+// ============================================================================
+// Phase D: Data Bar Oracle Test Data
+// ============================================================================
+
+export interface DataBarExpectedResult {
+    value: number;
+    expectedPercent: number; // 0-100, the width of the data bar
+    expectedColor?: { r: number; g: number; b: number };
+}
+
+export interface DataBarTestCase {
+    name: string;
+    description: string;
+    dataset: number[];
+    rule: {
+        color: { r: number; g: number; b: number };
+        gradient?: boolean;
+        showValue?: boolean;
+        minValue?: number;
+        maxValue?: number;
+    };
+    expectedResults: DataBarExpectedResult[];
+}
+
+/**
+ * Calculate expected data bar percentage based on value and range
+ */
+function calculateDataBarPercent(value: number, min: number, max: number): number {
+    if (max === min) return 100;
+    const percent = ((value - min) / (max - min)) * 100;
+    return Math.max(0, Math.min(100, percent));
+}
+
+/**
+ * Generate Data Bar Oracle Test Cases
+ */
+export function generateDataBarTestCases(): DataBarTestCase[] {
+    const testCases: DataBarTestCase[] = [];
+    
+    // Test Case 1: Solid Fill Blue Data Bars (automatic min/max)
+    const dataset1 = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const min1 = Math.min(...dataset1);
+    const max1 = Math.max(...dataset1);
+    const color1 = { r: 99, g: 142, b: 198 }; // Blue
+    
+    testCases.push({
+        name: 'solid-blue-automatic',
+        description: 'Solid blue data bars with automatic min/max',
+        dataset: dataset1,
+        rule: {
+            color: color1,
+            gradient: false,
+            showValue: true,
+        },
+        expectedResults: dataset1.map(value => ({
+            value,
+            expectedPercent: calculateDataBarPercent(value, min1, max1),
+            expectedColor: color1,
+        })),
+    });
+    
+    // Test Case 2: Gradient Green Data Bars (automatic min/max)
+    const dataset2 = [5, 15, 25, 35, 45, 55, 65, 75, 85, 95];
+    const min2 = Math.min(...dataset2);
+    const max2 = Math.max(...dataset2);
+    const color2 = { r: 99, g: 190, b: 123 }; // Green
+    
+    testCases.push({
+        name: 'gradient-green-automatic',
+        description: 'Gradient green data bars with automatic min/max',
+        dataset: dataset2,
+        rule: {
+            color: color2,
+            gradient: true,
+            showValue: true,
+        },
+        expectedResults: dataset2.map(value => ({
+            value,
+            expectedPercent: calculateDataBarPercent(value, min2, max2),
+            expectedColor: color2,
+        })),
+    });
+    
+    // Test Case 3: Red Data Bars with Fixed Range
+    const dataset3 = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const fixedMin = 0;
+    const fixedMax = 150;
+    const color3 = { r: 248, g: 105, b: 107 }; // Red
+    
+    testCases.push({
+        name: 'solid-red-fixed-range',
+        description: 'Solid red data bars with fixed range (0-150)',
+        dataset: dataset3,
+        rule: {
+            color: color3,
+            gradient: false,
+            showValue: true,
+            minValue: fixedMin,
+            maxValue: fixedMax,
+        },
+        expectedResults: dataset3.map(value => ({
+            value,
+            expectedPercent: calculateDataBarPercent(value, fixedMin, fixedMax),
+            expectedColor: color3,
+        })),
+    });
+    
+    // Test Case 4: Data Bars with Negative Values
+    const dataset4 = [-50, -30, -10, 0, 10, 30, 50, 70, 90, 100];
+    const min4 = Math.min(...dataset4);
+    const max4 = Math.max(...dataset4);
+    const color4 = { r: 255, g: 192, b: 0 }; // Orange
+    
+    testCases.push({
+        name: 'gradient-orange-negative',
+        description: 'Gradient orange data bars with negative values',
+        dataset: dataset4,
+        rule: {
+            color: color4,
+            gradient: true,
+            showValue: true,
+        },
+        expectedResults: dataset4.map(value => ({
+            value,
+            expectedPercent: calculateDataBarPercent(value, min4, max4),
+            expectedColor: color4,
+        })),
+    });
+    
+    // Test Case 5: Large Dataset
+    const dataset5 = Array.from({ length: 100 }, (_, i) => (i + 1) * 10);
+    const min5 = Math.min(...dataset5);
+    const max5 = Math.max(...dataset5);
+    const color5 = { r: 156, g: 99, b: 195 }; // Purple
+    
+    // Sample 6 values
+    const sampledValues5 = [dataset5[0], dataset5[19], dataset5[39], dataset5[59], dataset5[79], dataset5[99]];
+    
+    testCases.push({
+        name: 'solid-purple-large-dataset',
+        description: 'Solid purple data bars with 100 values (sampled validation)',
+        dataset: dataset5,
+        rule: {
+            color: color5,
+            gradient: false,
+            showValue: false,
+        },
+        expectedResults: sampledValues5.map(value => ({
+            value,
+            expectedPercent: calculateDataBarPercent(value, min5, max5),
+            expectedColor: color5,
+        })),
+    });
+    
+    return testCases;
+}
+

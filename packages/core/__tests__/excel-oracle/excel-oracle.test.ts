@@ -18,7 +18,7 @@ import { ConditionalFormattingEngine, IconSetRule, ColorScaleRule, DataBarRule }
 import { Address, CellValue } from '../../src/types';
 import * as fs from 'fs';
 import * as path from 'path';
-import { generateOracleTestCases, OracleTestCase, generateColorScaleTestCases, ColorScaleTestCase } from './oracle-test-data';
+import { generateOracleTestCases, OracleTestCase, generateColorScaleTestCases, ColorScaleTestCase, generateDataBarTestCases, DataBarTestCase } from './oracle-test-data';
 
 // Note: XLSX library will be added when we need to load actual Excel files
 // For now, we're using programmatically generated expected results based on Excel's documented behavior
@@ -477,15 +477,120 @@ describe('Excel Oracle Validation - Wave 4', () => {
         });
     });
 
-    describe('Phase D: Data Bar Validation (Placeholder)', () => {
-        it.skip('should match Excel for solid fill data bars', () => {
-            // TODO: Requires Excel file with data bar rules
-            expect(true).toBe(true);
+    describe('Phase D: Data Bar Validation (Oracle Comparison)', () => {
+        const dataBarTestCases = generateDataBarTestCases();
+
+        // Helper to convert RGB to hex string
+        function rgbToHex(r: number, g: number, b: number): string {
+            return '#' + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+
+        dataBarTestCases.forEach((testCase: DataBarTestCase) => {
+            it(`should match Excel for ${testCase.name}`, () => {
+                let exactMatches = 0;
+                let closeMatches = 0;
+                const mismatches: Array<{
+                    value: number;
+                    expectedPercent: number;
+                    actualPercent: number;
+                    diff: number;
+                }> = [];
+
+                const getValue = (addr: Address) => testCase.dataset[addr.row] ?? null;
+
+                // Build data bar rule based on test case
+                const rule: DataBarRule = {
+                    type: 'data-bar',
+                    ranges: [{ start: { row: 0, col: 0 }, end: { row: testCase.dataset.length - 1, col: 0 } }],
+                    color: rgbToHex(testCase.rule.color.r, testCase.rule.color.g, testCase.rule.color.b),
+                    gradient: testCase.rule.gradient ?? true,
+                    showValue: testCase.rule.showValue ?? true,
+                };
+
+                // Set min/max values if specified
+                if (testCase.rule.minValue !== undefined) {
+                    rule.minValue = testCase.rule.minValue;
+                }
+                if (testCase.rule.maxValue !== undefined) {
+                    rule.maxValue = testCase.rule.maxValue;
+                }
+
+                // Calculate dataset range
+                const datasetMin = Math.min(...testCase.dataset);
+                const datasetMax = Math.max(...testCase.dataset);
+
+                testCase.expectedResults.forEach((expected) => {
+                    const row = testCase.dataset.indexOf(expected.value);
+                    const result = engine.applyRules(expected.value, [rule], {
+                        address: { row, col: 0 },
+                        getValue,
+                        valueRange: { min: datasetMin, max: datasetMax },
+                    });
+
+                    // Get data bar percent from result
+                    const actualPercent = result.dataBar?.percent ? result.dataBar.percent * 100 : 0;
+                    const percentDiff = Math.abs(actualPercent - expected.expectedPercent);
+
+                    // Exact match: within ±0.1%
+                    if (percentDiff <= 0.1) {
+                        exactMatches++;
+                    }
+                    // Close match: within ±2% (allowing for rounding differences)
+                    else if (percentDiff <= 2) {
+                        closeMatches++;
+                    } else {
+                        mismatches.push({
+                            value: expected.value,
+                            expectedPercent: expected.expectedPercent,
+                            actualPercent,
+                            diff: percentDiff,
+                        });
+                    }
+                });
+
+                const totalTests = testCase.expectedResults.length;
+                const acceptableMatches = exactMatches + closeMatches;
+                const matchRate = (acceptableMatches / totalTests) * 100;
+
+                console.log(`\n${testCase.name}:`);
+                console.log(`  Dataset size: ${testCase.dataset.length}`);
+                console.log(`  Exact matches (±0.1%): ${exactMatches}/${totalTests} (${((exactMatches / totalTests) * 100).toFixed(1)}%)`);
+                console.log(`  Close matches (±2%): ${closeMatches}/${totalTests} (${((closeMatches / totalTests) * 100).toFixed(1)}%)`);
+                console.log(`  Total acceptable: ${acceptableMatches}/${totalTests} (${matchRate.toFixed(1)}%)`);
+
+                if (mismatches.length > 0) {
+                    console.log(`  Mismatches (${mismatches.length}):`);
+                    mismatches.slice(0, 3).forEach((m) => {
+                        console.log(
+                            `    Value ${m.value}: expected ${m.expectedPercent.toFixed(1)}%, ` +
+                            `got ${m.actualPercent.toFixed(1)}% (diff: ${m.diff.toFixed(1)}%)`
+                        );
+                    });
+                }
+
+                // Assert: ≥85% match rate for data bars (wider tolerance)
+                expect(matchRate).toBeGreaterThanOrEqual(85);
+            });
         });
 
-        it.skip('should match Excel for gradient fill data bars', () => {
-            // TODO: Requires Excel file
-            expect(true).toBe(true);
+        it('should report Phase D summary statistics', () => {
+            const testCases = generateDataBarTestCases();
+            
+            console.log('\n=== Phase D Data Bar Validation Summary ===');
+            console.log(`Test Cases: ${testCases.length}`);
+            
+            const totalValues = testCases.reduce((sum: number, tc: DataBarTestCase) => sum + tc.expectedResults.length, 0);
+            console.log(`Total Values Tested: ${totalValues}`);
+            console.log(`Data Bar Types: solid, gradient`);
+            console.log(`Tolerance: ±2% width`);
+            console.log(`Scenarios: automatic range, fixed range, negative values, large datasets`);
+            console.log('============================================');
+            
+            expect(testCases.length).toBeGreaterThan(0);
+            expect(totalValues).toBeGreaterThan(0);
         });
     });
 
@@ -493,6 +598,7 @@ describe('Excel Oracle Validation - Wave 4', () => {
         it('should report validation statistics', () => {
             const iconSetTestCases = generateOracleTestCases();
             const colorScaleTestCases = generateColorScaleTestCases();
+            const dataBarTestCases = generateDataBarTestCases();
             
             // Phase A: Infrastructure tests (2 passing)
             const phaseATests = 2;
@@ -504,19 +610,26 @@ describe('Excel Oracle Validation - Wave 4', () => {
             // Phase C: Color Scale tests (colorScaleTestCases.length + 1 summary)
             const phaseCTests = colorScaleTestCases.length + 1;
             
+            // Phase D: Data Bar tests (dataBarTestCases.length + 1 summary)
+            const phaseDTests = dataBarTestCases.length + 1;
+            
             const iconSetValues = iconSetTestCases.reduce((sum: number, tc: OracleTestCase) => sum + tc.dataset.length, 0);
             const colorScaleValues = colorScaleTestCases.reduce((sum: number, tc: ColorScaleTestCase) => sum + tc.expectedResults.length, 0);
+            const dataBarValues = dataBarTestCases.reduce((sum: number, tc: DataBarTestCase) => sum + tc.expectedResults.length, 0);
             
             const stats = {
                 phaseA: phaseATests,
                 phaseB: phaseBTests + edgeCaseTests,
                 phaseC: phaseCTests,
-                total: phaseATests + phaseBTests + edgeCaseTests + phaseCTests,
+                phaseD: phaseDTests,
+                total: phaseATests + phaseBTests + edgeCaseTests + phaseCTests + phaseDTests,
                 iconSetCases: iconSetTestCases.length,
                 colorScaleCases: colorScaleTestCases.length,
+                dataBarCases: dataBarTestCases.length,
                 iconSetValues,
                 colorScaleValues,
-                totalValues: iconSetValues + colorScaleValues,
+                dataBarValues,
+                totalValues: iconSetValues + colorScaleValues + dataBarValues,
             };
 
             console.log('\n=== Wave 4 Validation Summary ===');
@@ -529,6 +642,10 @@ describe('Excel Oracle Validation - Wave 4', () => {
             console.log(`  - Oracle test cases: ${stats.colorScaleCases}`);
             console.log(`  - Values validated: ${stats.colorScaleValues}`);
             console.log(`  - Match rate: ≥90% (±5 RGB tolerance)`);
+            console.log(`Phase D (Data Bars): ${stats.phaseD} tests`);
+            console.log(`  - Oracle test cases: ${stats.dataBarCases}`);
+            console.log(`  - Values validated: ${stats.dataBarValues}`);
+            console.log(`  - Match rate: ≥85% (±2% width tolerance)`);
             console.log(`Total Tests: ${stats.total}`);
             console.log(`Total Values Validated: ${stats.totalValues}`);
             console.log('=================================\n');
@@ -536,6 +653,7 @@ describe('Excel Oracle Validation - Wave 4', () => {
             expect(stats.total).toBeGreaterThan(0);
             expect(stats.iconSetCases).toBeGreaterThan(0);
             expect(stats.colorScaleCases).toBeGreaterThan(0);
+            expect(stats.dataBarCases).toBeGreaterThan(0);
         });
     });
 });
