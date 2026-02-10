@@ -80,6 +80,11 @@ export function registerBuiltInFunctions(registry: FunctionRegistry): void {
     ['SUMX2MY2', MathFunctions.SUMX2MY2, { category: FunctionCategory.MATH }],
     ['SUMX2PY2', MathFunctions.SUMX2PY2, { category: FunctionCategory.MATH }],
     ['SUMXMY2', MathFunctions.SUMXMY2, { category: FunctionCategory.MATH }],
+    // Week 2 Day 6: Math Aggregation & Rounding (Excel 2013+)
+    ['CEILING.MATH', MathFunctions.CEILING_MATH, { category: FunctionCategory.MATH, minArgs: 1, maxArgs: 3 }],
+    ['FLOOR.MATH', MathFunctions.FLOOR_MATH, { category: FunctionCategory.MATH, minArgs: 1, maxArgs: 3 }],
+    ['AGGREGATE', MathFunctions.AGGREGATE, { category: FunctionCategory.MATH, minArgs: 3 }],
+    ['SUBTOTAL', MathFunctions.SUBTOTAL, { category: FunctionCategory.MATH, minArgs: 2 }],
   ] as const;
 
   // Text functions

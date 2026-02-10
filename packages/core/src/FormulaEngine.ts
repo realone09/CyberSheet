@@ -1138,6 +1138,9 @@ export class FormulaEngine {
                         'FVSCHEDULE',
                         // Math array functions (Week 11 Day 2)
                         'PRODUCT', 'SUMPRODUCT', 'SUMX2MY2', 'SUMX2PY2', 'SUMXMY2',
+                        // Math aggregation functions (Week 2 Day 6)
+                        // Adding back temporarily to debug
+                        'AGGREGATE', 'SUBTOTAL',
                         // Text array functions (Week 11 Day 3)
                         'CONCAT', 'CONCATENATE'];
     return arrayFuncs.includes(name.toUpperCase());
