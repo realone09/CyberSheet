@@ -177,6 +177,12 @@ export class FormulaEngine {
       return expr.slice(1, -1);
     }
 
+    // Error literal (#DIV/0!, #VALUE!, #REF!, #NAME?, #NUM!, #N/A, #NULL!, #GETTING_DATA)
+    if (expr.startsWith('#') && expr.endsWith('!')) {
+      // Return as Error object
+      return new Error(expr);
+    }
+
     // Number literal
     if (/^-?\d+(\.\d+)?$/.test(expr)) {
       return parseFloat(expr);
@@ -1125,10 +1131,11 @@ export class FormulaEngine {
                         'PERCENTILE', 'PERCENTILE.INC', 'PERCENTILE.EXC',
                         'CORREL', 'COVARIANCE.P', 'COVARIANCE.S', 'RSQ',
                         'FORECAST', 'FORECAST.LINEAR', 'SLOPE', 'INTERCEPT',
-                        'STEYX', 'TREND', 'PEARSON',
+                        'STEYX', 'TREND', 'PEARSON', 'T.TEST', 'F.TEST', 'CHISQ.TEST',
                         // Financial functions (Week 8 Days 4-5)
                         'NPV', 'XNPV', 'PV', 'FV', 'PMT', 'IPMT', 'PPMT',
                         'IRR', 'XIRR', 'MIRR', 'NPER', 'RATE', 'EFFECT', 'NOMINAL',
+                        'FVSCHEDULE',
                         // Math array functions (Week 11 Day 2)
                         'PRODUCT', 'SUMPRODUCT', 'SUMX2MY2', 'SUMX2PY2', 'SUMXMY2',
                         // Text array functions (Week 11 Day 3)

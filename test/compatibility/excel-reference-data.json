@@ -1,0 +1,624 @@
+{
+  "version": "1.0.0",
+  "excelVersion": "Microsoft 365",
+  "generatedDate": "2026-02-09",
+  "testCases": [
+    {
+      "category": "Math - Basic",
+      "tests": [
+        {
+          "id": "MATH-001",
+          "formula": "=SUM(1, 2, 3)",
+          "inputs": {},
+          "expected": 6,
+          "description": "Basic SUM with multiple arguments"
+        },
+        {
+          "id": "MATH-002",
+          "formula": "=SUM(1, 2, 3, 4, 5)",
+          "inputs": {},
+          "expected": 15,
+          "description": "SUM with 5 arguments"
+        },
+        {
+          "id": "MATH-003",
+          "formula": "=PRODUCT(2, 3, 4)",
+          "inputs": {},
+          "expected": 24,
+          "description": "Basic PRODUCT"
+        },
+        {
+          "id": "MATH-004",
+          "formula": "=POWER(2, 8)",
+          "inputs": {},
+          "expected": 256,
+          "description": "Power function"
+        },
+        {
+          "id": "MATH-005",
+          "formula": "=SQRT(144)",
+          "inputs": {},
+          "expected": 12,
+          "description": "Square root"
+        },
+        {
+          "id": "MATH-006",
+          "formula": "=ABS(-42)",
+          "inputs": {},
+          "expected": 42,
+          "description": "Absolute value"
+        },
+        {
+          "id": "MATH-007",
+          "formula": "=ROUND(3.14159, 2)",
+          "inputs": {},
+          "expected": 3.14,
+          "description": "Round to 2 decimals"
+        },
+        {
+          "id": "MATH-008",
+          "formula": "=MOD(10, 3)",
+          "inputs": {},
+          "expected": 1,
+          "description": "Modulo operation"
+        },
+        {
+          "id": "MATH-009",
+          "formula": "=PI()",
+          "inputs": {},
+          "expected": 3.141592653589793,
+          "description": "Pi constant",
+          "tolerance": 0.000000000000001
+        },
+        {
+          "id": "MATH-010",
+          "formula": "=1/0",
+          "inputs": {},
+          "expected": "#DIV/0!",
+          "description": "Division by zero error"
+        }
+      ]
+    },
+    {
+      "category": "Text - Basic",
+      "tests": [
+        {
+          "id": "TEXT-001",
+          "formula": "=LEFT(\"Hello World\", 5)",
+          "inputs": {},
+          "expected": "Hello",
+          "description": "Extract leftmost 5 characters"
+        },
+        {
+          "id": "TEXT-002",
+          "formula": "=RIGHT(\"Hello World\", 5)",
+          "inputs": {},
+          "expected": "World",
+          "description": "Extract rightmost 5 characters"
+        },
+        {
+          "id": "TEXT-003",
+          "formula": "=MID(\"Hello World\", 7, 5)",
+          "inputs": {},
+          "expected": "World",
+          "description": "Extract middle 5 characters starting at position 7"
+        },
+        {
+          "id": "TEXT-004",
+          "formula": "=LEN(\"Hello World\")",
+          "inputs": {},
+          "expected": 11,
+          "description": "String length"
+        },
+        {
+          "id": "TEXT-005",
+          "formula": "=UPPER(\"hello\")",
+          "inputs": {},
+          "expected": "HELLO",
+          "description": "Convert to uppercase"
+        },
+        {
+          "id": "TEXT-006",
+          "formula": "=LOWER(\"WORLD\")",
+          "inputs": {},
+          "expected": "world",
+          "description": "Convert to lowercase"
+        },
+        {
+          "id": "TEXT-007",
+          "formula": "=CONCATENATE(\"Hello\", \" \", \"World\")",
+          "inputs": {},
+          "expected": "Hello World",
+          "description": "Concatenate strings"
+        },
+        {
+          "id": "TEXT-008",
+          "formula": "=TRIM(\"  Hello World  \")",
+          "inputs": {},
+          "expected": "Hello World",
+          "description": "Trim leading/trailing spaces"
+        },
+        {
+          "id": "TEXT-009",
+          "formula": "=SUBSTITUTE(\"Hello World\", \"World\", \"Excel\")",
+          "inputs": {},
+          "expected": "Hello Excel",
+          "description": "Substitute text"
+        },
+        {
+          "id": "TEXT-010",
+          "formula": "=FIND(\"World\", \"Hello World\")",
+          "inputs": {},
+          "expected": 7,
+          "description": "Find substring position (case-sensitive)"
+        }
+      ]
+    },
+    {
+      "category": "Logical - Basic",
+      "tests": [
+        {
+          "id": "LOGICAL-001",
+          "formula": "=IF(5 > 3, \"Yes\", \"No\")",
+          "inputs": {},
+          "expected": "Yes",
+          "description": "Basic IF statement (true case)"
+        },
+        {
+          "id": "LOGICAL-002",
+          "formula": "=IF(2 > 5, \"Yes\", \"No\")",
+          "inputs": {},
+          "expected": "No",
+          "description": "Basic IF statement (false case)"
+        },
+        {
+          "id": "LOGICAL-003",
+          "formula": "=AND(TRUE, TRUE)",
+          "inputs": {},
+          "expected": true,
+          "description": "AND with all true"
+        },
+        {
+          "id": "LOGICAL-004",
+          "formula": "=AND(TRUE, FALSE)",
+          "inputs": {},
+          "expected": false,
+          "description": "AND with one false"
+        },
+        {
+          "id": "LOGICAL-005",
+          "formula": "=OR(FALSE, FALSE)",
+          "inputs": {},
+          "expected": false,
+          "description": "OR with all false"
+        },
+        {
+          "id": "LOGICAL-006",
+          "formula": "=OR(TRUE, FALSE)",
+          "inputs": {},
+          "expected": true,
+          "description": "OR with one true"
+        },
+        {
+          "id": "LOGICAL-007",
+          "formula": "=NOT(TRUE)",
+          "inputs": {},
+          "expected": false,
+          "description": "NOT negation"
+        },
+        {
+          "id": "LOGICAL-008",
+          "formula": "=XOR(TRUE, FALSE)",
+          "inputs": {},
+          "expected": true,
+          "description": "XOR exclusive or"
+        },
+        {
+          "id": "LOGICAL-009",
+          "formula": "=IFS(1>2, \"A\", 3>2, \"B\", TRUE, \"C\")",
+          "inputs": {},
+          "expected": "B",
+          "description": "IFS multiple conditions"
+        },
+        {
+          "id": "LOGICAL-010",
+          "formula": "=SWITCH(2, 1, \"One\", 2, \"Two\", 3, \"Three\")",
+          "inputs": {},
+          "expected": "Two",
+          "description": "SWITCH statement"
+        }
+      ]
+    },
+    {
+      "category": "Information - Basic",
+      "tests": [
+        {
+          "id": "INFO-001",
+          "formula": "=ISNUMBER(42)",
+          "inputs": {},
+          "expected": true,
+          "description": "Check if value is number"
+        },
+        {
+          "id": "INFO-002",
+          "formula": "=ISTEXT(\"Hello\")",
+          "inputs": {},
+          "expected": true,
+          "description": "Check if value is text"
+        },
+        {
+          "id": "INFO-003",
+          "formula": "=ISBLANK(\"\")",
+          "inputs": {},
+          "expected": false,
+          "description": "Empty string is not blank (Excel behavior)"
+        },
+        {
+          "id": "INFO-004",
+          "formula": "=ISERROR(#DIV/0!)",
+          "inputs": {},
+          "expected": true,
+          "description": "Check if value is error"
+        },
+        {
+          "id": "INFO-005",
+          "formula": "=TYPE(42)",
+          "inputs": {},
+          "expected": 1,
+          "description": "TYPE returns 1 for number"
+        },
+        {
+          "id": "INFO-006",
+          "formula": "=TYPE(\"text\")",
+          "inputs": {},
+          "expected": 2,
+          "description": "TYPE returns 2 for text"
+        },
+        {
+          "id": "INFO-007",
+          "formula": "=TYPE(TRUE)",
+          "inputs": {},
+          "expected": 4,
+          "description": "TYPE returns 4 for boolean"
+        },
+        {
+          "id": "INFO-008",
+          "formula": "=TYPE(#DIV/0!)",
+          "inputs": {},
+          "expected": 16,
+          "description": "TYPE returns 16 for error"
+        },
+        {
+          "id": "INFO-009",
+          "formula": "=ERROR.TYPE(#DIV/0!)",
+          "inputs": {},
+          "expected": 2,
+          "description": "ERROR.TYPE returns 2 for #DIV/0!"
+        },
+        {
+          "id": "INFO-010",
+          "formula": "=ERROR.TYPE(#VALUE!)",
+          "inputs": {},
+          "expected": 3,
+          "description": "ERROR.TYPE returns 3 for #VALUE!"
+        }
+      ]
+    },
+    {
+      "category": "Statistical - Basic",
+      "tests": [
+        {
+          "id": "STAT-001",
+          "formula": "=AVERAGE(1, 2, 3, 4, 5)",
+          "inputs": {},
+          "expected": 3,
+          "description": "Average of 5 numbers"
+        },
+        {
+          "id": "STAT-002",
+          "formula": "=MEDIAN(1, 2, 3, 4, 5)",
+          "inputs": {},
+          "expected": 3,
+          "description": "Median of 5 numbers"
+        },
+        {
+          "id": "STAT-003",
+          "formula": "=MAX(1, 5, 3, 9, 2)",
+          "inputs": {},
+          "expected": 9,
+          "description": "Maximum value"
+        },
+        {
+          "id": "STAT-004",
+          "formula": "=MIN(1, 5, 3, 9, 2)",
+          "inputs": {},
+          "expected": 1,
+          "description": "Minimum value"
+        },
+        {
+          "id": "STAT-005",
+          "formula": "=COUNT(1, 2, \"text\", 3, TRUE)",
+          "inputs": {},
+          "expected": 3,
+          "description": "Count only numbers"
+        },
+        {
+          "id": "STAT-006",
+          "formula": "=COUNTA(1, 2, \"text\", 3, TRUE)",
+          "inputs": {},
+          "expected": 5,
+          "description": "Count all non-empty values"
+        },
+        {
+          "id": "STAT-007",
+          "formula": "=COUNTBLANK(\"\", 1, \"\", 2)",
+          "inputs": {},
+          "expected": 0,
+          "description": "Empty strings are not blank in Excel"
+        }
+      ]
+    },
+    {
+      "category": "Date/Time - Basic",
+      "tests": [
+        {
+          "id": "DATE-001",
+          "formula": "=DATE(2026, 2, 9)",
+          "inputs": {},
+          "expected": 46062,
+          "description": "Date serial number for 2026-02-09 (with Excel 1900 leap year bug)"
+        },
+        {
+          "id": "DATE-002",
+          "formula": "=YEAR(DATE(2026, 2, 9))",
+          "inputs": {},
+          "expected": 2026,
+          "description": "Extract year from date"
+        },
+        {
+          "id": "DATE-003",
+          "formula": "=MONTH(DATE(2026, 2, 9))",
+          "inputs": {},
+          "expected": 2,
+          "description": "Extract month from date"
+        },
+        {
+          "id": "DATE-004",
+          "formula": "=DAY(DATE(2026, 2, 9))",
+          "inputs": {},
+          "expected": 9,
+          "description": "Extract day from date"
+        },
+        {
+          "id": "DATE-005",
+          "formula": "=TIME(14, 30, 0)",
+          "inputs": {},
+          "expected": 0.6041666666666666,
+          "description": "Time serial number for 14:30:00",
+          "tolerance": 0.0000000001
+        },
+        {
+          "id": "DATE-006",
+          "formula": "=HOUR(TIME(14, 30, 45))",
+          "inputs": {},
+          "expected": 14,
+          "description": "Extract hour from time"
+        },
+        {
+          "id": "DATE-007",
+          "formula": "=MINUTE(TIME(14, 30, 45))",
+          "inputs": {},
+          "expected": 30,
+          "description": "Extract minute from time"
+        },
+        {
+          "id": "DATE-008",
+          "formula": "=SECOND(TIME(14, 30, 45))",
+          "inputs": {},
+          "expected": 45,
+          "description": "Extract second from time"
+        }
+      ]
+    },
+    {
+      "category": "Week 3 - Text Advanced",
+      "tests": [
+        {
+          "id": "WEEK3-TEXT-001",
+          "formula": "=TEXTBEFORE(\"user@example.com\", \"@\")",
+          "inputs": {},
+          "expected": "user",
+          "description": "TEXTBEFORE delimiter"
+        },
+        {
+          "id": "WEEK3-TEXT-002",
+          "formula": "=TEXTAFTER(\"user@example.com\", \"@\")",
+          "inputs": {},
+          "expected": "example.com",
+          "description": "TEXTAFTER delimiter"
+        },
+        {
+          "id": "WEEK3-TEXT-003",
+          "formula": "=TEXTSPLIT(\"A,B,C\", \",\")",
+          "inputs": {},
+          "expected": ["A", "B", "C"],
+          "description": "TEXTSPLIT by comma"
+        },
+        {
+          "id": "WEEK3-TEXT-004",
+          "formula": "=CONCAT(\"Hello\", \" \", \"World\")",
+          "inputs": {},
+          "expected": "Hello World",
+          "description": "CONCAT multiple strings"
+        },
+        {
+          "id": "WEEK3-TEXT-005",
+          "formula": "=LENB(\"Hello\")",
+          "inputs": {},
+          "expected": 5,
+          "description": "LENB byte length (ASCII)"
+        },
+        {
+          "id": "WEEK3-TEXT-006",
+          "formula": "=LENB(\"こんにちは\")",
+          "inputs": {},
+          "expected": 10,
+          "description": "LENB byte length (Japanese - 5 chars * 2 bytes)"
+        },
+        {
+          "id": "WEEK3-TEXT-007",
+          "formula": "=LEFTB(\"Hello\", 3)",
+          "inputs": {},
+          "expected": "Hel",
+          "description": "LEFTB extract 3 bytes"
+        },
+        {
+          "id": "WEEK3-TEXT-008",
+          "formula": "=RIGHTB(\"World\", 3)",
+          "inputs": {},
+          "expected": "rld",
+          "description": "RIGHTB extract 3 bytes"
+        },
+        {
+          "id": "WEEK3-TEXT-009",
+          "formula": "=MIDB(\"Hello\", 2, 3)",
+          "inputs": {},
+          "expected": "ell",
+          "description": "MIDB extract middle bytes"
+        }
+      ]
+    },
+    {
+      "category": "Week 3 - Web Functions",
+      "tests": [
+        {
+          "id": "WEEK3-WEB-001",
+          "formula": "=ENCODEURL(\"hello world\")",
+          "inputs": {},
+          "expected": "hello%20world",
+          "description": "ENCODEURL with space"
+        },
+        {
+          "id": "WEEK3-WEB-002",
+          "formula": "=ENCODEURL(\"user@example.com\")",
+          "inputs": {},
+          "expected": "user%40example.com",
+          "description": "ENCODEURL with special characters"
+        },
+        {
+          "id": "WEEK3-WEB-003",
+          "formula": "=ENCODEURL(\"こんにちは\")",
+          "inputs": {},
+          "expected": "%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF",
+          "description": "ENCODEURL with Unicode"
+        }
+      ]
+    },
+    {
+      "category": "Edge Cases - Errors",
+      "tests": [
+        {
+          "id": "EDGE-ERROR-001",
+          "formula": "=1/0",
+          "inputs": {},
+          "expected": "#DIV/0!",
+          "description": "Division by zero"
+        },
+        {
+          "id": "EDGE-ERROR-002",
+          "formula": "=SQRT(-1)",
+          "inputs": {},
+          "expected": "#NUM!",
+          "description": "Square root of negative"
+        },
+        {
+          "id": "EDGE-ERROR-003",
+          "formula": "=SUM(\"not a number\")",
+          "inputs": {},
+          "expected": "#VALUE!",
+          "description": "Type mismatch error"
+        },
+        {
+          "id": "EDGE-ERROR-004",
+          "formula": "=FIND(\"X\", \"Hello\")",
+          "inputs": {},
+          "expected": "#VALUE!",
+          "description": "FIND not found"
+        }
+      ]
+    },
+    {
+      "category": "Edge Cases - Boundaries",
+      "tests": [
+        {
+          "id": "EDGE-BOUND-001",
+          "formula": "=LEFT(\"abc\", 999)",
+          "inputs": {},
+          "expected": "abc",
+          "description": "LEFT with length > string length"
+        },
+        {
+          "id": "EDGE-BOUND-002",
+          "formula": "=RIGHT(\"abc\", 0)",
+          "inputs": {},
+          "expected": "",
+          "description": "RIGHT with zero length"
+        },
+        {
+          "id": "EDGE-BOUND-003",
+          "formula": "=MID(\"abc\", 10, 5)",
+          "inputs": {},
+          "expected": "",
+          "description": "MID starting beyond string length"
+        },
+        {
+          "id": "EDGE-BOUND-004",
+          "formula": "=ROUND(0, 0)",
+          "inputs": {},
+          "expected": 0,
+          "description": "ROUND zero"
+        },
+        {
+          "id": "EDGE-BOUND-005",
+          "formula": "=SUM()",
+          "inputs": {},
+          "expected": 0,
+          "description": "SUM with no arguments"
+        }
+      ]
+    },
+    {
+      "category": "Edge Cases - Empty/Null",
+      "tests": [
+        {
+          "id": "EDGE-EMPTY-001",
+          "formula": "=LEN(\"\")",
+          "inputs": {},
+          "expected": 0,
+          "description": "Length of empty string"
+        },
+        {
+          "id": "EDGE-EMPTY-002",
+          "formula": "=CONCATENATE(\"\", \"Hello\", \"\")",
+          "inputs": {},
+          "expected": "Hello",
+          "description": "Concatenate with empty strings"
+        },
+        {
+          "id": "EDGE-EMPTY-003",
+          "formula": "=TRIM(\"\")",
+          "inputs": {},
+          "expected": "",
+          "description": "Trim empty string"
+        },
+        {
+          "id": "EDGE-EMPTY-004",
+          "formula": "=UPPER(\"\")",
+          "inputs": {},
+          "expected": "",
+          "description": "Upper empty string"
+        }
+      ]
+    }
+  ]
+}

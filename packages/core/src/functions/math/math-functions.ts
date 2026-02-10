@@ -12,8 +12,25 @@ import { validateArgCount, validateNonZero, validatePositive } from '../../utils
 
 /**
  * SUM - Sum of all numbers
+ * 
+ * Excel behavior:
+ * - Direct string arguments: #VALUE! error
+ * - Strings from cell references: ignored (filtered out)
+ * - Direct number arguments or cell references with numbers: summed
  */
 export const SUM: FormulaFunction = (...args) => {
+  // Excel throws #VALUE! if direct string arguments are provided
+  // Check if any top-level argument is a string (not from array/range)
+  for (const arg of args) {
+    if (typeof arg === 'string') {
+      // Try to convert to number
+      const num = toNumber(arg);
+      if (num instanceof Error) {
+        return new Error('#VALUE!');
+      }
+    }
+  }
+  
   const numbers = filterNumbers(args);
   return numbers.reduce((sum, n) => sum + n, 0);
 };

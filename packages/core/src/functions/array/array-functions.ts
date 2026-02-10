@@ -41,8 +41,9 @@ export const UNIQUE: FormulaFunction = (...args) => {
     return new Error('#VALUE!');
   }
 
+  // Return empty array for empty input (consistent with Excel behavior)
   if (array.length === 0) {
-    return new Error('#CALC!');
+    return [];
   }
 
   const byColumn = byCol === true || byCol === 1;

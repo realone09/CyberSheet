@@ -4,11 +4,15 @@ import {
 	ConditionalFormattingRule,
 	ConditionalFormattingResult,
 	ConditionalFormattingContext,
+	FormulaRule,
+	ConditionalStyle,
+	DataBarRender,
+	IconRender,
 } from './ConditionalFormattingEngine';
-import {
-	ConditionalFormattingDependencyGraph,
-	RangeStatistics,
-} from './ConditionalFormattingDependencyGraph';
+import { ConditionalFormattingDependencyGraph } from './ConditionalFormattingDependencyGraph';
+import { ConditionalFormattingFormulaCompiler, CompiledFormula } from './ConditionalFormattingFormulaCompiler';
+import { RangeStatsManager, RangeStats } from './RangeStatsManager';
+import { CFDirtyPropagationEngine } from './CFDirtyPropagationEngine';
 
 /**
  * Batch-Evaluation CF Engine with Dependency Graph Integration
@@ -51,6 +55,8 @@ export interface RuleEvaluationState {
 export class ConditionalFormattingBatchEngine {
 	private engine: ConditionalFormattingEngine;
 	private graph: ConditionalFormattingDependencyGraph;
+	private compiledFormulas: Map<string, CompiledFormula> = new Map();
+	private rangeStatsManager: RangeStatsManager;
 	
 	/** Track rule lifecycle states */
 	private ruleStates: Map<string, RuleEvaluationState> = new Map();
@@ -65,6 +71,7 @@ export class ConditionalFormattingBatchEngine {
 	constructor() {
 		this.engine = new ConditionalFormattingEngine();
 		this.graph = new ConditionalFormattingDependencyGraph();
+		this.rangeStatsManager = new RangeStatsManager();
 	}
 
 	// ============================
@@ -76,6 +83,7 @@ export class ConditionalFormattingBatchEngine {
 	 */
 	addRule(ruleId: string, rule: ConditionalFormattingRule): void {
 		this.graph.addRule(ruleId, rule);
+		this.compiledFormulas.delete(ruleId);
 		
 		// Initialize rule state as dirty
 		this.ruleStates.set(ruleId, {
@@ -91,6 +99,7 @@ export class ConditionalFormattingBatchEngine {
 	removeRule(ruleId: string): void {
 		this.graph.removeRule(ruleId);
 		this.ruleStates.delete(ruleId);
+		this.compiledFormulas.delete(ruleId);
 	}
 
 	/**
@@ -99,6 +108,7 @@ export class ConditionalFormattingBatchEngine {
 	clearRules(): void {
 		this.graph.clear();
 		this.ruleStates.clear();
+		this.compiledFormulas.clear();
 	}
 
 	// ============================
@@ -136,16 +146,26 @@ export class ConditionalFormattingBatchEngine {
 	 */
 	evaluateDirtyRulesForRange(range: Range, options: BatchEvaluationOptions): Map<string, ConditionalFormattingResult> {
 		const results = new Map<string, ConditionalFormattingResult>();
+		const dirtyPropagationEngine = new CFDirtyPropagationEngine(
+			this.graph,
+			this.rangeStatsManager,
+			options.getValue
+		);
+		const dirtyPropagationResult = dirtyPropagationEngine.flush();
 
 		// Get all rules (to count how many we're skipping)
 		const allRules = this.graph.getAllRules();
 		const dirtyRules = this.graph.getDirtyRules();
+		const affectedRules = dirtyPropagationResult.affectedRules;
+		const rulesToEvaluate = affectedRules.size > 0
+			? dirtyRules.filter(ruleNode => affectedRules.has(ruleNode.ruleId))
+			: dirtyRules;
 		
 		// Count clean rules that we're skipping (performance win)
-		const cleanRulesCount = allRules.length - dirtyRules.length;
+		const cleanRulesCount = allRules.length - rulesToEvaluate.length;
 		this.stats.skippedCleanRules += cleanRulesCount;
 
-		for (const ruleNode of dirtyRules) {
+		for (const ruleNode of rulesToEvaluate) {
 			const ruleId = ruleNode.ruleId;
 
 			// 1️⃣ Gatekeeping: Only evaluate if rule is dirty
@@ -158,7 +178,7 @@ export class ConditionalFormattingBatchEngine {
 			this.transitionRuleState(ruleId, 'evaluating');
 
 			// Evaluate rule for all cells in range
-			const ruleResult = this.evaluateRuleForRange(ruleNode.rule, range, options);
+			const ruleResult = this.evaluateRuleForRange(ruleNode.rule, range, options, ruleId);
 			results.set(ruleId, ruleResult);
 
 			// 4️⃣ Real Invalidation: after apply → graph.clearDirty(rule)
@@ -204,9 +224,13 @@ export class ConditionalFormattingBatchEngine {
 			getValue: options.getValue,
 		};
 
-		const result = this.engine.applyRules(value, applicableRules, ctx, {
-			formulaEvaluator: options.formulaEvaluator,
-		});
+		const hasFormulaRule = applicableRules.some(rule => rule.type === 'formula');
+		const result = this.applyRulesWithPerRuleEvaluator(
+			applicableRules,
+			value,
+			ctx,
+			hasFormulaRule ? options : { ...options, formulaEvaluator: options.formulaEvaluator }
+		);
 
 		// Mark evaluated rules as clean
 		for (const ruleId of applicableRuleIds) {
@@ -289,25 +313,12 @@ export class ConditionalFormattingBatchEngine {
 	private evaluateRuleForRange(
 		rule: ConditionalFormattingRule,
 		range: Range,
-		options: BatchEvaluationOptions
+		options: BatchEvaluationOptions,
+		ruleId?: string
 	): ConditionalFormattingResult {
 		// For range-aware rules, compute statistics once
 		const needsStats = this.ruleNeedsRangeStats(rule);
-		let stats: RangeStatistics | undefined;
-
-		if (needsStats && rule.ranges && rule.ranges.length > 0) {
-			// Check cache first
-			const ruleId = (rule as any).id ?? 'temp';
-			stats = this.graph.getCachedStats(ruleId);
-
-			if (!stats) {
-				// Compute stats for rule's ranges
-				stats = this.computeRangeStatistics(rule.ranges, options.getValue);
-				if (ruleId !== 'temp') {
-					this.graph.setCachedStats(ruleId, stats);
-				}
-			}
-		}
+		const stats = needsStats ? this.getRangeStats(rule, options) : undefined;
 
 		// Evaluate rule for a representative cell (batch evaluation will be implemented in Step 3)
 		// For now, we evaluate the first cell in range
@@ -321,8 +332,112 @@ export class ConditionalFormattingBatchEngine {
 		};
 
 		return this.engine.applyRules(value, [rule], ctx, {
-			formulaEvaluator: options.formulaEvaluator,
+			formulaEvaluator: this.getFormulaEvaluator(rule, options, ruleId),
 		});
+	}
+
+	private getRangeStats(
+		rule: ConditionalFormattingRule,
+		options: BatchEvaluationOptions
+	): RangeStats | undefined {
+		if (!rule.ranges || rule.ranges.length === 0) {
+			return undefined;
+		}
+
+		if (rule.ranges.length === 1) {
+			return this.rangeStatsManager.computeOnce(rule.ranges[0], options.getValue);
+		}
+
+		return this.rangeStatsManager.computeOnceForRanges(rule.ranges, options.getValue);
+	}
+
+	private applyRulesWithPerRuleEvaluator(
+		rules: ConditionalFormattingRule[],
+		value: CellValue,
+		ctx: ConditionalFormattingContext,
+		options: BatchEvaluationOptions
+	): ConditionalFormattingResult {
+		if (!rules.length) return { appliedRuleIds: [] };
+
+		const sorted = [...rules].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+		const result: ConditionalFormattingResult = { appliedRuleIds: [] };
+
+		for (const rule of sorted) {
+			const valueRange = this.ruleNeedsRangeStats(rule)
+				? this.getRangeStats(rule, options)
+				: undefined;
+			const localCtx: ConditionalFormattingContext = valueRange
+				? { ...ctx, valueRange: { min: valueRange.min, max: valueRange.max } }
+				: ctx;
+
+			const ruleResult = this.engine.applyRules(value, [rule], localCtx, {
+				formulaEvaluator: this.getFormulaEvaluator(rule, options, rule.id ?? undefined),
+			});
+
+			if (!ruleResult.appliedRuleIds.length) continue;
+
+			result.appliedRuleIds.push(...ruleResult.appliedRuleIds);
+
+			this.mergeConditionalResult(result, ruleResult);
+
+			if (rule.stopIfTrue) break;
+		}
+
+		return result;
+	}
+
+	private mergeConditionalResult(
+		result: ConditionalFormattingResult,
+		ruleResult: ConditionalFormattingResult
+	): void {
+		const style = ruleResult.style as ConditionalStyle | undefined;
+		const dataBar = ruleResult.dataBar as DataBarRender | undefined;
+		const icon = ruleResult.icon as IconRender | undefined;
+
+		if (style) {
+			result.style = { ...(result.style ?? {}), ...style };
+			if (style.fillColor) result.style.fill = style.fillColor;
+			if (style.fontColor) result.style.color = style.fontColor;
+		}
+		if (dataBar) result.dataBar = dataBar;
+		if (icon) result.icon = icon;
+	}
+
+	private getFormulaEvaluator(
+		rule: ConditionalFormattingRule,
+		options: BatchEvaluationOptions,
+		ruleId?: string
+	): BatchEvaluationOptions['formulaEvaluator'] {
+		if (options.formulaEvaluator) {
+			return options.formulaEvaluator;
+		}
+
+		if (rule.type !== 'formula') {
+			return undefined;
+		}
+
+		const formulaRule = rule as FormulaRule;
+		const cacheKey = ruleId ?? formulaRule.id ?? formulaRule.expression;
+		let compiled = this.compiledFormulas.get(cacheKey);
+		if (!compiled) {
+			const baseAddress = formulaRule.ranges?.[0]?.start ?? { row: 0, col: 0 };
+			const baseAddressOneBased = { row: baseAddress.row + 1, col: baseAddress.col + 1 };
+			compiled = ConditionalFormattingFormulaCompiler.compile(formulaRule.expression, baseAddressOneBased);
+			this.compiledFormulas.set(cacheKey, compiled);
+		}
+
+		return (expression, context) => {
+			if (expression !== formulaRule.expression) {
+				return false;
+			}
+			if (!context.getValue) {
+				return false;
+			}
+			const address = context.address ?? { row: compiled!.ruleBaseAddress.row - 1, col: compiled!.ruleBaseAddress.col - 1 };
+			const addressOneBased = { row: address.row + 1, col: address.col + 1 };
+			const getValue = (addr: Address) => context.getValue!({ row: addr.row - 1, col: addr.col - 1 });
+			return compiled!.evaluate(addressOneBased, getValue);
+		};
 	}
 
 	/**
@@ -336,52 +451,6 @@ export class ConditionalFormattingBatchEngine {
 			rule.type === 'color-scale' ||
 			rule.type === 'data-bar'
 		);
-	}
-
-	/**
-	 * Compute statistics for ranges (one-pass scan)
-	 */
-	private computeRangeStatistics(ranges: Range[], getValue: (address: Address) => CellValue): RangeStatistics {
-		const numericValues: number[] = [];
-		const allValues: any[] = [];
-
-		for (const range of ranges) {
-			for (let row = range.start.row; row <= range.end.row; row++) {
-				for (let col = range.start.col; col <= range.end.col; col++) {
-					const value = getValue({ row, col });
-					allValues.push(value);
-					if (typeof value === 'number') {
-						numericValues.push(value);
-					}
-				}
-			}
-		}
-
-		// Sort numeric values
-		numericValues.sort((a, b) => a - b);
-
-		// Compute statistics
-		const min = numericValues.length > 0 ? numericValues[0] : 0;
-		const max = numericValues.length > 0 ? numericValues[numericValues.length - 1] : 0;
-		const sum = numericValues.reduce((acc, val) => acc + val, 0);
-		const average = numericValues.length > 0 ? sum / numericValues.length : 0;
-
-		// Standard deviation
-		const variance = numericValues.length > 0
-			? numericValues.reduce((acc, val) => acc + Math.pow(val - average, 2), 0) / numericValues.length
-			: 0;
-		const stdDev = Math.sqrt(variance);
-
-		return {
-			numericValues,
-			allValues,
-			min,
-			max,
-			average,
-			stdDev,
-			count: numericValues.length,
-			timestamp: Date.now(),
-		};
 	}
 
 	/**

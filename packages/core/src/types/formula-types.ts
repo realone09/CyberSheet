@@ -92,6 +92,7 @@ export enum FunctionCategory {
   FINANCIAL = 'FINANCIAL',
   ENGINEERING = 'ENGINEERING',
   INFORMATION = 'INFORMATION',
+  CUBE = 'CUBE',
 }
 
 /**

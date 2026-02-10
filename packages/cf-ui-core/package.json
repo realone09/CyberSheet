@@ -1,0 +1,39 @@
+{
+  "name": "@cyber-sheet/cf-ui-core",
+  "version": "1.0.0",
+  "description": "Framework-agnostic conditional formatting UI controllers and business logic",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "conditional-formatting",
+    "excel",
+    "ui",
+    "framework-agnostic",
+    "vanilla",
+    "react",
+    "vue",
+    "angular",
+    "svelte"
+  ],
+  "dependencies": {
+    "@cyber-sheet/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "tsup": "^8.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "@jest/globals": "^29.0.0"
+  },
+  "peerDependencies": {},
+  "author": "Navid Rezadoost",
+  "license": "MIT"
+}
