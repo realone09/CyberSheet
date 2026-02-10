@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Week 2 Day 6: Math Aggregation & Rounding (2026-02-10)
+
+#### Functions Implemented (4 new, 33/33 tests passing)
+
+**CEILING.MATH** - Round up to multiple with mode control
+- Syntax: `CEILING.MATH(number, [significance], [mode])`
+- Rounds positive numbers away from zero
+- Mode parameter controls negative number rounding:
+  - Mode 0 (default): Round toward zero (e.g., -8.1 → -8)
+  - Mode 1: Round away from zero (e.g., -8.1 → -9)
+- Default significance: 1
+- Test coverage: 8/8 tests passing
+
+**FLOOR.MATH** - Round down to multiple with mode control
+- Syntax: `FLOOR.MATH(number, [significance], [mode])`
+- Symmetric behavior to CEILING.MATH
+- Mode parameter controls negative number rounding (opposite effect)
+- Default significance: 1
+- Test coverage: 8/8 tests passing
+
+**AGGREGATE** - Advanced aggregation with ignore options
+- Syntax: `AGGREGATE(function_num, options, ref1, [ref2], ...)`
+- 19 aggregation functions:
+  - 1-11: AVERAGE, COUNT, COUNTA, MAX, MIN, PRODUCT, STDEV.S, STDEV.P, SUM, VAR.S, VAR.P
+  - 12-19: MEDIAN, MODE.SNGL, LARGE, SMALL, PERCENTILE.INC, QUARTILE, percentiles
+- 8 option codes (0-7) control ignore behavior:
+  - Ignore nested SUBTOTAL/AGGREGATE functions
+  - Ignore hidden rows
+  - Ignore error values
+  - Combinations of above
+- Supports multiple range arguments
+- Test coverage: 8/8 tests passing
+
+**SUBTOTAL** - Aggregation respecting filters
+- Syntax: `SUBTOTAL(function_num, ref1, [ref2], ...)`
+- 11 aggregation functions (codes 1-11, 101-111)
+- Function codes 101-111 ignore filtered rows
+- Always ignores other SUBTOTAL/AGGREGATE calls
+- Respects hidden rows when appropriate
+- Test coverage: 6/6 tests passing
+
+#### Implementation Details
+
+**Array Handling for Variadic Functions**
+- Implemented flattening for nested 2D array ranges
+- Handles `...refs` spread operator over range arguments
+- Prevents triple-nesting issue: `[[[1],[2],[3]]]` → `[1,2,3]`
+- Supports mixed arguments (single values + ranges)
+
+**Aggregation Engine**
+- Helper function `getAggregationFunction()` returns aggregation logic
+- Supports 19 function codes with ignore parameters
+- Reusable across AGGREGATE and SUBTOTAL
+- Special handling for COUNTA (pre-filtered to numbers)
+
+**Test Infrastructure Discovery**
+- Fixed critical test setup issue: 0-based vs 1-based indexing
+- Worksheet internally uses 0-based addressing
+- Formula parser converts A1 → {row: 0, col: 0}
+- Updated all test fixtures to use correct indexing
+- Prevented future indexing errors with inline comments
+
+#### Test Results
+```
+Week 2 Day 6: Math Aggregation & Rounding
+  CEILING.MATH: 8/8 tests ✓
+  FLOOR.MATH: 8/8 tests ✓
+  AGGREGATE: 8/8 tests ✓
+  SUBTOTAL: 6/6 tests ✓
+  Integration: 3/3 tests ✓
+  
+Total: 33/33 tests passing (100%)
+```
+
+#### Cumulative Progress
+- **Week 2 Complete**: Days 1-6 (209/209 tests, 100%)
+- **Functions Added**: 4 new (CEILING.MATH, FLOOR.MATH, AGGREGATE, SUBTOTAL)
+- **Total Statistical Functions**: 50+ (beta, gamma, distributions, aggregations)
+
 ## [4.4.0] - 2026-02-08
 
 ### Added - Wave 4: Excel Parity Validation (100% Oracle Testing Complete)
