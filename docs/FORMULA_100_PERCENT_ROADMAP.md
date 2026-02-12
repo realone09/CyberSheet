@@ -5,6 +5,35 @@
 **Target:** 300 functions (100% web-compatible coverage, excluding ~200 VBA/Macro functions)  
 **Remaining:** 202 functions to implement
 
+**CRITICAL UPDATE (Feb 12, 2026):** Wave 0 Platform Hardening required BEFORE Wave 1
+
+---
+
+## 🚨 Strategic Revision: Wave 0 First
+
+**Management Decision:**  
+Current engine built for ~100 functions. Financial functions (YIELD, XIRR, ACCRINT) will expose architectural weaknesses. Execute **Wave 0 Platform Hardening (1 week)** before implementing 202 functions.
+
+**See:** `docs/WAVE_0_PLATFORM_HARDENING.md` for full specification
+
+---
+
+## Wave 0: Platform Hardening (1 week) — MANDATORY FIRST STEP
+
+**Goal:** Architectural foundation for 300-function scale
+
+### Three Critical Tasks:
+1. **Extended metadata** (2 days): Add `volatile`, `complexityClass`, `precisionClass` to all 98 functions
+2. **Error propagation matrix** (2 days): Formalize rules (empty → 0 vs "", #N/A handling), 50+ tests
+3. **Performance budget** (1 day): Label complexity O(1)/O(n)/O(n²)/ITERATIVE, establish baselines
+
+**Why it matters:**
+- Prevents technical debt collapse at function 150
+- Financial functions need formal error propagation
+- Performance budget prevents regression
+
+**Timeline:** 1 week → **Ready for Wave 1**
+
 ---
 
 ## Executive Summary
@@ -17,52 +46,102 @@
 - ✅ Architecture proven scalable
 
 **Path to 100%:**
-- 📋 Implement 202 remaining web-compatible Excel functions
+- 📋 **Wave 0:** Platform hardening (1 week)
+- 📋 **Wave 1:** Implement 50 high-value functions (5-6 weeks)
+- 📋 **Wave 2:** Implement 80 power-user functions (8 weeks)
+- 📋 **Wave 3:** Implement 72 specialized functions (6-8 weeks)
 - 📋 Maintain quality standards (oracle tests, precision validation)
-- 📋 Estimated timeline: 12-16 weeks (3-4 months)
+- 📋 **Revised timeline: 16-19 weeks (~5 months)**
 
 ---
 
 ## Missing Functions Breakdown (202 Total)
 
-### **Wave 1: High-Value Functions (50 functions, 4 weeks)**
+### **Wave 1: High-Value Functions (50 functions, 5-6 weeks)** ← REVISED
 
-**Priority: CRITICAL** - These are commonly used in real-world spreadsheets
+**NEW Priority Order:** Low numerical risk → High risk  
+**Rationale:** Build confidence momentum before tackling complex financial functions
 
-#### Financial Functions (15 functions, 1 week)
-- [ ] **PRICE** - Security price per $100 face value
-- [ ] **YIELD** - Yield of a security that pays periodic interest
-- [ ] **DURATION** - Macauley duration
-- [ ] **MDURATION** - Modified Macauley duration
-- [ ] **ACCRINT** - Accrued interest for periodic security
-- [ ] **DISC** - Discount rate for a security
-- [ ] **INTRATE** - Interest rate for fully invested security
-- [ ] **RECEIVED** - Amount received at maturity
-- [ ] **TBILLEQ** - Bond-equivalent yield for Treasury bill
-- [ ] **TBILLPRICE** - Price per $100 for Treasury bill
-- [ ] **TBILLYIELD** - Yield for Treasury bill
-- [ ] **COUPDAYS** - Days in coupon period
-- [ ] **COUPDAYBS** - Days from beginning of coupon period
-- [ ] **COUPNCD** - Next coupon date
-- [ ] **COUPPCD** - Previous coupon date
+---
 
-**Implementation Strategy:** Use financial mathematics library patterns from existing NPV/IRR
+#### **Sprint 1 (2 weeks): Date/Time (8) + Text (10)**
 
-#### Statistical Functions (15 functions, 1 week)
-- [ ] **QUARTILE** - Quartile of a data set
-- [ ] **QUARTILE.INC** - Quartile (inclusive)
-- [ ] **QUARTILE.EXC** - Quartile (exclusive)
-- [ ] **PERCENTILE** - k-th percentile
-- [ ] **PERCENTILE.INC** - Percentile (inclusive)
-- [ ] **PERCENTILE.EXC** - Percentile (exclusive)
-- [ ] **RANK** - Rank of a number
-- [ ] **RANK.AVG** - Rank (average for ties)
-- [ ] **RANK.EQ** - Rank (equal for ties)
+**Date/Time Functions (8 functions)**
+- [ ] **WEEKNUM** - Week number of year
+- [ ] **ISOWEEKNUM** - ISO week number
+- [ ] **WORKDAY** - Working day N days from start
+- [ ] **WORKDAY.INTL** - Working day with custom weekend
+- [ ] **NETWORKDAYS** - Number of working days between dates
+- [ ] **NETWORKDAYS.INTL** - Working days with custom weekend
+- [ ] **EDATE** - Date N months before/after
+- [ ] **EOMONTH** - Last day of month N months away
+
+**Text Functions (10 functions)**
+- [ ] **PROPER** - Capitalize first letter of each word
+- [ ] **REPT** - Repeat text N times
+- [ ] **SUBSTITUTE** - Replace text by matching
+- [ ] **TRIM** - Remove extra spaces
+- [ ] **CLEAN** - Remove non-printable characters
+- [ ] **CHAR** - Character from code
+- [ ] **CODE** - Numeric code for first character
+- [ ] **T** - Convert to text
+- [ ] **TEXT** - Format number as text
+- [ ] **VALUE** - Convert text to number
+
+**Why first:** Low complexity, deterministic, no iterative solvers, fast to implement
+
+---
+
+#### **Sprint 2 (2 weeks): Lookup (5) + Statistical (15)**
+
+**Lookup Functions (5 functions)**
+- [ ] **CHOOSE** - Choose value from list by index
+- [ ] **INDIRECT** - Reference specified by text string
+- [ ] **OFFSET** - Range offset from reference
+- [ ] **ROWS** - Number of rows in reference
+- [ ] **COLUMNS** - Number of columns in reference
+
+**Statistical Functions (15 functions)**
+- [ ] **QUARTILE** / **QUARTILE.INC** / **QUARTILE.EXC** - Quartile of dataset
+- [ ] **PERCENTILE** / **PERCENTILE.INC** / **PERCENTILE.EXC** - k-th percentile
+- [ ] **RANK** / **RANK.AVG** / **RANK.EQ** - Rank of number
 - [ ] **PERCENTRANK** - Percentage rank
 - [ ] **CORREL** - Correlation coefficient
 - [ ] **RSQ** - R-squared value
 - [ ] **SLOPE** - Slope of linear regression
-- [ ] **INTERCEPT** - Y-intercept of linear regression
+- [ ] **INTERCEPT** - Y-intercept
+- [ ] **LINEST** - Linear regression statistics
+
+**Mid-risk:** Some numerical precision needed, but well-defined algorithms
+
+---
+
+#### **Sprint 3-4 (2 weeks): Financial (15) — HIGH RISK**
+
+**Financial Functions (15 functions) — COMPLEX**
+- [ ] **PRICE** - Security price per $100 face value
+- [ ] **YIELD** - Yield of security (iterative solver)
+- [ ] **DURATION** - Macauley duration
+- [ ] **MDURATION** - Modified duration
+- [ ] **ACCRINT** - Accrued interest for periodic security
+- [ ] **ACCRINTM** - Accrued interest for maturity security
+- [ ] **DISC** - Discount rate
+- [ ] **INTRATE** - Interest rate for fully invested security
+- [ ] **RECEIVED** - Amount received at maturity
+- [ ] **TBILLEQ** - Bond-equivalent yield for T-bill
+- [ ] **TBILLPRICE** - Price per $100 for T-bill
+- [ ] **TBILLYIELD** - Yield for T-bill
+- [ ] **COUPDAYS** - Days in coupon period
+- [ ] **COUPDAYBS** - Days from beginning of coupon period
+- [ ] **COUPNCD** - Next coupon date
+
+**Why last:**
+- Day-count conventions (30/360, Actual/Actual, Actual/365, etc.)
+- Iterative solvers (YIELD uses Newton-Raphson or bisection)
+- Bond math standards (need deep domain knowledge)
+- Excel quirks and edge cases (most complex error surface)
+
+**Estimated effort:** 2x normal functions due to complexity
 - [ ] **STEYX** - Standard error of predicted y
 
 **Implementation Strategy:** Leverage existing statistical foundation (STDEV, VAR)
