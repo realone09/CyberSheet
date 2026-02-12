@@ -65,6 +65,8 @@ export type OperatorHandler = (left: FormulaValue, right: FormulaValue) => Formu
 /**
  * Function metadata for registration
  * Provides information about function requirements and behavior
+ * 
+ * WARNING: This is the base interface. Use StrictFunctionMetadata for registration.
  */
 export interface FunctionMetadata {
   name: string;
@@ -74,7 +76,29 @@ export interface FunctionMetadata {
   maxArgs?: number;
   isSpecial?: boolean; // Special handling (e.g., LAMBDA, IF, LET)
   needsContext?: boolean; // If true, handler is ContextAwareFormulaFunction
+  
+  // SDK-grade enforcement fields
+  volatile?: boolean;              // RAND, NOW → scheduler always re-evaluates
+  complexityClass?: ComplexityClass; // Used for warnings + future async eligibility
+  precisionClass?: PrecisionClass;   // Drives test tolerance automatically
+  errorStrategy?: ErrorStrategy;     // Per-function error handling override
+  iterationPolicy?: IterationPolicy | null; // For IRR, YIELD, XIRR, RATE (null if not iterative)
 }
+
+/**
+ * STRICT METADATA: All enforcement fields required
+ * SDK-grade: Registry ONLY accepts this type
+ * 
+ * TypeScript will fail to compile if any enforcement field is missing.
+ * This is intentional — prevents metadata drift at 300-function scale.
+ */
+export type StrictFunctionMetadata = Required<Omit<FunctionMetadata, 'minArgs' | 'maxArgs' | 'isSpecial' | 'needsContext' | 'iterationPolicy'>> & {
+  minArgs: number;          // Required: no implicit defaults
+  maxArgs: number;          // Required: no implicit defaults
+  isSpecial: boolean;       // Required: explicit false if not special
+  needsContext: boolean;    // Required: explicit false if not context-aware
+  iterationPolicy: IterationPolicy | null; // Required: null if not iterative
+};
 
 /**
  * Function categories for organization and lookup optimization
@@ -93,6 +117,53 @@ export enum FunctionCategory {
   ENGINEERING = 'ENGINEERING',
   INFORMATION = 'INFORMATION',
   CUBE = 'CUBE',
+}
+
+/**
+ * Complexity classification for performance budgeting
+ * SDK-grade: Used for performance introspection API
+ */
+export enum ComplexityClass {
+  O_1 = 'O(1)',           // PI, TRUE, NOW
+  O_N = 'O(n)',           // SUM, AVERAGE
+  O_N_LOG_N = 'O(n log n)', // SORT, MEDIAN
+  O_N2 = 'O(n²)',         // MMULT
+  ITERATIVE = 'iterative' // IRR, YIELD (Newton/bisection)
+}
+
+/**
+ * Precision classification for test tolerance
+ * SDK-grade: Drives test tolerance automatically
+ */
+export enum PrecisionClass {
+  EXACT = 'exact',            // Integer math, text
+  FINANCIAL = 'financial',    // ±$0.01
+  STATISTICAL = 'statistical', // ±1e-10
+  ERF_LIMITED = 'erf-limited', // ±1e-7 (NORM.DIST)
+  ITERATIVE = 'iterative'    // Convergence-dependent
+}
+
+/**
+ * Error handling strategy for per-function overrides
+ * SDK-grade: Consumed by Error Engine Layer
+ */
+export enum ErrorStrategy {
+  PROPAGATE_FIRST = 'propagate-first', // Standard: first error propagates
+  SKIP_ERRORS = 'skip-errors',         // AVERAGE, COUNT skip errors
+  LAZY_EVALUATION = 'lazy',            // IF evaluates branches lazily
+  SHORT_CIRCUIT = 'short-circuit',     // AND, OR stop on first determinant
+  LOOKUP_STRICT = 'lookup-strict',     // MATCH, VLOOKUP treat #N/A specially
+  FINANCIAL_STRICT = 'financial-strict' // PRICE, YIELD strict coercion
+}
+
+/**
+ * Iteration policy for iterative solvers
+ * SDK-grade: Standardizes convergence management
+ */
+export interface IterationPolicy {
+  maxIterations: number;  // e.g., 100 for IRR, 50 for YIELD
+  tolerance: number;      // e.g., 1e-7
+  algorithm: 'newton' | 'bisection' | 'secant';
 }
 
 /**

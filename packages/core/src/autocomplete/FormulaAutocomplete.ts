@@ -211,10 +211,18 @@ export class FormulaAutocomplete {
 
   /**
    * Generate function syntax string
+   * 
+   * Wave 0 Day 1: Strict enforcement - no implicit defaults
+   * Registry guarantees all metadata fields are defined
    */
   private generateSyntax(funcName: string, metadata: FunctionMetadata): string {
-    const minArgs = metadata.minArgs ?? 0;
-    const maxArgs = metadata.maxArgs ?? 255;
+    // Registry guarantees these are defined via StrictFunctionMetadata
+    if (metadata.minArgs === undefined || metadata.maxArgs === undefined) {
+      throw new Error(`[WAVE_0_DAY_1] Function ${funcName} has incomplete metadata. All functions must have minArgs/maxArgs defined.`);
+    }
+    
+    const minArgs = metadata.minArgs;
+    const maxArgs = metadata.maxArgs;
     
     if (minArgs === 0 && maxArgs === 0) {
       return `${funcName}()`;

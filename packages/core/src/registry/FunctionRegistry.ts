@@ -4,6 +4,12 @@
  * Central registry for all formula functions.
  * Uses Map for O(1) lookup instead of switch/if-else chains.
  * 
+ * SDK-Grade Enforcement:
+ * - Registry ONLY accepts StrictFunctionMetadata
+ * - TypeScript build fails if metadata incomplete
+ * - No runtime defaults, no implicit assumptions
+ * - Fail fast at development time
+ * 
  * Design Patterns:
  * - Registry Pattern: Central registration point
  * - Strategy Pattern: Different function categories
@@ -16,7 +22,14 @@
  * - Inline cache friendly
  */
 
-import type { FormulaFunction, ContextAwareFormulaFunction, FunctionMetadata, FunctionCategory } from '../types/formula-types';
+import type { 
+  FormulaFunction, 
+  ContextAwareFormulaFunction, 
+  FunctionMetadata,
+  StrictFunctionMetadata,
+  FunctionCategory
+} from '../types/formula-types';
+import { ComplexityClass } from '../types/formula-types';
 
 export interface FunctionRegistryConfig {
   enableCaching?: boolean;
@@ -48,36 +61,29 @@ export class FunctionRegistry {
   }
 
   /**
-   * Register a function
-   * @param name - Function name (will be uppercased)
-   * @param handler - Function implementation
-   * @param metadata - Optional metadata
+   * Register a function with STRICT metadata enforcement
+   * 
+   * SDK-Grade: TypeScript will fail to compile if metadata incomplete
+   * NO runtime defaults, NO implicit assumptions
+   * 
+   * @param metadata - Complete StrictFunctionMetadata (all fields required)
    */
-  register(
-    name: string,
-    handler: FormulaFunction | ContextAwareFormulaFunction,
-    metadata?: Partial<FunctionMetadata>
-  ): void {
-    const upperName = name.toUpperCase();
+  register(metadata: StrictFunctionMetadata): void {
+    const upperName = metadata.name.toUpperCase();
 
     // Store function handler
-    this.functions.set(upperName, handler);
+    this.functions.set(upperName, metadata.handler);
 
-    // Store metadata
-    const fullMetadata: FunctionMetadata = {
+    // Store complete metadata (already validated by TypeScript)
+    const storedMetadata: FunctionMetadata = {
+      ...metadata,
       name: upperName,
-      handler,
-      category: metadata?.category ?? 'MATH' as any,
-      minArgs: metadata?.minArgs,
-      maxArgs: metadata?.maxArgs,
-      isSpecial: metadata?.isSpecial ?? false,
-      needsContext: metadata?.needsContext ?? false,
     };
 
-    this.metadata.set(upperName, fullMetadata);
+    this.metadata.set(upperName, storedMetadata);
 
     // Update category index
-    const category = fullMetadata.category;
+    const category = metadata.category;
     if (!this.categoryIndex.has(category)) {
       this.categoryIndex.set(category, new Set());
     }
@@ -90,11 +96,13 @@ export class FunctionRegistry {
   }
 
   /**
-   * Register multiple functions at once
+   * Register multiple functions at once (STRICT enforcement)
+   * 
+   * @param functions - Array of StrictFunctionMetadata (all fields required)
    */
-  registerBatch(functions: Array<[string, FormulaFunction | ContextAwareFormulaFunction, Partial<FunctionMetadata>?]>): void {
-    for (const [name, handler, metadata] of functions) {
-      this.register(name, handler, metadata);
+  registerBatch(functions: StrictFunctionMetadata[]): void {
+    for (const metadata of functions) {
+      this.register(metadata);
     }
   }
 
@@ -244,6 +252,72 @@ export class FunctionRegistry {
       categories,
       specialFunctions: specialCount,
     };
+  }
+
+  /**
+   * SDK-Grade: Query volatile functions
+   * Used by scheduler for recalc planning
+   */
+  getVolatileFunctions(): string[] {
+    const volatile: string[] = [];
+    for (const [name, meta] of this.metadata.entries()) {
+      if (meta.volatile === true) {
+        volatile.push(name);
+      }
+    }
+    return volatile;
+  }
+
+  /**
+   * SDK-Grade: Query iterative functions
+   * Used for performance budgeting
+   */
+  getIterativeFunctions(): string[] {
+    const iterative: string[] = [];
+    for (const [name, meta] of this.metadata.entries()) {
+      if (meta.iterationPolicy !== null && meta.iterationPolicy !== undefined) {
+        iterative.push(name);
+      }
+    }
+    return iterative;
+  }
+
+  /**
+   * SDK-Grade: Check if function is expensive
+   * Returns true for O(n²) and ITERATIVE complexity
+   */
+  isExpensive(functionName: string): boolean {
+    const meta = this.metadata.get(functionName.toUpperCase());
+    if (!meta) return false;
+    
+    return meta.complexityClass === ComplexityClass.O_N2 || 
+           meta.complexityClass === ComplexityClass.ITERATIVE;
+  }
+
+  /**
+   * SDK-Grade: Export metadata as JSON for documentation
+   * Used for audit and documentation generation
+   */
+  exportMetadataJSON(): Record<string, any>[] {
+    const exported: Record<string, any>[] = [];
+    
+    for (const [name, meta] of this.metadata.entries()) {
+      exported.push({
+        name,
+        category: meta.category,
+        minArgs: meta.minArgs,
+        maxArgs: meta.maxArgs,
+        isSpecial: meta.isSpecial,
+        needsContext: meta.needsContext,
+        volatile: meta.volatile,
+        complexityClass: meta.complexityClass,
+        precisionClass: meta.precisionClass,
+        errorStrategy: meta.errorStrategy,
+        iterationPolicy: meta.iterationPolicy,
+      });
+    }
+    
+    return exported.sort((a, b) => a.name.localeCompare(b.name));
   }
 }
 

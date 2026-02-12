@@ -1353,10 +1353,49 @@ export class FormulaEngine {
   }
 
   /**
-   * Registers built-in Excel functions
+   * @deprecated [WAVE_0_DAY_1] Use registerFunctionStrict() instead
+   * 
+   * Legacy method that bypasses strict metadata enforcement.
+   * This method will be removed in Wave 1.
+   * 
+   * SDK-Grade Migration Path:
+   * - For 300-function implementations, use registerFunctionStrict()
+   * - This method exists only for backward compatibility during Wave 0
    */
   registerFunction(name: string, func: FormulaFunction): void {
-    this.functionRegistry.register(name.toUpperCase(), func);
+    throw new Error(
+      `[WAVE_0_DAY_1] registerFunction() is deprecated. ` +
+      `Use registerFunctionStrict() with complete StrictFunctionMetadata. ` +
+      `Partial metadata is no longer supported.`
+    );
+  }
+
+  /**
+   * SDK-Grade: Register function with strict metadata enforcement
+   * 
+   * Wave 0 Day 1: TypeScript enforces completeness at compile-time
+   * All 98 functions must be backfilled with complete metadata (Day 2)
+   * 
+   * @param metadata - Complete StrictFunctionMetadata (all fields required)
+   * 
+   * @example
+   * engine.registerFunctionStrict({
+   *   name: 'SUM',
+   *   handler: (args) => args.reduce((a, b) => a + b, 0),
+   *   category: FunctionCategory.MATH,
+   *   minArgs: 1,
+   *   maxArgs: 255,
+   *   isSpecial: false,
+   *   needsContext: false,
+   *   volatile: false,
+   *   complexityClass: ComplexityClass.O_N,
+   *   precisionClass: PrecisionClass.EXACT,
+   *   errorStrategy: ErrorStrategy.PROPAGATE_FIRST,
+   *   iterationPolicy: null
+   * });
+   */
+  registerFunctionStrict(metadata: import('./types/formula-types').StrictFunctionMetadata): void {
+    this.functionRegistry.register(metadata);
   }
 
   /**
