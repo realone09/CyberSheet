@@ -207,6 +207,11 @@ function hashObject(obj: any): number {
  * @internal Exported for benchmarking only
  */
 export function normalizeStyle(style: CellStyle): CellStyle {
+  // Handle edge case: empty/undefined style
+  if (!style || Object.keys(style).length === 0) {
+    return {};
+  }
+  
   const normalized: Partial<CellStyle> = {};
   
   // Copy defined properties in canonical order
