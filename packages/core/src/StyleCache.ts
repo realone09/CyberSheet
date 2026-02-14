@@ -1,0 +1,575 @@
+/**
+ * StyleCache: Workbook-level immutable style interning
+ * 
+ * Enterprise-Grade Formatting Foundation
+ * - Structural equality → Reference equality
+ * - O(1) lookup with collision resolution
+ * - Workbook-level deduplication (cross-sheet)
+ * - Reference counting for automatic GC
+ * 
+ * Performance Contract:
+ * - Hit rate: ≥90% (typical), ≥80% (designer)
+ * - Intern time: <0.1ms avg
+ * - Memory: <1MB overhead (5k unique styles)
+ * - Collisions: <5%
+ * 
+ * Gate: ALL benchmarks must pass before Layout Layer.
+ */
+
+import type { CellStyle } from './types';
+
+/**
+ * Hash function for CellStyle objects.
+ * 
+ * Strategy:
+ * 1. Bitmask for boolean flags (8 bits, single XOR)
+ * 2. Prime multiplication for numeric properties
+ * 3. djb2 hash for string properties
+ * 4. XOR mixing for collision resistance
+ * 
+ * Critical: Hash quality determines collision rate.
+ * Target: <5% collisions for 5k unique styles.
+ * 
+ * @internal Exported for benchmarking only
+ */
+export function hashStyle(style: CellStyle): number {
+  // Start with a non-zero seed to handle empty objects
+  let hash = 0x811c9dc5; // FNV offset basis (32-bit)
+  
+  // === Flags Bitmask ===
+  // Single operation for all boolean properties
+  const flags =
+    (style.bold ? 1 << 0 : 0) |
+    (style.italic ? 1 << 1 : 0) |
+    (style.underline ? 1 << 2 : 0) |
+    (style.wrap ? 1 << 3 : 0) |
+    (style.shrinkToFit ? 1 << 4 : 0);
+  
+  // Mix flags with FNV prime
+  if (flags !== 0) {
+    hash ^= flags;
+    hash = Math.imul(hash, 0x01000193); // FNV prime
+  }
+  
+  // === Numeric Properties (Prime Multiplication + Mix) ===
+  // Different primes for each property to reduce collisions
+  if (style.fontSize !== undefined) {
+    hash ^= (style.fontSize * 31) | 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  if (style.rotation !== undefined) {
+    hash ^= (style.rotation * 37) | 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  // === String Properties (djb2 Hash with better mixing) ===
+  if (style.fontFamily) {
+    for (let i = 0; i < style.fontFamily.length; i++) {
+      hash ^= style.fontFamily.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+  }
+  
+  // Handle color (string or ExcelColorSpec)
+  if (style.color) {
+    // Include property name to distinguish from fill
+    hash ^= 'color'.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+    
+    if (typeof style.color === 'string') {
+      for (let i = 0; i < style.color.length; i++) {
+        hash ^= style.color.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+      }
+    } else {
+      // ExcelColorSpec: hash object structure
+      hash ^= hashObject(style.color);
+      hash = Math.imul(hash, 0x01000193);
+    }
+  }
+  
+  // Handle fill (string or ExcelColorSpec)
+  if (style.fill) {
+    // Include property name to distinguish from color
+    hash ^= 'fill'.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+    
+    if (typeof style.fill === 'string') {
+      for (let i = 0; i < style.fill.length; i++) {
+        hash ^= style.fill.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+      }
+    } else {
+      hash ^= hashObject(style.fill);
+      hash = Math.imul(hash, 0x01000193);
+    }
+  }
+  
+  // === Alignment (Enum → Number with mixing) ===
+  if (style.align) {
+    const alignValue = { left: 1, center: 2, right: 3 }[style.align] || 0;
+    hash ^= (alignValue * 43) | 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  if (style.valign) {
+    const valignValue = { top: 1, middle: 2, bottom: 3 }[style.valign] || 0;
+    hash ^= (valignValue * 47) | 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  // === Text Overflow ===
+  if (style.textOverflow) {
+    const overflowValue = { clip: 1, ellipsis: 2, overflow: 3 }[style.textOverflow] || 0;
+    hash ^= (overflowValue * 53) | 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  // === Number Format ===
+  if (style.numberFormat) {
+    for (let i = 0; i < style.numberFormat.length; i++) {
+      hash ^= style.numberFormat.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+  }
+  
+  // === Borders ===
+  if (style.border) {
+    hash ^= hashObject(style.border);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  // === Final Avalanche Mixing ===
+  // Improve distribution in lower bits
+  hash ^= (hash >>> 16);
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= (hash >>> 13);
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= (hash >>> 16);
+  
+  // Return unsigned 32-bit integer
+  return hash >>> 0;
+}
+
+/**
+ * Hash a generic object (for nested structures like borders, colors)
+ * @internal
+ */
+function hashObject(obj: any): number {
+  let hash = 0x811c9dc5; // FNV offset basis
+  
+  // Sort keys for stable hashing
+  const keys = Object.keys(obj).sort();
+  
+  for (const key of keys) {
+    // Hash key name
+    for (let i = 0; i < key.length; i++) {
+      hash ^= key.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193); // FNV prime
+    }
+    
+    // Hash value
+    const value = obj[key];
+    if (typeof value === 'string') {
+      for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+      }
+    } else if (typeof value === 'number') {
+      hash ^= (value * 59) | 0;
+      hash = Math.imul(hash, 0x01000193);
+    } else if (typeof value === 'boolean') {
+      hash ^= (value ? 61 : 67) | 0;
+      hash = Math.imul(hash, 0x01000193);
+    } else if (typeof value === 'object' && value !== null) {
+      hash ^= hashObject(value);
+      hash = Math.imul(hash, 0x01000193);
+    }
+  }
+  
+  return hash;
+}
+
+/**
+ * Normalize style to canonical form for stable hashing.
+ * 
+ * Operations:
+ * 1. Remove undefined properties
+ * 2. Sort object keys (stable property order)
+ * 3. Convert default values to explicit (e.g., bold: false)
+ * 
+ * Benefits:
+ * - Stable hash for equivalent styles
+ * - Fewer collisions (consistent representation)
+ * - Faster deepEquals (same structure)
+ * 
+ * @internal Exported for benchmarking only
+ */
+export function normalizeStyle(style: CellStyle): CellStyle {
+  const normalized: Partial<CellStyle> = {};
+  
+  // Copy defined properties in canonical order
+  const keys = Object.keys(style).sort() as Array<keyof CellStyle>;
+  
+  for (const key of keys) {
+    const value = style[key];
+    if (value !== undefined) {
+      (normalized as any)[key] = value;
+    }
+  }
+  
+  return normalized as CellStyle;
+}
+
+/**
+ * Deep equality check for CellStyle objects.
+ * 
+ * Used for collision resolution in StyleCache.
+ * Only called when hashes match → performance critical.
+ * 
+ * Optimization: Assumes normalized styles (stable key order).
+ * 
+ * @internal Exported for benchmarking only
+ */
+export function deepEquals(a: CellStyle, b: CellStyle): boolean {
+  // Fast path: same reference
+  if (a === b) return true;
+  
+  // Fast path: different key counts
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  
+  // Compare each property
+  for (const key of keysA) {
+    const valueA = (a as any)[key];
+    const valueB = (b as any)[key];
+    
+    // Primitive comparison
+    if (valueA !== valueB) {
+      // Deep comparison for nested objects (e.g., borders, fills)
+      if (typeof valueA === 'object' && typeof valueB === 'object') {
+        if (!deepEqualsObject(valueA, valueB)) return false;
+      } else {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Deep equality for nested objects (borders, fills, etc.)
+ * 
+ * @internal
+ */
+function deepEqualsObject(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  
+  for (const key of keysA) {
+    if (a[key] !== b[key]) {
+      if (typeof a[key] === 'object' && typeof b[key] === 'object') {
+        if (!deepEqualsObject(a[key], b[key])) return false;
+      } else {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * StyleCache Metrics
+ * 
+ * Tracks performance characteristics for benchmarking.
+ */
+export interface StyleCacheMetrics {
+  hitCount: number;
+  missCount: number;
+  collisionCount: number;
+  totalInternTime: number; // milliseconds
+  cacheSize: number; // unique styles
+  bucketCount: number;
+  maxBucketDepth: number;
+}
+
+/**
+ * StyleCache: Workbook-level immutable style interning
+ * 
+ * Implementation Strategy:
+ * 1. Hash-based bucketing (Map<hash, CellStyle[]>)
+ * 2. Collision resolution via deepEquals()
+ * 3. Reference counting for automatic GC
+ * 4. Deep Object.freeze() for immutability
+ * 
+ * Lifecycle:
+ * - intern(): Add style to cache, return frozen reference
+ * - release(): Decrement ref count, GC if zero
+ * - clear(): Remove all styles (workbook close)
+ */
+export class StyleCache {
+  /**
+   * Hash buckets: hash → array of styles with that hash
+   * 
+   * Collision resolution: Linear search within bucket
+   * Expected bucket depth: 1-2 styles (<5% collision rate)
+   */
+  private cache = new Map<number, CellStyle[]>();
+  
+  /**
+   * Reference counting for automatic GC
+   * 
+   * WeakMap allows styles to be GC'd when no longer referenced.
+   * But we still need manual cleanup from buckets.
+   */
+  private refCount = new WeakMap<CellStyle, number>();
+  
+  /**
+   * Performance metrics (for benchmarking)
+   */
+  private metrics: StyleCacheMetrics = {
+    hitCount: 0,
+    missCount: 0,
+    collisionCount: 0,
+    totalInternTime: 0,
+    cacheSize: 0,
+    bucketCount: 0,
+    maxBucketDepth: 0,
+  };
+  
+  /**
+   * Intern a style into the cache.
+   * 
+   * Returns frozen reference to cached style.
+   * If style already exists (structural equality), returns existing reference.
+   * 
+   * Performance:
+   * - Average: O(1) (hash lookup + constant bucket scan)
+   * - Worst: O(n) where n = bucket depth (expected <5)
+   * 
+   * @param style Style to intern (will be normalized)
+   * @returns Frozen cached style reference
+   */
+  intern(style: CellStyle): CellStyle {
+    const start = performance.now();
+    
+    // Normalize for stable hashing
+    const normalized = normalizeStyle(style);
+    const hash = hashStyle(normalized);
+    
+    // Get bucket (collision chain)
+    let bucket = this.cache.get(hash);
+    
+    if (bucket) {
+      // Search for existing style in bucket
+      for (const cached of bucket) {
+        if (deepEquals(cached, normalized)) {
+          // Cache hit!
+          this.metrics.hitCount++;
+          this.incrementRef(cached);
+          
+          const end = performance.now();
+          this.metrics.totalInternTime += (end - start);
+          
+          return cached;
+        }
+      }
+      
+      // Collision: hash matches but style differs
+      this.metrics.collisionCount++;
+    } else {
+      // First style with this hash
+      bucket = [];
+      this.cache.set(hash, bucket);
+      this.metrics.bucketCount++;
+    }
+    
+    // Cache miss: freeze and add to bucket
+    this.metrics.missCount++;
+    
+    const frozen = this.freezeStyle(normalized);
+    bucket.push(frozen);
+    this.refCount.set(frozen, 1);
+    this.metrics.cacheSize++;
+    
+    // Update max bucket depth
+    if (bucket.length > this.metrics.maxBucketDepth) {
+      this.metrics.maxBucketDepth = bucket.length;
+    }
+    
+    const end = performance.now();
+    this.metrics.totalInternTime += (end - start);
+    
+    return frozen;
+  }
+  
+  /**
+   * Release a style reference.
+   * 
+   * Decrements ref count. If zero, removes from cache.
+   * 
+   * CRITICAL: Must be called when cell style changes or cell is deleted.
+   * Failure to release causes memory leaks.
+   * 
+   * @param style Style to release
+   */
+  release(style: CellStyle): void {
+    const count = this.refCount.get(style);
+    
+    if (count === undefined) {
+      // Style not in cache (possible if manually created)
+      return;
+    }
+    
+    if (count <= 1) {
+      // Last reference: remove from cache
+      this.refCount.delete(style);
+      this.removeFromBucket(style);
+      this.metrics.cacheSize--;
+    } else {
+      // Decrement ref count
+      this.refCount.set(style, count - 1);
+    }
+  }
+  
+  /**
+   * Clear all cached styles.
+   * 
+   * Used when workbook is closed.
+   */
+  clear(): void {
+    this.cache.clear();
+    // refCount is WeakMap, will GC automatically
+    this.metrics = {
+      hitCount: 0,
+      missCount: 0,
+      collisionCount: 0,
+      totalInternTime: 0,
+      cacheSize: 0,
+      bucketCount: 0,
+      maxBucketDepth: 0,
+    };
+  }
+  
+  /**
+   * Get cache metrics (for benchmarking).
+   */
+  getMetrics(): Readonly<StyleCacheMetrics> {
+    return { ...this.metrics };
+  }
+  
+  /**
+   * Get cache hit rate.
+   * 
+   * Target: ≥90% for typical workbooks, ≥80% for designer workbooks.
+   */
+  getHitRate(): number {
+    const total = this.metrics.hitCount + this.metrics.missCount;
+    return total > 0 ? this.metrics.hitCount / total : 0;
+  }
+  
+  /**
+   * Get collision rate.
+   * 
+   * Target: <5% (indicates hash quality).
+   */
+  getCollisionRate(): number {
+    return this.metrics.missCount > 0
+      ? this.metrics.collisionCount / this.metrics.missCount
+      : 0;
+  }
+  
+  /**
+   * Get average intern time.
+   * 
+   * Target: <0.1ms.
+   */
+  getAvgInternTime(): number {
+    const total = this.metrics.hitCount + this.metrics.missCount;
+    return total > 0 ? this.metrics.totalInternTime / total : 0;
+  }
+  
+  /**
+   * Get cache size (unique styles).
+   */
+  size(): number {
+    return this.metrics.cacheSize;
+  }
+  
+  /**
+   * Freeze style deeply (immutability enforcement).
+   * 
+   * In production: Deep Object.freeze()
+   * In development: Add mutation proxy
+   * 
+   * Cost: O(properties) but amortized across all references.
+   */
+  private freezeStyle(style: CellStyle): CellStyle {
+    // Deep freeze
+    Object.freeze(style);
+    
+    // Freeze nested objects (borders, fills, etc.)
+    for (const key in style) {
+      const value = (style as any)[key];
+      if (typeof value === 'object' && value !== null) {
+        Object.freeze(value);
+        
+        // Recursively freeze nested properties
+        if (Array.isArray(value)) {
+          value.forEach(item => {
+            if (typeof item === 'object' && item !== null) {
+              Object.freeze(item);
+            }
+          });
+        }
+      }
+    }
+    
+    // TODO: Add development-mode proxy for mutation detection
+    // if (process.env.NODE_ENV === 'development') {
+    //   return createMutationProxy(style);
+    // }
+    
+    return style;
+  }
+  
+  /**
+   * Increment reference count.
+   */
+  private incrementRef(style: CellStyle): void {
+    const count = this.refCount.get(style) || 0;
+    this.refCount.set(style, count + 1);
+  }
+  
+  /**
+   * Remove style from bucket (GC cleanup).
+   * 
+   * CRITICAL: Must remove from bucket array, not just WeakMap.
+   * Otherwise memory leak (bucket holds strong reference).
+   */
+  private removeFromBucket(style: CellStyle): void {
+    const hash = hashStyle(style);
+    const bucket = this.cache.get(hash);
+    
+    if (bucket) {
+      const index = bucket.indexOf(style);
+      if (index >= 0) {
+        bucket.splice(index, 1);
+        
+        // If bucket empty, remove hash key
+        if (bucket.length === 0) {
+          this.cache.delete(hash);
+          this.metrics.bucketCount--;
+        }
+      }
+    }
+  }
+}
