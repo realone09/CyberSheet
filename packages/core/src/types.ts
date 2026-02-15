@@ -24,6 +24,11 @@ export type CellStyle = {
   rotation?: number;
   // Shrink text to fit within cell width without wrapping
   shrinkToFit?: boolean;
+  // Phase 1 UI: Structural text formatting
+  strikethrough?: boolean;
+  superscript?: boolean; // Mutually exclusive with subscript
+  subscript?: boolean;   // Mutually exclusive with superscript
+  indent?: number;       // 0-250 (Excel limit), undefined normalizes to 0
   numberFormat?: string; // e.g., "#,##0.00"
   border?: {
     top?: string | ExcelColorSpec;

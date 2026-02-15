@@ -19,6 +19,53 @@
 import type { CellStyle } from './types';
 
 /**
+ * Symbol to mark interned styles (dev mode safeguard).
+ * 
+ * Purpose: Prevents accidental non-interned style usage at render boundaries.
+ * Protects against ecosystem integration drift (React, XLSX, toolbar mutations).
+ * 
+ * Rule: UI layer must NEVER construct full style objects.
+ * Only StyleCache.intern() may create canonical styles.
+ */
+const INTERNED_SYMBOL = Symbol.for('__cyber_sheet_interned__');
+
+/**
+ * Check if a style has been interned through StyleCache.
+ * 
+ * Used at render boundaries to enforce canonical identity.
+ * Only enabled in development mode (zero runtime cost in production).
+ * 
+ * @param style Style to check
+ * @returns true if style was interned
+ */
+export function isInternedStyle(style: CellStyle | undefined): boolean {
+  if (!style) return true; // undefined/null are valid
+  return !!(style as any)[INTERNED_SYMBOL];
+}
+
+/**
+ * Assert that a style is interned (dev mode only).
+ * 
+ * Throws if non-interned style detected.
+ * Guards against UI layer bypassing StyleCache.
+ * 
+ * @param style Style to validate
+ * @param context Context for error message (e.g., 'CanvasRenderer.render')
+ */
+export function assertInternedStyle(style: CellStyle | undefined, context: string): void {
+  // Only enforce in development
+  if (process.env.NODE_ENV === 'production') return;
+  
+  if (style && !isInternedStyle(style)) {
+    throw new Error(
+      `[StyleCache] Non-interned style detected at ${context}. ` +
+      `All styles must pass through StyleCache.intern() before rendering. ` +
+      `This prevents identity fragmentation and ensures canonical references.`
+    );
+  }
+}
+
+/**
  * Hash function for CellStyle objects.
  * 
  * Strategy:
@@ -43,7 +90,10 @@ export function hashStyle(style: CellStyle): number {
     (style.italic ? 1 << 1 : 0) |
     (style.underline ? 1 << 2 : 0) |
     (style.wrap ? 1 << 3 : 0) |
-    (style.shrinkToFit ? 1 << 4 : 0);
+    (style.shrinkToFit ? 1 << 4 : 0) |
+    (style.strikethrough ? 1 << 5 : 0) |
+    (style.superscript ? 1 << 6 : 0) |
+    (style.subscript ? 1 << 7 : 0);
   
   // Mix flags with FNV prime
   if (flags !== 0) {
@@ -60,6 +110,12 @@ export function hashStyle(style: CellStyle): number {
   
   if (style.rotation !== undefined) {
     hash ^= (style.rotation * 37) | 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  
+  // Phase 1 UI: indent (normalized: 0 === undefined, skip if 0)
+  if (style.indent !== undefined && style.indent !== 0) {
+    hash ^= (style.indent * 41) | 0;
     hash = Math.imul(hash, 0x01000193);
   }
   
@@ -214,14 +270,38 @@ export function normalizeStyle(style: CellStyle): CellStyle {
   
   const normalized: Partial<CellStyle> = {};
   
+  // Phase 1 UI: Enforce mutual exclusivity BEFORE normalization
+  // superscript takes precedence over subscript
+  const hasSuperscript = style.superscript === true;
+  const hasSubscript = style.subscript === true;
+  
   // Copy defined properties in canonical order
   const keys = Object.keys(style).sort() as Array<keyof CellStyle>;
   
   for (const key of keys) {
     const value = style[key];
-    if (value !== undefined) {
-      (normalized as any)[key] = value;
+    
+    // Skip undefined
+    if (value === undefined) {
+      continue;
     }
+    
+    // Phase 1 UI: Normalize boolean flags (false === undefined)
+    if (typeof value === 'boolean' && value === false) {
+      continue; // Skip false boolean values (same as undefined)
+    }
+    
+    // Phase 1 UI: Normalize indent (0 === undefined)
+    if (key === 'indent' && value === 0) {
+      continue; // Skip indent: 0 (same as undefined)
+    }
+    
+    // Phase 1 UI: Enforce mutual exclusivity (superscript wins)
+    if (key === 'subscript' && hasSuperscript) {
+      continue; // Skip subscript if superscript is true
+    }
+    
+    (normalized as any)[key] = value;
   }
   
   return normalized as CellStyle;
@@ -250,6 +330,14 @@ export function deepEquals(a: CellStyle, b: CellStyle): boolean {
   for (const key of keysA) {
     const valueA = (a as any)[key];
     const valueB = (b as any)[key];
+    
+    // Phase 1 UI: Normalize indent (0 === undefined)
+    if (key === 'indent') {
+      const normalizedA = valueA === undefined || valueA === 0 ? 0 : valueA;
+      const normalizedB = valueB === undefined || valueB === 0 ? 0 : valueB;
+      if (normalizedA !== normalizedB) return false;
+      continue;
+    }
     
     // Primitive comparison
     if (valueA !== valueB) {
@@ -484,11 +572,20 @@ export class StyleCache {
    * Freeze style deeply (immutability enforcement).
    * 
    * In production: Deep Object.freeze()
-   * In development: Add mutation proxy
+   * In development: Add interning marker + mutation proxy
    * 
    * Cost: O(properties) but amortized across all references.
    */
   private freezeStyle(style: CellStyle): CellStyle {
+    // Mark as interned (dev mode safeguard)
+    // Non-enumerable property prevents it from affecting hashing/equality
+    Object.defineProperty(style, INTERNED_SYMBOL, {
+      value: true,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
+    
     // Deep freeze
     Object.freeze(style);
     
@@ -508,11 +605,6 @@ export class StyleCache {
         }
       }
     }
-    
-    // TODO: Add development-mode proxy for mutation detection
-    // if (process.env.NODE_ENV === 'development') {
-    //   return createMutationProxy(style);
-    // }
     
     return style;
   }
