@@ -672,15 +672,44 @@ sheet.setCellStyle({ row: 1, col: 1 }, {
 
 ### **Formulas (100+ Functions)**
 
+CyberSheet supports 100+ Excel-compatible functions across multiple categories:
+
+**Math & Aggregation**
 ```typescript
 =SUM(A1:A10)
 =AVERAGE(B1:B10)
+=CEILING.MATH(24.3, 5)        // Round up to multiple
+=FLOOR.MATH(24.3, 5)          // Round down to multiple
+=AGGREGATE(9, 0, A1:A10)      // SUM with ignore options
+=SUBTOTAL(9, A1:A10)          // SUM respecting filters
+```
+
+**Statistical Functions**
+```typescript
+=BETA.DIST(0.4, 8, 10, TRUE)  // Beta distribution
+=GAMMA.DIST(10.00001131, 9, 2, FALSE)
+=HYPGEOM.DIST(1, 4, 8, 20, FALSE)
+=F.DIST(15.2069, 6, 4, FALSE)
+```
+
+**Logical & Lookup**
+```typescript
 =IF(A1>100, "High", "Low")
 =VLOOKUP(A1, B1:D10, 3, FALSE)
+```
+
+**Text & Date**
+```typescript
 =CONCATENATE(A1, " ", B1)
 =TODAY()
+```
+
+**Financial**
+```typescript
 =PMT(0.05/12, 360, 200000)
 ```
+
+See [Formula Documentation](./docs/FORMULA_ARCHITECTURE.md) for complete function list.
 
 ### **Row & Column**
 

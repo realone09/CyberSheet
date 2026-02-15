@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>CF Inspector Demo - Day 4</title>
+	<style>
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			margin: 0;
+			padding: 20px;
+			background: #f5f5f5;
+		}
+		.container {
+			max-width: 1400px;
+			margin: 0 auto;
+			background: white;
+			padding: 24px;
+			border-radius: 8px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+		}
+		h1 {
+			margin-top: 0;
+			color: #007acc;
+			border-bottom: 2px solid #007acc;
+			padding-bottom: 12px;
+		}
+		.demo-section {
+			margin: 24px 0;
+		}
+		.demo-grid {
+			display: grid;
+			grid-template-columns: repeat(10, 60px);
+			gap: 2px;
+			margin: 20px 0;
+			border: 1px solid #ccc;
+			padding: 10px;
+			border-radius: 4px;
+		}
+		.demo-cell {
+			width: 60px;
+			height: 40px;
+			border: 1px solid #ddd;
+			display: flex;
+			align-items: center;
+			justify-center;
+			cursor: pointer;
+			position: relative;
+			background: white;
+		}
+		.demo-cell:hover {
+			border-color: #007acc;
+			box-shadow: 0 0 4px rgba(0,122,204,0.3);
+		}
+		.demo-cell.formatted {
+			font-weight: 600;
+		}
+		.instructions {
+			background: #fff8e1;
+			padding: 16px;
+			border-radius: 4px;
+			border-left: 4px solid #ffc107;
+			margin: 20px 0;
+		}
+		#root {
+			margin-top: 20px;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>🎯 Week 1, Day 4: Rule Inspector Demo</h1>
+		
+		<div class="instructions">
+			<strong>📌 Excel-Killer Feature:</strong> Hover over any colored cell to see CF rule details!
+			<br><br>
+			<strong>Shows:</strong>
+			<ul style="margin: 8px 0;">
+				<li>Rule type badge (Top 10%, Value &gt; 75, etc.)</li>
+				<li>Explanation (why rule applied)</li>
+				<li>Rank info (position, threshold)</li>
+				<li>Priority & stopIfTrue status</li>
+				<li>Source: Manual vs Preset</li>
+			</ul>
+		</div>
+
+		<div class="demo-section">
+			<h2>Interactive Grid with CF Rules</h2>
+			<p style="color: #666;">
+				<strong>Sample Data:</strong> 100 cells with values 1-100<br>
+				<strong>Applied Rules:</strong>
+			</p>
+			<ul>
+				<li><strong style="color: #c00;">Top 10%</strong> - Red background (values ≥ 91)</li>
+				<li><strong style="color: #090;">Above Average</strong> - Green background (values &gt; 50)</li>
+				<li><strong style="color: #06c;">Value ≥ 75</strong> - Blue text</li>
+			</ul>
+		</div>
+
+		<!-- React app mounts here -->
+		<div id="root"></div>
+	</div>
+
+	<script type="module" src="./cf-inspector-demo.tsx"></script>
+</body>
+</html>

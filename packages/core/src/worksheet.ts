@@ -16,14 +16,16 @@ export class Worksheet {
   private formulaEngine?: IFormulaEngine;
   private merges: Range[] = [];
   private conditionalRules: ConditionalFormattingRule[] = [];
+  private workbook?: any; // Reference to parent Workbook (for StyleCache access)
   rowCount: number;
   colCount: number;
 
-  constructor(name: string, rows = 1000, cols = 26, engine?: IFormulaEngine) {
+  constructor(name: string, rows = 1000, cols = 26, engine?: IFormulaEngine, workbook?: any) {
     this.name = name;
     this.rowCount = rows;
     this.colCount = cols;
     this.formulaEngine = engine;
+    this.workbook = workbook;
   }
 
   on(listener: (e: SheetEvents) => void) {
@@ -54,15 +56,55 @@ export class Worksheet {
   setCellStyle(addr: Address, style: CellStyle | undefined): void {
     const k = key(addr);
     const c = this.cells.get(k) ?? { value: null };
-    c.style = style ? { ...style } : undefined;
+    
+    // Auto-intern through workbook StyleCache (entropy-resistant boundary)
+    // Protects against XLSX import, UI mutations, and spread operators
+    let internedStyle = style;
+    if (style && this.workbook?.getStyleCache) {
+      internedStyle = this.workbook.getStyleCache().intern(style);
+    }
+    
+    c.style = internedStyle; // Reference to canonical style (not a copy)
     this.cells.set(k, c);
-    this.events.emit({ type: 'style-changed', address: addr, style });
+    this.events.emit({ type: 'style-changed', address: addr, style: internedStyle });
   }
 
   // ==================== Conditional Formatting ====================
 
-  setConditionalFormattingRules(rules: ConditionalFormattingRule[]): void {
-    this.conditionalRules = rules.slice();
+  setConditionalFormattingRules(rules: ConditionalFormattingRule[]): void;
+  setConditionalFormattingRules(
+    range: Range,
+    rules: ConditionalFormattingRule[],
+    options?: { replace?: boolean; source?: 'preset' | 'manual' }
+  ): void;
+  setConditionalFormattingRules(
+    rangeOrRules: Range | ConditionalFormattingRule[],
+    rulesOrOptions?: ConditionalFormattingRule[] | { replace?: boolean; source?: 'preset' | 'manual' },
+    options?: { replace?: boolean; source?: 'preset' | 'manual' }
+  ): void {
+    if (Array.isArray(rangeOrRules)) {
+      this.conditionalRules = rangeOrRules.slice();
+      this.events.emit({ type: 'sheet-mutated' });
+      return;
+    }
+
+    const range = rangeOrRules;
+    const rules = Array.isArray(rulesOrOptions) ? rulesOrOptions : [];
+    const opts = Array.isArray(rulesOrOptions) ? options : rulesOrOptions;
+    const replace = opts?.replace ?? true;
+
+    const normalizedRange = this.normalizeRange(range);
+    const updatedRules = rules.map(rule => ({
+      ...rule,
+      ranges: [normalizedRange],
+    }));
+
+    if (replace) {
+      this.conditionalRules = updatedRules;
+    } else {
+      this.conditionalRules = [...this.conditionalRules, ...updatedRules];
+    }
+
     this.events.emit({ type: 'sheet-mutated' });
   }
 
@@ -78,6 +120,88 @@ export class Worksheet {
 
   getConditionalFormattingRules(): ConditionalFormattingRule[] {
     return this.conditionalRules.slice();
+  }
+
+  /**
+   * Get the used range (smallest rectangle that includes all non-empty cells).
+   */
+  getUsedRange(): Range | null {
+    if (this.cells.size === 0) return null;
+
+    let minRow = Infinity;
+    let maxRow = -Infinity;
+    let minCol = Infinity;
+    let maxCol = -Infinity;
+
+    for (const keyStr of this.cells.keys()) {
+      const [rowStr, colStr] = keyStr.split(':');
+      const row = Number(rowStr);
+      const col = Number(colStr);
+      if (Number.isNaN(row) || Number.isNaN(col)) continue;
+      minRow = Math.min(minRow, row);
+      maxRow = Math.max(maxRow, row);
+      minCol = Math.min(minCol, col);
+      maxCol = Math.max(maxCol, col);
+    }
+
+    if (!Number.isFinite(minRow) || !Number.isFinite(minCol)) return null;
+
+    return {
+      start: { row: minRow, col: minCol },
+      end: { row: maxRow, col: maxCol },
+    };
+  }
+
+  /**
+   * Get contiguous block around an address (expands until empty rows/cols).
+   */
+  getContiguousRange(anchor: Address): Range | null {
+    if (!this.getCell(anchor)) return null;
+
+    let minRow = anchor.row;
+    let maxRow = anchor.row;
+    let minCol = anchor.col;
+    let maxCol = anchor.col;
+
+    const isRowNonEmpty = (row: number, startCol: number, endCol: number): boolean => {
+      for (let col = startCol; col <= endCol; col++) {
+        if (this.getCell({ row, col })) return true;
+      }
+      return false;
+    };
+
+    const isColNonEmpty = (col: number, startRow: number, endRow: number): boolean => {
+      for (let row = startRow; row <= endRow; row++) {
+        if (this.getCell({ row, col })) return true;
+      }
+      return false;
+    };
+
+    let expanded = true;
+    while (expanded) {
+      expanded = false;
+      if (minRow > 0 && isRowNonEmpty(minRow - 1, minCol, maxCol)) {
+        minRow -= 1;
+        expanded = true;
+      }
+      if (maxRow < this.rowCount && isRowNonEmpty(maxRow + 1, minCol, maxCol)) {
+        maxRow += 1;
+        expanded = true;
+      }
+      if (minCol > 0 && isColNonEmpty(minCol - 1, minRow, maxRow)) {
+        minCol -= 1;
+        expanded = true;
+      }
+      if (maxCol < this.colCount && isColNonEmpty(maxCol + 1, minRow, maxRow)) {
+        maxCol += 1;
+        expanded = true;
+      }
+    }
+
+    return {
+      start: { row: minRow, col: minCol },
+      end: { row: maxRow, col: maxCol },
+    };
   }
 
   setColumnFilter(col: number, filter: ColumnFilter): void {

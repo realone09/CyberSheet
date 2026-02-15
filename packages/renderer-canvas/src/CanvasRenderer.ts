@@ -1,4 +1,4 @@
-import { Worksheet, Address, CellStyle, CellEvent, resolveExcelColor, ExcelColorSpec, Emitter } from '@cyber-sheet/core';
+import { Worksheet, Address, CellStyle, CellEvent, resolveExcelColor, ExcelColorSpec, Emitter, assertInternedStyle, computeVerticalOffset } from '@cyber-sheet/core';
 import { TextMeasureCache } from './TextMeasureCache';
 import { Theme, ExcelLightTheme, mergeTheme, ThemePresetName, resolveThemePreset } from './Theme';
 import { FormatCache } from './FormatCache';
@@ -526,6 +526,10 @@ export class CanvasRenderer {
           const v = this.sheet.getCellValue(addr);
           const style: CellStyle | undefined = this.sheet.getCellStyle(addr);
 
+          // Phase 1 UI: Validate style is interned (dev mode only)
+          // Prevents ecosystem integration drift (React, XLSX, toolbar mutations)
+          assertInternedStyle(style, 'CanvasRenderer.renderCells');
+
           // Apply plugin-based heatmap background
           let pluginBg: string | undefined;
           for (const plugin of this.plugins) {
@@ -576,6 +580,8 @@ export class CanvasRenderer {
               if (style.border.bottom) { ctx.strokeStyle = transformBorder(style.border.bottom)!; ctx.beginPath(); ctx.moveTo(x, y + bh + 0.5); ctx.lineTo(x + bw, y + bh + 0.5); ctx.stroke(); }
               if (style.border.left) { ctx.strokeStyle = transformBorder(style.border.left)!; ctx.beginPath(); ctx.moveTo(x + 0.5, y); ctx.lineTo(x + 0.5, y + bh); ctx.stroke(); }
               if (style.border.right) { ctx.strokeStyle = transformBorder(style.border.right)!; ctx.beginPath(); ctx.moveTo(x + bw + 0.5, y); ctx.lineTo(x + bw + 0.5, y + bh); ctx.stroke(); }
+              if (style.border.diagonalDown) { ctx.strokeStyle = transformBorder(style.border.diagonalDown)!; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + bw, y + bh); ctx.stroke(); }
+              if (style.border.diagonalUp) { ctx.strokeStyle = transformBorder(style.border.diagonalUp)!; ctx.beginPath(); ctx.moveTo(x, y + bh); ctx.lineTo(x + bw, y); ctx.stroke(); }
             }
           }
 
@@ -612,8 +618,9 @@ export class CanvasRenderer {
             }
             ctx.fillStyle = textColor;
             const drawW = merged ? spanW : cw; const drawH = merged ? spanH : rh; const maxWidth = Math.max(0, drawW - 8);
-            let tx = x + 4; let ty = y + drawH / 2 + fontSize / 2 - 2;
-            const valign = style?.valign ?? 'middle'; if (valign === 'top') ty = y + fontSize + 2; if (valign === 'bottom') ty = y + drawH - 4;
+            let tx = x + 4;
+            // Compute vertical offset using layout function (pure layout concern)
+            let ty = y + computeVerticalOffset(style?.valign, drawH, fontSize, fontSize, 2, 4) - fontSize / 2 + 2;
             const align = style?.align ?? this.formatCache.preferredAlign(v, style?.numberFormat);
             let textWidth = this.textCache.get(font, text); if (textWidth === undefined) { textWidth = ctx.measureText(text).width; this.textCache.set(font, text, textWidth); }
             // Shrink-to-fit scaling if specified (tolerate style flag if present)
@@ -629,21 +636,51 @@ export class CanvasRenderer {
               let localTx = -drawW / 2 + 4;
               if (align === 'right') localTx = drawW / 2 - 4 - (textWidth as number);
               else if (align === 'center') localTx = -(textWidth as number) / 2;
-              let localTy = (fontSize / 2) - 2; // approx vertical center line
-              if (valign === 'top') localTy = -drawH / 2 + fontSize + 2;
-              if (valign === 'bottom') localTy = drawH / 2 - 4;
+              // Compute vertical offset using layout function (scaled context)
+              const valignOffset = computeVerticalOffset(style?.valign, drawH, fontSize, fontSize, 2, 4);
+              let localTy = valignOffset - drawH / 2 - fontSize / 2 + 2;
               ctx.beginPath(); ctx.rect(-drawW / 2 + 1, -drawH / 2 + 1, drawW - 2, drawH - 2); ctx.clip();
               ctx.fillText(text, localTx, localTy, maxWidth);
               ctx.restore();
               x += this.sheet.getColumnWidth(col); col++;
               continue;
             }
-            if (align === 'right') tx = x + drawW - 4 - (textWidth as number); else if (align === 'center') tx = x + drawW / 2 - (textWidth as number) / 2;
+            // Phase 1 UI: Apply indent (left-align only)
+            let indentOffset = 0;
+            if (style?.indent && align === 'left') {
+              indentOffset = (style.indent) * 8; // ~8px per indent level
+            }
+            
+            if (align === 'right') tx = x + drawW - 4 - (textWidth as number) + indentOffset; else if (align === 'center') tx = x + drawW / 2 - (textWidth as number) / 2; else if (indentOffset > 0) tx += indentOffset;
             const wrap = !!style?.wrap; const overflow = style?.textOverflow ?? 'clip';
             ctx.save(); ctx.beginPath(); ctx.rect(x + 1, y + 1, drawW - 2, drawH - 2); ctx.clip();
+            
+            // Phase 1 UI: Superscript/Subscript font scaling (fast path: check before computing)
+            const hasScript = style?.superscript || style?.subscript;
+            let scriptScale = 1;
+            let scriptOffsetY = 0;
+            if (hasScript) {
+              scriptScale = 0.7; // 70% of normal font size
+              const metrics = ctx.measureText(text);
+              const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+              scriptOffsetY = style.superscript ? -ascent * 0.4 : ascent * 0.2;
+            }
+            
             if (style?.rotation && style.rotation !== 0) {
               const angle = (style.rotation * Math.PI) / 180; const cx = x + (drawW / 2); const cy = y + (drawH / 2);
-              ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle); const rx = -(textWidth as number) / 2; const ry = fontSize / 2; ctx.fillText(text, rx, ry); ctx.restore();
+              ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle); 
+              if (hasScript) {
+                ctx.save();
+                ctx.scale(scriptScale, scriptScale);
+                const rx = -(textWidth as number) / 2 / scriptScale; 
+                const ry = fontSize / 2 / scriptScale + scriptOffsetY / scriptScale;
+                ctx.fillText(text, rx, ry);
+                ctx.restore();
+              } else {
+                const rx = -(textWidth as number) / 2; const ry = fontSize / 2; 
+                ctx.fillText(text, rx, ry); 
+              }
+              ctx.restore();
             } else if (!wrap) {
               let toDraw = text;
               if (overflow === 'ellipsis' && (textWidth as number) > maxWidth) {
@@ -651,15 +688,79 @@ export class CanvasRenderer {
                 while (lo < hi) { const mid = Math.floor((lo + hi) / 2); const s = text.slice(0, mid) + '…'; const w2 = this.textCache.get(font, s) ?? ctx.measureText(s).width; if (w2 <= maxWidth) { lo = mid + 1; this.textCache.set(font, s, w2); } else { hi = mid; } }
                 toDraw = text.slice(0, Math.max(0, lo - 1)) + '…';
               }
-              ctx.fillText(toDraw, tx, ty, maxWidth);
+              
+              // Apply superscript/subscript if present
+              if (hasScript) {
+                ctx.save();
+                ctx.scale(scriptScale, scriptScale);
+                ctx.fillText(toDraw, tx / scriptScale, (ty + scriptOffsetY) / scriptScale, maxWidth / scriptScale);
+                ctx.restore();
+              } else {
+                ctx.fillText(toDraw, tx, ty, maxWidth);
+              }
+              
+              // Phase 1 UI: Strikethrough rendering (fast path: only if property is true)
+              if (style?.strikethrough) {
+                const metrics = ctx.measureText(toDraw);
+                const strikeY = ty - (metrics.actualBoundingBoxAscent || fontSize * 0.8) * 0.3;
+                const strikeWidth = (typeof metrics.width === 'number') ? metrics.width : (textWidth as number);
+                ctx.strokeStyle = textColor;
+                ctx.lineWidth = Math.max(1, fontSize * 0.08); // ~8% of font size
+                ctx.beginPath();
+                ctx.moveTo(tx, strikeY);
+                ctx.lineTo(tx + strikeWidth * scriptScale, strikeY);
+                ctx.stroke();
+              }
             } else {
               const raw = String(text); const paragraphs = raw.split(/\n/); const words = paragraphs.flatMap((p, i) => (i > 0 ? ['\n', ...p.split(/\s+/)] : p.split(/\s+/)));
               const lines: string[] = []; let line = '';
               for (const wtoken of words) { if (wtoken === '\n') { if (line) { lines.push(line); line = ''; } continue; } const candidate = line ? line + ' ' + wtoken : wtoken; const cw = this.textCache.get(font, candidate) ?? ctx.measureText(candidate).width; if (cw <= maxWidth || !line) { line = candidate; this.textCache.set(font, candidate, cw); } else { lines.push(line); line = wtoken; } }
               if (line) lines.push(line);
-              let lineY = y + fontSize + 2; if (valign === 'middle') { const totalH = lines.length * (fontSize + 2); lineY = y + (drawH - totalH) / 2 + fontSize; } else if (valign === 'bottom') { const totalH = lines.length * (fontSize + 2); lineY = y + drawH - totalH + fontSize; }
-              const startX = align === 'center' ? (x + drawW / 2) : (align === 'right' ? (x + drawW - 4) : (x + 4));
-              for (const ln of lines) { let lx = startX; const lw = this.textCache.get(font, ln) ?? ctx.measureText(ln).width; if (align === 'center') lx -= (lw as number) / 2; else if (align === 'right') lx -= (lw as number); ctx.fillText(ln, lx, lineY, maxWidth); lineY += fontSize + 2; if (lineY > y + drawH) break; }
+              // Compute vertical offset using layout function (multi-line case)
+              const totalH = lines.length * (fontSize + 2);
+              let lineY = y + computeVerticalOffset(style?.valign, drawH, totalH, fontSize, 2, 4) - fontSize;
+              const startX = align === 'center' ? (x + drawW / 2) : (align === 'right' ? (x + drawW - 4) : (x + 4 + indentOffset));
+              
+              // Phase 1 UI: Apply superscript/subscript to wrapped text (fast path: only if needed)
+              if (hasScript) {
+                ctx.save();
+                ctx.scale(scriptScale, scriptScale);
+              }
+              
+              for (const ln of lines) { 
+                let lx = startX; 
+                const lw = this.textCache.get(font, ln) ?? ctx.measureText(ln).width; 
+                if (align === 'center') lx -= (lw as number) / 2; 
+                else if (align === 'right') lx -= (lw as number); 
+                
+                const finalLx = hasScript ? lx / scriptScale : lx;
+                const finalLineY = hasScript ? (lineY + scriptOffsetY) / scriptScale : lineY;
+                const finalMaxWidth = hasScript ? maxWidth / scriptScale : maxWidth;
+                
+                ctx.fillText(ln, finalLx, finalLineY, finalMaxWidth); 
+                
+                // Phase 1 UI: Strikethrough for wrapped lines (fast path: only if property is true)
+                if (style?.strikethrough) {
+                  const metrics = ctx.measureText(ln);
+                  const strikeY = hasScript 
+                    ? (lineY + scriptOffsetY - (metrics.actualBoundingBoxAscent || fontSize * 0.8) * 0.3) / scriptScale
+                    : lineY - (metrics.actualBoundingBoxAscent || fontSize * 0.8) * 0.3;
+                  const strikeWidth = (typeof metrics.width === 'number') ? metrics.width : (lw as number);
+                  ctx.strokeStyle = textColor;
+                  ctx.lineWidth = Math.max(1, fontSize * 0.08) / (hasScript ? scriptScale : 1);
+                  ctx.beginPath();
+                  ctx.moveTo(finalLx, strikeY);
+                  ctx.lineTo(finalLx + strikeWidth, strikeY);
+                  ctx.stroke();
+                }
+                
+                lineY += fontSize + 2; 
+                if (lineY > y + drawH) break; 
+              }
+              
+              if (hasScript) {
+                ctx.restore();
+              }
             }
             ctx.restore();
             

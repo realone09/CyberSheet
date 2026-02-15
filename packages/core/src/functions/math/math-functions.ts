@@ -6,14 +6,31 @@
  */
 
 import type { FormulaFunction, FormulaValue } from '../../types/formula-types';
-import { filterNumbers } from '../../utils/array-utils';
+import { filterNumbers, flattenArray } from '../../utils/array-utils';
 import { toNumber } from '../../utils/type-utils';
 import { validateArgCount, validateNonZero, validatePositive } from '../../utils/validation-utils';
 
 /**
  * SUM - Sum of all numbers
+ * 
+ * Excel behavior:
+ * - Direct string arguments: #VALUE! error
+ * - Strings from cell references: ignored (filtered out)
+ * - Direct number arguments or cell references with numbers: summed
  */
 export const SUM: FormulaFunction = (...args) => {
+  // Excel throws #VALUE! if direct string arguments are provided
+  // Check if any top-level argument is a string (not from array/range)
+  for (const arg of args) {
+    if (typeof arg === 'string') {
+      // Try to convert to number
+      const num = toNumber(arg);
+      if (num instanceof Error) {
+        return new Error('#VALUE!');
+      }
+    }
+  }
+  
   const numbers = filterNumbers(args);
   return numbers.reduce((sum, n) => sum + n, 0);
 };
@@ -788,4 +805,458 @@ export const SUMXMY2: FormulaFunction = (arrayX, arrayY) => {
   }
   
   return sum;
+};
+
+// ============================================================================
+// Week 2 Day 6: Math Aggregation & Rounding Functions (Excel 2013+)
+// ============================================================================
+
+/**
+ * CEILING.MATH - Round up to nearest multiple (Excel 2013+)
+ * 
+ * Rounds a number up to the nearest integer or multiple of significance.
+ * Improved version of CEILING with mode parameter for negative numbers.
+ * 
+ * Syntax: CEILING.MATH(number, [significance], [mode])
+ * 
+ * @param number - Value to round up
+ * @param significance - Multiple to round to (default 1). If omitted or 0, defaults to 1
+ * @param mode - Rounding mode for negative numbers (default 0)
+ *   0 (or omitted) = Round away from zero (e.g., -4.3 → -5)
+ *   non-zero = Round toward zero (e.g., -4.3 → -4)
+ * 
+ * Key differences from legacy CEILING:
+ * - Supports mode parameter for negative number behavior
+ * - significance defaults to 1 (not required to match sign of number)
+ * - More consistent with Excel 2013+ standards
+ * 
+ * @example
+ * =CEILING.MATH(24.3) → 25
+ * =CEILING.MATH(24.3, 5) → 25
+ * =CEILING.MATH(6.7, 1) → 7
+ * =CEILING.MATH(-8.1) → -8 (mode 0: toward zero for negative)
+ * =CEILING.MATH(-8.1, 1, 0) → -8
+ * =CEILING.MATH(-8.1, 1, 1) → -9 (mode 1: away from zero for negative)
+ * =CEILING.MATH(-5.5, 2) → -4 (rounds to multiple of 2, toward zero)
+ * =CEILING.MATH(-5.5, 2, 1) → -6 (mode 1: away from zero)
+ */
+export const CEILING_MATH: FormulaFunction = (number, significance = 1, mode = 0) => {
+  const num = toNumber(number);
+  if (num instanceof Error) return num;
+  
+  let sig = significance;
+  if (sig === null || sig === undefined || sig === 0) {
+    sig = 1;
+  }
+  
+  const sigNum = toNumber(sig);
+  if (sigNum instanceof Error) return sigNum;
+  
+  const modeNum = toNumber(mode);
+  if (modeNum instanceof Error) return modeNum;
+  
+  // Use absolute value of significance (Excel behavior)
+  const absSig = Math.abs(sigNum);
+  
+  if (num === 0) return 0;
+  
+  // For positive numbers, always round up
+  if (num > 0) {
+    return Math.ceil(num / absSig) * absSig;
+  }
+  
+  // For negative numbers, mode controls direction
+  if (modeNum === 0) {
+    // Mode 0: Round toward zero (less negative) - this is "up" for negatives
+    return Math.ceil(num / absSig) * absSig;
+  } else {
+    // Mode non-zero: Round away from zero (more negative) - this is "down" for negatives
+    return Math.floor(num / absSig) * absSig;
+  }
+};
+
+/**
+ * FLOOR.MATH - Round down to nearest multiple (Excel 2013+)
+ * 
+ * Rounds a number down to the nearest integer or multiple of significance.
+ * Improved version of FLOOR with mode parameter for negative numbers.
+ * 
+ * Syntax: FLOOR.MATH(number, [significance], [mode])
+ * 
+ * @param number - Value to round down
+ * @param significance - Multiple to round to (default 1). If omitted or 0, defaults to 1
+ * @param mode - Rounding mode for negative numbers (default 0)
+ *   0 (or omitted) = Round away from zero (e.g., -4.3 → -5)
+ *   non-zero = Round toward zero (e.g., -4.3 → -4)
+ * 
+ * @example
+ * =FLOOR.MATH(24.3) → 24
+ * =FLOOR.MATH(24.3, 5) → 20
+ * =FLOOR.MATH(6.7, 1) → 6
+ * =FLOOR.MATH(-8.1) → -9 (mode 0: away from zero for negative)
+ * =FLOOR.MATH(-8.1, 1, 0) → -9
+ * =FLOOR.MATH(-8.1, 1, 1) → -8 (mode 1: toward zero for negative)
+ * =FLOOR.MATH(-5.5, 2) → -6 (rounds to multiple of 2, away from zero)
+ * =FLOOR.MATH(-5.5, 2, 1) → -4 (mode 1: toward zero)
+ */
+export const FLOOR_MATH: FormulaFunction = (number, significance = 1, mode = 0) => {
+  const num = toNumber(number);
+  if (num instanceof Error) return num;
+  
+  let sig = significance;
+  if (sig === null || sig === undefined || sig === 0) {
+    sig = 1;
+  }
+  
+  const sigNum = toNumber(sig);
+  if (sigNum instanceof Error) return sigNum;
+  
+  const modeNum = toNumber(mode);
+  if (modeNum instanceof Error) return modeNum;
+  
+  // Use absolute value of significance (Excel behavior)
+  const absSig = Math.abs(sigNum);
+  
+  if (num === 0) return 0;
+  
+  // For positive numbers, always round down
+  if (num > 0) {
+    return Math.floor(num / absSig) * absSig;
+  }
+  
+  // For negative numbers, mode controls direction
+  if (modeNum === 0) {
+    // Mode 0: Round away from zero (more negative) - this is "down" for negatives
+    return Math.floor(num / absSig) * absSig;
+  } else {
+    // Mode non-zero: Round toward zero (less negative) - this is "up" for negatives
+    return Math.ceil(num / absSig) * absSig;
+  }
+};
+
+/**
+ * Helper: Get aggregation function by code
+ * Used by AGGREGATE and SUBTOTAL
+ * 
+ * Returns a function that takes an array of numbers and returns an aggregated result.
+ * Note: COUNTA is special - it should count all non-empty values, not just numbers.
+ * But since we pre-filter to numbers for performance, COUNTA will behave like COUNT.
+ */
+function getAggregationFunction(functionNum: number, ignoreHidden: boolean = false): 
+  ((values: number[]) => FormulaValue) | null {
+  
+  // SUBTOTAL function codes (1-11)
+  // AGGREGATE function codes (1-19 for basic, 101-119 with ignore options)
+  
+  const baseCode = functionNum > 100 ? functionNum - 100 : functionNum;
+  
+  switch (baseCode) {
+    case 1:  // AVERAGE
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#DIV/0!');
+        return values.reduce((sum, n) => sum + n, 0) / values.length;
+      };
+    
+    case 2:  // COUNT (count numeric values)
+      return (values: number[]) => {
+        return values.length;
+      };
+    
+    case 3:  // COUNTA (count all non-empty - but we only get numbers, so same as COUNT)
+      return (values: number[]) => {
+        return values.length;
+      };
+    
+    case 4:  // MAX
+      return (values: number[]) => {
+        if (values.length === 0) return 0;
+        return Math.max(...values);
+      };
+    
+    case 5:  // MIN
+      return (values: number[]) => {
+        if (values.length === 0) return 0;
+        return Math.min(...values);
+      };
+    
+    case 6:  // PRODUCT
+      return (values: number[]) => {
+        if (values.length === 0) return 0;
+        return values.reduce((product, n) => product * n, 1);
+      };
+    
+    case 7:  // STDEV.S (sample standard deviation)
+      return (values: number[]) => {
+        if (values.length < 2) return new Error('#DIV/0!');
+        const avg = values.reduce((sum, n) => sum + n, 0) / values.length;
+        const variance = values.reduce((sum, n) => sum + Math.pow(n - avg, 2), 0) / (values.length - 1);
+        return Math.sqrt(variance);
+      };
+    
+    case 8:  // STDEV.P (population standard deviation)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#DIV/0!');
+        const avg = values.reduce((sum, n) => sum + n, 0) / values.length;
+        const variance = values.reduce((sum, n) => sum + Math.pow(n - avg, 2), 0) / values.length;
+        return Math.sqrt(variance);
+      };
+    
+    case 9:  // SUM
+      return (values: number[]) => {
+        return values.reduce((sum, n) => sum + n, 0);
+      };
+    
+    case 10: // VAR.S (sample variance)
+      return (values: number[]) => {
+        if (values.length < 2) return new Error('#DIV/0!');
+        const avg = values.reduce((sum, n) => sum + n, 0) / values.length;
+        return values.reduce((sum, n) => sum + Math.pow(n - avg, 2), 0) / (values.length - 1);
+      };
+    
+    case 11: // VAR.P (population variance)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#DIV/0!');
+        const avg = values.reduce((sum, n) => sum + n, 0) / values.length;
+        return values.reduce((sum, n) => sum + Math.pow(n - avg, 2), 0) / values.length;
+      };
+    
+    // AGGREGATE-only functions (12-19)
+    case 12: // MEDIAN
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      };
+    
+    case 13: // MODE.SNGL
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        const freq = new Map<number, number>();
+        values.forEach(n => freq.set(n, (freq.get(n) || 0) + 1));
+        let maxFreq = 0;
+        let mode = values[0];
+        freq.forEach((count, value) => {
+          if (count > maxFreq) {
+            maxFreq = count;
+            mode = value;
+          }
+        });
+        return maxFreq > 1 ? mode : new Error('#N/A');
+      };
+    
+    case 14: // LARGE (k=1, i.e., MAX)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        return Math.max(...values);
+      };
+    
+    case 15: // SMALL (k=1, i.e., MIN)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        return Math.min(...values);
+      };
+    
+    case 16: // PERCENTILE.INC (k=0.5, i.e., MEDIAN)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      };
+    
+    case 17: // QUARTILE.INC (quart=1, i.e., 25th percentile)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        const sorted = [...values].sort((a, b) => a - b);
+        const pos = (sorted.length - 1) * 0.25;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (sorted[base + 1] !== undefined) {
+          return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+        }
+        return sorted[base];
+      };
+    
+    case 18: // QUARTILE.INC (quart=3, i.e., 75th percentile)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        const sorted = [...values].sort((a, b) => a - b);
+        const pos = (sorted.length - 1) * 0.75;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (sorted[base + 1] !== undefined) {
+          return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+        }
+        return sorted[base];
+      };
+    
+    case 19: // PERCENTILE.INC (k=0.9, i.e., 90th percentile)
+      return (values: number[]) => {
+        if (values.length === 0) return new Error('#NUM!');
+        const sorted = [...values].sort((a, b) => a - b);
+        const pos = (sorted.length - 1) * 0.9;
+        const base = Math.floor(pos);
+        const rest = pos - base;
+        if (sorted[base + 1] !== undefined) {
+          return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+        }
+        return sorted[base];
+      };
+    
+    default:
+      return null;
+  }
+}
+
+/**
+ * AGGREGATE - Apply aggregation function with options (Excel 2010+)
+ * 
+ * Performs aggregation on a range with flexible ignore options.
+ * Similar to SUBTOTAL but with more functions (19 vs 11) and more control.
+ * 
+ * Syntax: AGGREGATE(function_num, options, ref1, [ref2], ...)
+ * 
+ * @param function_num - Function to use:
+ *   1-11: Same as SUBTOTAL (AVERAGE, COUNT, COUNTA, MAX, MIN, PRODUCT, STDEV.S, STDEV.P, SUM, VAR.S, VAR.P)
+ *   12-19: Additional functions (MEDIAN, MODE.SNGL, LARGE, SMALL, PERCENTILE.INC, QUARTILE.INC variants)
+ * 
+ * @param options - Ignore behavior (bitmask):
+ *   0 = Ignore nested SUBTOTAL and AGGREGATE functions
+ *   1 = Ignore hidden rows (filtered data)
+ *   2 = Ignore error values
+ *   3 = Ignore hidden rows and error values
+ *   4 = Ignore nothing
+ *   5 = Ignore hidden rows (alternative)
+ *   6 = Ignore error values (alternative)
+ *   7 = Ignore hidden rows and errors (alternative)
+ * 
+ * @param ref1, ref2, ... - One or more ranges to aggregate
+ * 
+ * @example
+ * =AGGREGATE(1, 0, A1:A10) → Average, ignore nested functions
+ * =AGGREGATE(9, 1, B1:B100) → Sum, ignore hidden rows
+ * =AGGREGATE(4, 2, C1:C50) → Max, ignore errors
+ * =AGGREGATE(12, 3, D1:D20) → Median, ignore hidden rows and errors
+ */
+export const AGGREGATE: FormulaFunction = (function_num, options, ...refs) => {
+  const funcNum = toNumber(function_num);
+  if (funcNum instanceof Error) return funcNum;
+  
+  const opts = toNumber(options);
+  if (opts instanceof Error) return opts;
+  
+  // Validate function number
+  if (funcNum < 1 || funcNum > 19) {
+    return new Error('#VALUE!');
+  }
+  
+  // Validate options
+  if (opts < 0 || opts > 7) {
+    return new Error('#VALUE!');
+  }
+  
+  // Get aggregation function
+  const aggFunc = getAggregationFunction(funcNum, opts === 1 || opts === 3 || opts === 5 || opts === 7);
+  if (!aggFunc) {
+    return new Error('#VALUE!');
+  }
+  
+  // Flatten each ref individually to handle nested 2D arrays from ranges
+  // This avoids the double-nesting issue: refs = [[[1],[2],[3]]] → [1,2,3]
+  const allValues: FormulaValue[] = [];
+  for (const ref of refs) {
+    if (Array.isArray(ref)) {
+      // Flatten the 2D array range
+      const flattened = flattenArray(ref);
+      allValues.push(...flattened);
+    } else {
+      // Single value
+      allValues.push(ref);
+    }
+  }
+  
+  // Apply ignore options (if error handling requested)
+  let filteredValues = allValues;
+  if (opts === 2 || opts === 3 || opts === 6 || opts === 7) {
+    // Option 2, 3, 6, 7: Ignore errors
+    filteredValues = filteredValues.filter(v => !(v instanceof Error));
+  }
+  
+  // Convert to numbers for aggregation
+  const numbers = filterNumbers(filteredValues);
+  
+  // Apply aggregation
+  return aggFunc(numbers);
+};
+
+/**
+ * SUBTOTAL - Apply aggregation function (respects filters)
+ * 
+ * Performs aggregation on a range, automatically ignoring other SUBTOTAL/AGGREGATE functions.
+ * Designed for filtered data (respects hidden rows when function_num 101-111).
+ * 
+ * Syntax: SUBTOTAL(function_num, ref1, [ref2], ...)
+ * 
+ * @param function_num - Function to use:
+ *   1 or 101 = AVERAGE
+ *   2 or 102 = COUNT
+ *   3 or 103 = COUNTA
+ *   4 or 104 = MAX
+ *   5 or 105 = MIN
+ *   6 or 106 = PRODUCT
+ *   7 or 107 = STDEV.S
+ *   8 or 108 = STDEV.P
+ *   9 or 109 = SUM
+ *   10 or 110 = VAR.S
+ *   11 or 111 = VAR.P
+ *   
+ *   Note: 1-11 ignore manually hidden rows
+ *         101-111 ignore manually hidden rows AND filtered rows
+ * 
+ * @param ref1, ref2, ... - One or more ranges to aggregate
+ * 
+ * @example
+ * =SUBTOTAL(9, A1:A10) → Sum (ignore hidden)
+ * =SUBTOTAL(1, B1:B100) → Average (ignore hidden)
+ * =SUBTOTAL(109, C1:C50) → Sum (ignore hidden and filtered)
+ */
+export const SUBTOTAL: FormulaFunction = (function_num, ...refs) => {
+  const funcNum = toNumber(function_num);
+  if (funcNum instanceof Error) return funcNum;
+  
+  // Validate function number
+  if ((funcNum < 1 || funcNum > 11) && (funcNum < 101 || funcNum > 111)) {
+    return new Error('#VALUE!');
+  }
+  
+  // Get aggregation function
+  const ignoreHidden = true; // SUBTOTAL always ignores hidden rows
+  const aggFunc = getAggregationFunction(funcNum, ignoreHidden);
+  if (!aggFunc) {
+    return new Error('#VALUE!');
+  }
+  
+  // Flatten each ref individually to handle nested 2D arrays from ranges
+  // This avoids the double-nesting issue: refs = [[[1],[2],[3]]] → [1,2,3]
+  const allValues: FormulaValue[] = [];
+  for (const ref of refs) {
+    if (Array.isArray(ref)) {
+      // Flatten the 2D array range
+      const flattened = flattenArray(ref);
+      allValues.push(...flattened);
+    } else {
+      // Single value
+      allValues.push(ref);
+    }
+  }
+  
+  // Note: In full Excel implementation, would filter hidden rows from worksheet context
+  // For now, treat all values as visible (worksheet visibility tracking not yet implemented)
+  
+  // Convert to numbers for aggregation
+  const numbers = filterNumbers(allValues);
+  
+  // Apply aggregation
+  return aggFunc(numbers);
 };

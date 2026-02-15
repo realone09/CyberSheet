@@ -11,12 +11,26 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --watch --config jest.config.js",
+    "test:a11y": "jest --config jest.config.js src/conditional-formatting/__tests__/cf-preset-picker.component.a11y.spec.ts"
   },
   "peerDependencies": {
     "@angular/core": ">=14.0.0",
     "@angular/common": ">=14.0.0",
     "@cyber-sheet/core": "^0.1.0",
     "@cyber-sheet/renderer-canvas": "^0.1.0"
+  },
+  "devDependencies": {
+    "@angular/core": "^19.0.0",
+    "@angular/common": "^19.0.0",
+    "@angular/platform-browser-dynamic": "^19.0.0",
+    "@angular/core/testing": "^19.0.0",
+    "jest-axe": "^8.0.0",
+    "zone.js": "^0.14.0"
+  },
+  "dependencies": {
+    "@cyber-sheet/cf-ui-core": "*"
   }
 }

@@ -49,6 +49,45 @@ export const LEFT: FormulaFunction = (text, numChars = 1) => {
 };
 
 /**
+ * LEFTB - Leftmost characters by byte count (for DBCS)
+ * 
+ * Returns leftmost characters counting bytes instead of characters.
+ * Used with double-byte character sets (DBCS).
+ * 
+ * @example
+ * =LEFTB("Hello", 3) → "Hel" (3 bytes = 3 ASCII chars)
+ * =LEFTB("日本語", 4) → "日本" (4 bytes = 2 DBCS chars)
+ * =LEFTB("Hello世界", 7) → "Hello世" (5 ASCII + 2 bytes for one DBCS)
+ */
+export const LEFTB: FormulaFunction = (text, numBytes = 1) => {
+  const str = toString(text);
+  const num = toNumber(numBytes);
+
+  if (str instanceof Error) return str;
+  if (num instanceof Error) return num;
+
+  if (num < 0) return new Error('#VALUE!');
+
+  let result = '';
+  let byteCount = 0;
+  
+  for (let i = 0; i < str.length && byteCount < num; i++) {
+    const code = str.charCodeAt(i);
+    const charBytes = code < 128 ? 1 : 2;
+    
+    // Only add character if it fits within byte limit
+    if (byteCount + charBytes <= num) {
+      result += str[i];
+      byteCount += charBytes;
+    } else {
+      break;
+    }
+  }
+  
+  return result;
+};
+
+/**
  * RIGHT - Rightmost characters
  */
 export const RIGHT: FormulaFunction = (text, numChars = 1) => {
@@ -59,8 +98,51 @@ export const RIGHT: FormulaFunction = (text, numChars = 1) => {
   if (num instanceof Error) return num;
 
   if (num < 0) return new Error('#VALUE!');
+  
+  // Handle zero case: RIGHT("abc", 0) should return ""
+  if (num === 0) return '';
 
   return str.slice(-num);
+};
+
+/**
+ * RIGHTB - Rightmost characters by byte count (for DBCS)
+ * 
+ * Returns rightmost characters counting bytes instead of characters.
+ * Used with double-byte character sets (DBCS).
+ * 
+ * @example
+ * =RIGHTB("Hello", 3) → "llo" (3 bytes = 3 ASCII chars)
+ * =RIGHTB("日本語", 4) → "本語" (4 bytes = 2 DBCS chars)
+ * =RIGHTB("Hello世界", 7) → "lo世界" (2 ASCII + 4 bytes for two DBCS)
+ */
+export const RIGHTB: FormulaFunction = (text, numBytes = 1) => {
+  const str = toString(text);
+  const num = toNumber(numBytes);
+
+  if (str instanceof Error) return str;
+  if (num instanceof Error) return num;
+
+  if (num < 0) return new Error('#VALUE!');
+
+  // Build result from right to left
+  let result = '';
+  let byteCount = 0;
+  
+  for (let i = str.length - 1; i >= 0 && byteCount < num; i--) {
+    const code = str.charCodeAt(i);
+    const charBytes = code < 128 ? 1 : 2;
+    
+    // Only add character if it fits within byte limit
+    if (byteCount + charBytes <= num) {
+      result = str[i] + result;
+      byteCount += charBytes;
+    } else {
+      break;
+    }
+  }
+  
+  return result;
 };
 
 /**
@@ -81,12 +163,106 @@ export const MID: FormulaFunction = (text, start, numChars) => {
 };
 
 /**
+ * MIDB - Middle characters by byte count (for DBCS)
+ * 
+ * Returns middle portion of string counting bytes instead of characters.
+ * Used with double-byte character sets (DBCS).
+ * 
+ * @param text - Source text
+ * @param startByte - Starting byte position (1-based)
+ * @param numBytes - Number of bytes to return
+ * 
+ * @example
+ * =MIDB("Hello", 2, 3) → "ell" (start at byte 2, get 3 bytes)
+ * =MIDB("日本語", 3, 2) → "本" (start at byte 3 = 2nd char, get 2 bytes = 1 char)
+ * =MIDB("Hello世界", 6, 4) → "o世" (1 ASCII + 1 DBCS char)
+ */
+export const MIDB: FormulaFunction = (text, startByte, numBytes) => {
+  const str = toString(text);
+  const startNum = toNumber(startByte);
+  const numBytesNum = toNumber(numBytes);
+
+  if (str instanceof Error) return str;
+  if (startNum instanceof Error) return startNum;
+  if (numBytesNum instanceof Error) return numBytesNum;
+
+  if (startNum < 1 || numBytesNum < 0) return new Error('#VALUE!');
+
+  // Find starting character position
+  let bytePos = 0;
+  let startCharPos = 0;
+  
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    const charBytes = code < 128 ? 1 : 2;
+    
+    if (bytePos + charBytes > startNum - 1) {
+      startCharPos = i;
+      break;
+    }
+    
+    bytePos += charBytes;
+    if (i === str.length - 1) {
+      startCharPos = str.length;
+    }
+  }
+
+  // Extract characters up to byte limit
+  let result = '';
+  let resultBytes = 0;
+  
+  for (let i = startCharPos; i < str.length && resultBytes < numBytesNum; i++) {
+    const code = str.charCodeAt(i);
+    const charBytes = code < 128 ? 1 : 2;
+    
+    if (resultBytes + charBytes <= numBytesNum) {
+      result += str[i];
+      resultBytes += charBytes;
+    } else {
+      break;
+    }
+  }
+  
+  return result;
+};
+
+/**
  * LEN - String length
  */
 export const LEN: FormulaFunction = (text) => {
   const str = toString(text);
   if (str instanceof Error) return str;
   return str.length;
+};
+
+/**
+ * LENB - String length in bytes (for DBCS)
+ * 
+ * In languages with double-byte character sets (DBCS) like Chinese, Japanese, Korean,
+ * each character may take 2 bytes. LENB returns the byte count.
+ * 
+ * For simplicity, we count:
+ * - ASCII characters (code < 128): 1 byte
+ * - Extended ASCII and Unicode (code >= 128): 2 bytes
+ * 
+ * @example
+ * =LENB("Hello") → 5 (all ASCII)
+ * =LENB("日本") → 4 (2 chars × 2 bytes)
+ * =LENB("Hello世界") → 9 (5 ASCII + 2 × 2 bytes)
+ */
+export const LENB: FormulaFunction = (text) => {
+  const str = toString(text);
+  if (str instanceof Error) return str;
+  
+  let byteCount = 0;
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    // ASCII characters (0-127) count as 1 byte
+    // Everything else counts as 2 bytes (DBCS characters)
+    byteCount += code < 128 ? 1 : 2;
+  }
+  
+  return byteCount;
 };
 
 /**
@@ -752,8 +928,9 @@ export const TEXTSPLIT: FormulaFunction = (
       parts = parts.filter(p => p !== '');
     }
 
-    // Return as 1D horizontal array (single row)
-    return [parts];
+    // Return as 1D array (single row, multiple columns)
+    // Excel TEXTSPLIT with only column delimiter returns horizontal 1D array
+    return parts;
   }
 
   // Split by row delimiter first

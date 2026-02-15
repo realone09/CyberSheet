@@ -1,6 +1,6 @@
 # CyberSheet Architecture
 
-**Last Updated: November 17, 2025**
+**Last Updated: February 8, 2026**
 
 This document outlines the scalable, maintainable architecture for CyberSheet - a high-performance, canvas-first spreadsheet rendering engine that delivers Excel-level fidelity with 10x better performance.
 
@@ -184,8 +184,6 @@ const lineWidth = Math.max(0.5, Math.round(dpr) / dpr);
 
 ## 💾 Data Model
 
-## 💾 Data Model
-
 ### Core Types
 
 ```typescript
@@ -198,7 +196,6 @@ interface Cell {
   icon?: CellIcon;
   metadata?: Record<string, any>;
 }
-
 // Comment with threading support
 interface CellComment {
   id: string;
@@ -232,6 +229,53 @@ interface CellStyle {
   border?: BorderStyle;
 }
 ```
+
+---
+
+## 🎯 Conditional Formatting Architecture (Wave 5)
+
+Wave 5 introduces Excel-scale conditional formatting with dependency-aware, range-stat batching and incremental dirty propagation.
+
+```
+Cell Change
+   → CFDependencyGraph
+      → Dirty RangeStats
+         → RangeStatsManager (compute-once)
+            → CFRuleEngine
+               → VisualOutput
+```
+
+### Core Components
+
+- **CFDependencyGraph** (`packages/core/src/ConditionalFormattingDependencyGraph.ts`)
+  - Tracks dependencies: Cell → Range → RangeStat → Rule
+  - Maintains dirty rule and dirty range-stat sets
+
+- **RangeStatsManager** (`packages/core/src/RangeStatsManager.ts`)
+  - Compute-once-per-range cache
+  - Excel-style PERCENTILE.INC batching
+  - Dirty invalidation for range-level recompute
+
+- **CFDirtyPropagationEngine** (`packages/core/src/CFDirtyPropagationEngine.ts`)
+  - Converts cell changes into minimal range-stat recomputes
+  - Returns affected rule IDs for targeted evaluation
+
+- **ConditionalFormattingBatchEngine** (`packages/core/src/ConditionalFormattingBatchEngine.ts`)
+  - Rule-centric evaluation
+  - Flushes dirty range stats before rule evaluation
+  - Integrates relative reference formula compiler for formula rules
+
+### Performance Guarantees
+
+- **First load:** $O(N)$
+- **Single cell edit:** $O(1)$ amortized
+- **Range edits:** $O(k\;\text{ranges})$
+- **Scroll:** $O(0)$ (no evaluation)
+
+### Determinism
+
+- Rule evaluation is pure and deterministic per input range stats
+- Relative references resolve with Excel-accurate semantics
 
 ### Workbook API
 
