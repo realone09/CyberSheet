@@ -21,7 +21,7 @@ import { ConditionalFormattingRule } from './ConditionalFormattingEngine';
 // Node Types
 // ============================
 
-export type DependencyNodeType = 'cell' | 'formula' | 'cf-rule';
+export type DependencyNodeType = 'cell' | 'formula' | 'cf-rule' | 'range-stat';
 
 export interface DependencyNode {
 	id: string;
@@ -53,12 +53,23 @@ export interface CFRuleNode extends DependencyNode {
 	rule: ConditionalFormattingRule;
 	/** Cells in the rule's ranges */
 	dependsOnCells: Set<string>; // cell IDs
+	/** Range stats nodes this rule depends on */
+	dependsOnRangeStats: Set<string>; // range stat IDs
 	/** Formulas used in rule evaluation */
 	dependsOnFormulas: Set<string>; // formula node IDs
 	/** Whether rule needs re-evaluation */
 	isDirty: boolean;
 	/** Cached statistics for range-aware rules (Top/Bottom, Avg, etc.) */
 	cachedStats?: RangeStatistics;
+}
+
+export interface RangeStatNode extends DependencyNode {
+	type: 'range-stat';
+	range: Range;
+	/** CF rules that depend on this range stats */
+	affectsRules: Set<string>; // rule IDs
+	/** Whether range stats need re-computation */
+	isDirty: boolean;
 }
 
 // ============================
@@ -100,9 +111,15 @@ export class ConditionalFormattingDependencyGraph {
 	
 	/** CF rule nodes indexed by rule ID */
 	private ruleNodes: Map<string, CFRuleNode> = new Map();
+
+	/** Range statistics nodes indexed by range signature */
+	private rangeStatNodes: Map<string, RangeStatNode> = new Map();
 	
 	/** Dirty rules that need re-evaluation */
 	private dirtyRules: Set<string> = new Set();
+
+	/** Dirty range stats that need re-computation */
+	private dirtyRangeStats: Set<string> = new Set();
 
 	// ============================
 	// Node Management
@@ -171,10 +188,15 @@ export class ConditionalFormattingDependencyGraph {
 		let node = this.ruleNodes.get(ruleId);
 		
 		const cellIds = new Set<string>();
+		const rangeStatIds = new Set<string>();
 		
 		// Extract all cells from rule ranges
 		if (rule.ranges) {
 			for (const range of rule.ranges) {
+				const rangeStatId = this.rangeToKey(range);
+				rangeStatIds.add(rangeStatId);
+				this.addRangeStatNode(rangeStatId, range, ruleId);
+
 				for (let row = range.start.row; row <= range.end.row; row++) {
 					for (let col = range.start.col; col <= range.end.col; col++) {
 						const cellId = this.addressToKey({ row, col });
@@ -195,6 +217,7 @@ export class ConditionalFormattingDependencyGraph {
 				ruleId,
 				rule,
 				dependsOnCells: cellIds,
+				dependsOnRangeStats: rangeStatIds,
 				dependsOnFormulas: new Set(),
 				isDirty: true, // New rules start dirty
 			};
@@ -214,6 +237,7 @@ export class ConditionalFormattingDependencyGraph {
 			
 			// Set new cell dependencies
 			node.dependsOnCells = cellIds;
+			node.dependsOnRangeStats = rangeStatIds;
 			
 			// Link cells to rule
 			for (const cellId of cellIds) {
@@ -225,6 +249,9 @@ export class ConditionalFormattingDependencyGraph {
 		}
 		
 		this.dirtyRules.add(ruleId);
+		for (const rangeStatId of rangeStatIds) {
+			this.markRangeStatDirty(rangeStatId);
+		}
 		return node;
 	}
 
@@ -248,6 +275,19 @@ export class ConditionalFormattingDependencyGraph {
 			const formulaNode = this.formulaNodes.get(formulaId);
 			if (formulaNode) {
 				formulaNode.affectsRules.delete(ruleId);
+			}
+		}
+
+		// Unlink from range stats nodes
+		for (const rangeStatId of node.dependsOnRangeStats) {
+			const rangeNode = this.rangeStatNodes.get(rangeStatId);
+			if (rangeNode) {
+				rangeNode.affectsRules.delete(ruleId);
+				if (rangeNode.affectsRules.size === 0) {
+					this.rangeStatNodes.delete(rangeStatId);
+					this.nodes.delete(rangeStatId);
+					this.dirtyRangeStats.delete(rangeStatId);
+				}
 			}
 		}
 		
@@ -277,6 +317,10 @@ export class ConditionalFormattingDependencyGraph {
 				this.dirtyRules.add(ruleId);
 				// Invalidate cached stats
 				delete ruleNode.cachedStats;
+				// Mark dependent range stats dirty
+				for (const rangeStatId of ruleNode.dependsOnRangeStats) {
+					this.markRangeStatDirty(rangeStatId);
+				}
 			}
 		}
 		
@@ -291,6 +335,9 @@ export class ConditionalFormattingDependencyGraph {
 						ruleNode.isDirty = true;
 						this.dirtyRules.add(ruleId);
 						delete ruleNode.cachedStats;
+						for (const rangeStatId of ruleNode.dependsOnRangeStats) {
+							this.markRangeStatDirty(rangeStatId);
+						}
 					}
 				}
 			}
@@ -342,6 +389,40 @@ export class ConditionalFormattingDependencyGraph {
 			this.dirtyRules.add(ruleId);
 			delete node.cachedStats;
 		}
+		for (const rangeStatId of this.rangeStatNodes.keys()) {
+			this.markRangeStatDirty(rangeStatId);
+		}
+	}
+
+	// ============================
+	// Range Stats Dependency Layer
+	// ============================
+
+	/**
+	 * Get dirty range stats IDs that need re-computation
+	 */
+	getDirtyRangeStats(): string[] {
+		return Array.from(this.dirtyRangeStats.values());
+	}
+
+	/**
+	 * Get rules affected by a range stats node
+	 */
+	getAffectedRules(rangeStatId: string): string[] {
+		const node = this.rangeStatNodes.get(rangeStatId);
+		if (!node) return [];
+		return Array.from(node.affectsRules.values());
+	}
+
+	/**
+	 * Mark a range stats node as clean after recomputation
+	 */
+	clearRangeStatDirty(rangeStatId: string): void {
+		const node = this.rangeStatNodes.get(rangeStatId);
+		if (node) {
+			node.isDirty = false;
+		}
+		this.dirtyRangeStats.delete(rangeStatId);
 	}
 
 	// ============================
@@ -378,6 +459,13 @@ export class ConditionalFormattingDependencyGraph {
 	}
 
 	/**
+	 * Convert range to a stable key
+	 */
+	private rangeToKey(range: Range): string {
+		return `R${range.start.row}C${range.start.col}:R${range.end.row}C${range.end.col}`;
+	}
+
+	/**
 	 * Convert string key back to address
 	 */
 	private keyToAddress(key: string): Address {
@@ -401,6 +489,13 @@ export class ConditionalFormattingDependencyGraph {
 	}
 
 	/**
+	 * Get range stats node by ID
+	 */
+	getRangeStat(rangeStatId: string): RangeStatNode | undefined {
+		return this.rangeStatNodes.get(rangeStatId);
+	}
+
+	/**
 	 * Get cell node by address
 	 */
 	getCell(address: Address): CellNode | undefined {
@@ -416,6 +511,8 @@ export class ConditionalFormattingDependencyGraph {
 		this.formulaNodes.clear();
 		this.ruleNodes.clear();
 		this.dirtyRules.clear();
+		this.rangeStatNodes.clear();
+		this.dirtyRangeStats.clear();
 	}
 
 	/**
@@ -428,5 +525,31 @@ export class ConditionalFormattingDependencyGraph {
 			rules: this.ruleNodes.size,
 			dirtyRules: this.dirtyRules.size,
 		};
+	}
+
+	private addRangeStatNode(rangeStatId: string, range: Range, ruleId: string): RangeStatNode {
+		let node = this.rangeStatNodes.get(rangeStatId);
+		if (!node) {
+			node = {
+				id: rangeStatId,
+				type: 'range-stat',
+				range,
+				affectsRules: new Set(),
+				isDirty: true,
+			};
+			this.rangeStatNodes.set(rangeStatId, node);
+			this.nodes.set(rangeStatId, node);
+		}
+		node.affectsRules.add(ruleId);
+		this.markRangeStatDirty(rangeStatId);
+		return node;
+	}
+
+	private markRangeStatDirty(rangeStatId: string): void {
+		const node = this.rangeStatNodes.get(rangeStatId);
+		if (node) {
+			node.isDirty = true;
+			this.dirtyRangeStats.add(rangeStatId);
+		}
 	}
 }

@@ -721,10 +721,14 @@ export const COUNTA: FormulaFunction = (...values) => {
 
 /**
  * COUNTBLANK - Count blank cells
+ * 
+ * IMPORTANT: Excel only counts truly empty cells (null/undefined) as blank.
+ * Empty strings "" are NOT considered blank.
  */
 export const COUNTBLANK: FormulaFunction = (range) => {
   const flattened = flattenArray([range]);
-  return flattened.filter(v => v === null || v === undefined || v === '').length;
+  // Only count null and undefined as blank, NOT empty strings
+  return flattened.filter(v => v === null || v === undefined).length;
 };
 
 /**
@@ -2491,4 +2495,1691 @@ export const FISHERINV: FormulaFunction = (y) => {
   
   const e2y = Math.exp(2 * yNum);
   return (e2y - 1) / (e2y + 1);
+};
+
+/**
+ * Helper: Incomplete Beta Function
+ * Used for calculating t-distribution, F-distribution, etc.
+ * Uses continued fraction approximation for numerical stability
+ */
+function incompleteBeta(x: number, a: number, b: number): number {
+  if (x < 0 || x > 1) return NaN;
+  if (x === 0) return 0;
+  if (x === 1) return 1;
+  
+  // Use symmetry relation if x > (a+1)/(a+b+2)
+  if (x > (a + 1) / (a + b + 2)) {
+    return 1 - incompleteBeta(1 - x, b, a);
+  }
+  
+  // Beta function B(a,b) = Gamma(a)*Gamma(b)/Gamma(a+b)
+  const lnBeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+  const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lnBeta) / a;
+  
+  // Continued fraction approximation
+  const cf = betaContinuedFraction(x, a, b);
+  return front * cf;
+}
+
+/**
+ * Helper: Log Gamma function (Lanczos approximation)
+ */
+function logGamma(z: number): number {
+  const g = 7;
+  const coef = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7
+  ];
+  
+  if (z < 0.5) {
+    return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+  }
+  
+  z -= 1;
+  let x = coef[0];
+  for (let i = 1; i < g + 2; i++) {
+    x += coef[i] / (z + i);
+  }
+  
+  const t = z + g + 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+/**
+ * Helper: Continued fraction for incomplete beta
+ */
+function betaContinuedFraction(x: number, a: number, b: number): number {
+  const maxIter = 100;
+  const epsilon = 3e-7;
+  
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
+  let c = 1;
+  let d = 1 - qab * x / qap;
+  
+  if (Math.abs(d) < 1e-30) d = 1e-30;
+  d = 1 / d;
+  let h = d;
+  
+  for (let m = 1; m <= maxIter; m++) {
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = 1 + aa / c;
+    if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d;
+    h *= d * c;
+    
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = 1 + aa / c;
+    if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    
+    if (Math.abs(del - 1) < epsilon) break;
+  }
+  
+  return h;
+}
+
+/**
+ * Helper: Regularized lower incomplete gamma function P(a,x)
+ * P(a,x) = γ(a,x) / Γ(a)
+ * This is the CDF of the gamma distribution
+ */
+function regularizedGammaP(a: number, x: number): number {
+  if (x < 0 || a <= 0) {
+    return 0;
+  }
+  
+  if (x === 0) {
+    return 0;
+  }
+  
+  if (x < a + 1) {
+    // Use series representation for x < a+1
+    return gammaSeriesP(a, x);
+  } else {
+    // Use continued fraction for x >= a+1
+    return 1 - gammaContinuedFractionQ(a, x);
+  }
+}
+
+/**
+ * Helper: Regularized upper incomplete gamma function Q(a,x)
+ * Q(a,x) = Γ(a,x) / Γ(a) = 1 - P(a,x)
+ * This is the survival function (right tail) of gamma distribution
+ */
+function regularizedGammaQ(a: number, x: number): number {
+  return 1 - regularizedGammaP(a, x);
+}
+
+/**
+ * Helper: Series representation for regularized gamma P(a,x)
+ */
+function gammaSeriesP(a: number, x: number): number {
+  const maxIter = 100;
+  const epsilon = 3e-7;
+  
+  // P(a,x) = e^(-x) * x^a * Σ(x^n / (a+n)!) 
+  // = e^(-x) * x^a / Γ(a) * Σ(Γ(a)/Γ(a+1+n) * x^n)
+  
+  let sum = 1 / a;
+  let term = 1 / a;
+  
+  for (let n = 1; n < maxIter; n++) {
+    term *= x / (a + n);
+    sum += term;
+    
+    if (Math.abs(term) < Math.abs(sum) * epsilon) {
+      break;
+    }
+  }
+  
+  // Result: e^(-x + a*ln(x) - ln(Γ(a))) * sum
+  return Math.exp(-x + a * Math.log(x) - logGamma(a)) * sum;
+}
+
+/**
+ * Helper: Continued fraction for regularized gamma Q(a,x)
+ */
+function gammaContinuedFractionQ(a: number, x: number): number {
+  const maxIter = 100;
+  const epsilon = 3e-7;
+  
+  let b = x + 1 - a;
+  let c = 1 / 1e-30;
+  let d = 1 / b;
+  let h = d;
+  
+  for (let i = 1; i <= maxIter; i++) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = b + an / c;
+    if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    
+    if (Math.abs(del - 1) < epsilon) {
+      break;
+    }
+  }
+  
+  // Result: e^(-x + a*ln(x) - ln(Γ(a))) * h
+  return Math.exp(-x + a * Math.log(x) - logGamma(a)) * h;
+}
+
+// ============================================================================
+// T-DISTRIBUTION FUNCTIONS (Week 2 Day 1)
+// ============================================================================
+
+/**
+ * T.DIST - Student's T Distribution
+ * Returns the Student's t-distribution
+ * 
+ * @param x - Value at which to evaluate
+ * @param deg_freedom - Degrees of freedom
+ * @param cumulative - TRUE for cumulative, FALSE for probability density
+ * @returns Probability or density
+ * 
+ * @example
+ * =T.DIST(1.96, 60, TRUE) → 0.9726... (cumulative)
+ * =T.DIST(2, 10, FALSE) → 0.0567... (density)
+ */
+export const T_DIST: FormulaFunction = (x, deg_freedom, cumulative) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const df = toNumber(deg_freedom);
+  if (df instanceof Error) return df;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Validate degrees of freedom
+  if (df < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const dfInt = Math.floor(df);
+  
+  if (cum) {
+    // Cumulative distribution function
+    if (xNum === 0) return 0.5;
+    
+    const t2 = xNum * xNum;
+    const xPos = xNum > 0;
+    const absX = Math.abs(xNum);
+    
+    // Use incomplete beta function: P(t < x) = 1 - 0.5 * I(df/(df+t^2); df/2, 1/2)
+    const betaArg = dfInt / (dfInt + t2);
+    const ibeta = incompleteBeta(betaArg, dfInt / 2, 0.5);
+    
+    let p = 0.5 * ibeta;
+    if (xPos) {
+      return 1 - p;
+    } else {
+      return p;
+    }
+  } else {
+    // Probability density function
+    const t2 = xNum * xNum;
+    const coef = Math.exp(logGamma((dfInt + 1) / 2) - logGamma(dfInt / 2));
+    const denom = Math.sqrt(dfInt * Math.PI) * Math.pow(1 + t2 / dfInt, (dfInt + 1) / 2);
+    return coef / denom;
+  }
+};
+
+/**
+ * T.DIST.RT - Right-Tailed Student's T Distribution
+ * Returns the right-tailed Student's t-distribution (legacy function)
+ * 
+ * @param x - Value at which to evaluate
+ * @param deg_freedom - Degrees of freedom
+ * @returns Right-tail probability
+ * 
+ * @example
+ * =T.DIST.RT(1.96, 60) → 0.0274... (right tail)
+ */
+export const T_DIST_RT: FormulaFunction = (x, deg_freedom) => {
+  const leftTail = T_DIST(x, deg_freedom, true);
+  if (leftTail instanceof Error) return leftTail;
+  return 1 - (leftTail as number);
+};
+
+/**
+ * T.DIST.2T - Two-Tailed Student's T Distribution
+ * Returns the two-tailed Student's t-distribution
+ * 
+ * @param x - Value at which to evaluate (must be positive)
+ * @param deg_freedom - Degrees of freedom
+ * @returns Two-tail probability
+ * 
+ * @example
+ * =T.DIST.2T(1.96, 60) → 0.0548... (two-tailed)
+ */
+export const T_DIST_2T: FormulaFunction = (x, deg_freedom) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  if (xNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  const rightTail = T_DIST_RT(xNum, deg_freedom);
+  if (rightTail instanceof Error) return rightTail;
+  
+  return 2 * (rightTail as number);
+};
+
+/**
+ * T.INV - Inverse of Student's T Distribution
+ * Returns the t-value for a given probability
+ * 
+ * @param probability - Probability (0 to 1)
+ * @param deg_freedom - Degrees of freedom
+ * @returns T-value
+ * 
+ * @example
+ * =T.INV(0.9726, 60) → 1.96... (approximately)
+ */
+export const T_INV: FormulaFunction = (probability, deg_freedom) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  const df = toNumber(deg_freedom);
+  if (df instanceof Error) return df;
+  
+  // Validate inputs
+  if (p <= 0 || p >= 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (df < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const dfInt = Math.floor(df);
+  
+  // Newton-Raphson iteration to find x such that T.DIST(x, df, TRUE) = p
+  let x = 0; // Initial guess
+  
+  // Better initial guess based on normal approximation
+  if (p < 0.5) {
+    x = -Math.sqrt(dfInt * (Math.pow(p * 2, -2 / dfInt) - 1));
+  } else {
+    x = Math.sqrt(dfInt * (Math.pow((1 - p) * 2, -2 / dfInt) - 1));
+  }
+  
+  const maxIter = 100;
+  const tolerance = 1e-10;
+  
+  for (let i = 0; i < maxIter; i++) {
+    const cdf = T_DIST(x, dfInt, true);
+    if (cdf instanceof Error) return cdf;
+    
+    const pdf = T_DIST(x, dfInt, false);
+    if (pdf instanceof Error) return pdf;
+    
+    const error = (cdf as number) - p;
+    if (Math.abs(error) < tolerance) break;
+    
+    // Newton-Raphson step: x_new = x - f(x)/f'(x)
+    x = x - error / (pdf as number);
+  }
+  
+  return x;
+};
+
+/**
+ * T.INV.2T - Two-Tailed Inverse of Student's T Distribution
+ * Returns the t-value for a given two-tailed probability
+ * 
+ * @param probability - Two-tailed probability (0 to 1)
+ * @param deg_freedom - Degrees of freedom
+ * @returns Positive t-value
+ * 
+ * @example
+ * =T.INV.2T(0.05, 60) → 2.000... (critical value for 5% significance)
+ */
+export const T_INV_2T: FormulaFunction = (probability, deg_freedom) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  if (p <= 0 || p >= 1) {
+    return new Error('#NUM!');
+  }
+  
+  // Two-tailed p-value: convert to one-tailed and use positive value
+  const oneTailedP = 1 - p / 2;
+  return T_INV(oneTailedP, deg_freedom);
+};
+
+/**
+ * T.TEST - Student's T-Test
+ * Returns the probability associated with a Student's t-test
+ * 
+ * @param array1 - First data set
+ * @param array2 - Second data set
+ * @param tails - Number of tails (1 or 2)
+ * @param type - Type of test (1=paired, 2=equal variance, 3=unequal variance)
+ * @returns P-value
+ * 
+ * @example
+ * =T.TEST(A1:A10, B1:B10, 2, 1) → p-value for paired two-tailed test
+ */
+export const T_TEST: FormulaFunction = (array1, array2, tails, type) => {
+  const nums1 = filterNumbers(flattenArray([array1]));
+  const nums2 = filterNumbers(flattenArray([array2]));
+  
+  const tailsNum = toNumber(tails);
+  if (tailsNum instanceof Error) return tailsNum;
+  
+  const typeNum = toNumber(type);
+  if (typeNum instanceof Error) return typeNum;
+  
+  // Validate inputs
+  if (nums1.length === 0 || nums2.length === 0) {
+    return new Error('#N/A');
+  }
+  
+  if (tailsNum !== 1 && tailsNum !== 2) {
+    return new Error('#NUM!');
+  }
+  
+  if (typeNum !== 1 && typeNum !== 2 && typeNum !== 3) {
+    return new Error('#NUM!');
+  }
+  
+  const n1 = nums1.length;
+  const n2 = nums2.length;
+  
+  // Calculate means
+  const mean1 = nums1.reduce((a, b) => a + b, 0) / n1;
+  const mean2 = nums2.reduce((a, b) => a + b, 0) / n2;
+  
+  let tStat: number;
+  let df: number;
+  
+  if (typeNum === 1) {
+    // Paired test
+    if (n1 !== n2) {
+      return new Error('#N/A');
+    }
+    
+    const diffs = nums1.map((v, i) => v - nums2[i]);
+    const meanDiff = diffs.reduce((a, b) => a + b, 0) / n1;
+    const varDiff = diffs.reduce((a, b) => a + (b - meanDiff) ** 2, 0) / (n1 - 1);
+    const seDiff = Math.sqrt(varDiff / n1);
+    
+    tStat = meanDiff / seDiff;
+    df = n1 - 1;
+  } else {
+    // Two-sample tests
+    const var1 = nums1.reduce((a, b) => a + (b - mean1) ** 2, 0) / (n1 - 1);
+    const var2 = nums2.reduce((a, b) => a + (b - mean2) ** 2, 0) / (n2 - 1);
+    
+    if (typeNum === 2) {
+      // Equal variance (pooled)
+      const pooledVar = ((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2);
+      const se = Math.sqrt(pooledVar * (1 / n1 + 1 / n2));
+      tStat = (mean1 - mean2) / se;
+      df = n1 + n2 - 2;
+    } else {
+      // Unequal variance (Welch's t-test)
+      const se = Math.sqrt(var1 / n1 + var2 / n2);
+      tStat = (mean1 - mean2) / se;
+      
+      // Welch-Satterthwaite degrees of freedom
+      const numerator = (var1 / n1 + var2 / n2) ** 2;
+      const denom = (var1 / n1) ** 2 / (n1 - 1) + (var2 / n2) ** 2 / (n2 - 1);
+      df = numerator / denom;
+    }
+  }
+  
+  // Calculate p-value
+  const absTStat = Math.abs(tStat);
+  const oneTailP = T_DIST_RT(absTStat, df);
+  if (oneTailP instanceof Error) return oneTailP;
+  
+  if (tailsNum === 1) {
+    return oneTailP;
+  } else {
+    return (oneTailP as number) * 2;
+  }
+};
+
+// ============================================================================
+// F-DISTRIBUTION FUNCTIONS (Week 2 Day 2)
+// ============================================================================
+
+/**
+ * F.DIST - F Distribution
+ * Returns the F probability distribution (variance ratio)
+ * 
+ * F-distribution is related to Beta distribution:
+ * F.DIST(x, d1, d2) = BETA.DIST(d1*x/(d1*x+d2), d1/2, d2/2)
+ * 
+ * @param x - Value at which to evaluate (must be >= 0)
+ * @param deg_freedom1 - Numerator degrees of freedom
+ * @param deg_freedom2 - Denominator degrees of freedom
+ * @param cumulative - TRUE for CDF, FALSE for PDF
+ * @returns Probability or density
+ * 
+ * @example
+ * =F.DIST(15.2069, 6, 4, TRUE) → 0.99 (cumulative)
+ * =F.DIST(2, 5, 10, FALSE) → 0.1518... (density)
+ */
+export const F_DIST: FormulaFunction = (x, deg_freedom1, deg_freedom2, cumulative) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const df1 = toNumber(deg_freedom1);
+  if (df1 instanceof Error) return df1;
+  
+  const df2 = toNumber(deg_freedom2);
+  if (df2 instanceof Error) return df2;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Validate inputs
+  if (xNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (df1 < 1 || df2 < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const d1 = Math.floor(df1);
+  const d2 = Math.floor(df2);
+  
+  if (cum) {
+    // Cumulative distribution: use Beta distribution relationship
+    // F.DIST(x, d1, d2) = BETA.DIST(d1*x/(d1*x+d2), d1/2, d2/2)
+    if (xNum === 0) return 0;
+    
+    const betaX = (d1 * xNum) / (d1 * xNum + d2);
+    return incompleteBeta(betaX, d1 / 2, d2 / 2);
+  } else {
+    // Probability density function
+    const a = d1 / 2;
+    const b = d2 / 2;
+    
+    // F-distribution PDF:
+    // f(x; d1, d2) = sqrt[(d1*x)^d1 * d2^d2 / (d1*x + d2)^(d1+d2)] / [x * B(d1/2, d2/2)]
+    // = (d1/d2)^(d1/2) * x^(d1/2-1) * [d2/(d1*x+d2)]^((d1+d2)/2) / B(d1/2, d2/2)
+    //
+    // Using logs for numerical stability:
+    const logNumer = a * Math.log(d1) - a * Math.log(d2) + (a - 1) * Math.log(xNum) + ((d1 + d2) / 2) * Math.log(d2);
+    const logDenom = ((d1 + d2) / 2) * Math.log(d1 * xNum + d2);
+    const logBeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+    
+    return Math.exp(logNumer - logDenom - logBeta);
+  }
+};
+
+/**
+ * F.DIST.RT - Right-Tailed F Distribution
+ * Returns the right-tailed F probability distribution
+ * 
+ * @param x - Value at which to evaluate
+ * @param deg_freedom1 - Numerator degrees of freedom
+ * @param deg_freedom2 - Denominator degrees of freedom
+ * @returns Right-tail probability
+ * 
+ * @example
+ * =F.DIST.RT(15.2069, 6, 4) → 0.01 (approximately)
+ */
+export const F_DIST_RT: FormulaFunction = (x, deg_freedom1, deg_freedom2) => {
+  const leftTail = F_DIST(x, deg_freedom1, deg_freedom2, true);
+  if (leftTail instanceof Error) return leftTail;
+  return 1 - (leftTail as number);
+};
+
+/**
+ * F.INV - Inverse of F Distribution
+ * Returns the inverse of the F cumulative distribution
+ * 
+ * Uses Newton-Raphson iteration to solve F.DIST(x, d1, d2) = p
+ * 
+ * @param probability - Probability (0 to 1)
+ * @param deg_freedom1 - Numerator degrees of freedom
+ * @param deg_freedom2 - Denominator degrees of freedom
+ * @returns F-value
+ * 
+ * @example
+ * =F.INV(0.99, 6, 4) → 15.2069... (approximately)
+ */
+export const F_INV: FormulaFunction = (probability, deg_freedom1, deg_freedom2) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  const df1 = toNumber(deg_freedom1);
+  if (df1 instanceof Error) return df1;
+  
+  const df2 = toNumber(deg_freedom2);
+  if (df2 instanceof Error) return df2;
+  
+  // Validate inputs
+  if (p < 0 || p > 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (df1 < 1 || df2 < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const d1 = Math.floor(df1);
+  const d2 = Math.floor(df2);
+  
+  // Edge cases
+  if (p === 0) return 0;
+  if (p === 1) return Infinity;
+  
+  // Use bisection method for robustness (removed median approximation for accuracy)
+  let low = 0;
+  let high = d2 > 2 ? 10 * (d2 / (d2 - 2)) : 100; // Upper bound estimate
+  
+  // Ensure high is actually higher than target
+  let highCDF = F_DIST(high, d1, d2, true);
+  if (highCDF instanceof Error) return highCDF;
+  
+  while ((highCDF as number) < p && high < 1e10) {
+    high *= 10;
+    highCDF = F_DIST(high, d1, d2, true);
+    if (highCDF instanceof Error) return highCDF;
+  }
+  
+  // Bisection with Newton-Raphson refinement
+  const maxIterations = 100;
+  const tolerance = 1e-10;
+  
+  for (let i = 0; i < maxIterations; i++) {
+    const mid = (low + high) / 2;
+    
+    const cdf = F_DIST(mid, d1, d2, true);
+    if (cdf instanceof Error) return cdf;
+    
+    const error = (cdf as number) - p;
+    
+    if (Math.abs(error) < tolerance) {
+      return mid;
+    }
+    
+    // Bisection step
+    if (error > 0) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+    
+    // Try Newton-Raphson for faster convergence when close
+    if (Math.abs(error) < 0.01 && i > 10) {
+      const pdf = F_DIST(mid, d1, d2, false);
+      if (pdf instanceof Error) return pdf;
+      
+      if ((pdf as number) > 1e-10) {
+        const newtonStep = mid - error / (pdf as number);
+        if (newtonStep > low && newtonStep < high) {
+          const newtonCDF = F_DIST(newtonStep, d1, d2, true);
+          if (!(newtonCDF instanceof Error) && Math.abs((newtonCDF as number) - p) < Math.abs(error)) {
+            // Newton step improved, update bounds
+            if ((newtonCDF as number) > p) {
+              high = newtonStep;
+            } else {
+              low = newtonStep;
+            }
+            continue;
+          }
+        }
+      }
+    }
+  }
+  
+  return (low + high) / 2;
+};
+
+/**
+ * F.INV.RT - Inverse of Right-Tailed F Distribution
+ * Returns the inverse of the right-tailed F cumulative distribution
+ * 
+ * Note: F.INV.RT(p) is NOT equal to 1/F.INV(p)
+ * It's the inverse of F.DIST.RT, so F.INV.RT(p) = F.INV(1-p)
+ * 
+ * @param probability - Right-tail probability (0 to 1)
+ * @param deg_freedom1 - Numerator degrees of freedom
+ * @param deg_freedom2 - Denominator degrees of freedom
+ * @returns F-value
+ * 
+ * @example
+ * =F.INV.RT(0.01, 6, 4) → 15.2069... (approximately)
+ */
+export const F_INV_RT: FormulaFunction = (probability, deg_freedom1, deg_freedom2) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  // F.INV.RT(p) = F.INV(1-p)
+  return F_INV(1 - p, deg_freedom1, deg_freedom2);
+};
+
+/**
+ * F.TEST - F-Test for Equal Variances
+ * Returns the two-tailed probability that the variances in two arrays are not significantly different
+ * 
+ * F = VAR1 / VAR2 (larger variance / smaller variance)
+ * p-value = 2 * MIN(F.DIST(F), F.DIST(1/F))
+ * 
+ * Uses sample variance (division by n-1)
+ * 
+ * @param array1 - First data array
+ * @param array2 - Second data array
+ * @returns Two-tailed p-value
+ * 
+ * @example
+ * =F.TEST(A1:A10, B1:B10) → p-value for variance equality test
+ */
+export const F_TEST: FormulaFunction = (array1, array2) => {
+  const nums1 = filterNumbers(flattenArray([array1]));
+  const nums2 = filterNumbers(flattenArray([array2]));
+  
+  // Validate inputs
+  if (nums1.length < 2 || nums2.length < 2) {
+    return new Error('#DIV/0!');
+  }
+  
+  const n1 = nums1.length;
+  const n2 = nums2.length;
+  
+  // Calculate sample variances (division by n-1)
+  const mean1 = nums1.reduce((a, b) => a + b, 0) / n1;
+  const mean2 = nums2.reduce((a, b) => a + b, 0) / n2;
+  
+  const var1 = nums1.reduce((a, b) => a + (b - mean1) ** 2, 0) / (n1 - 1);
+  const var2 = nums2.reduce((a, b) => a + (b - mean2) ** 2, 0) / (n2 - 1);
+  
+  // Handle zero variance
+  if (var1 === 0 || var2 === 0) {
+    return new Error('#DIV/0!');
+  }
+  
+  // Excel always uses larger variance in numerator
+  let F: number;
+  let df1: number;
+  let df2: number;
+  
+  if (var1 >= var2) {
+    F = var1 / var2;
+    df1 = n1 - 1;
+    df2 = n2 - 1;
+  } else {
+    F = var2 / var1;
+    df1 = n2 - 1;
+    df2 = n1 - 1;
+  }
+  
+  // Two-tailed p-value: 2 * MIN(right-tail, left-tail)
+  // right-tail = F.DIST.RT(F, df1, df2)
+  const rightTail = F_DIST_RT(F, df1, df2);
+  if (rightTail instanceof Error) return rightTail;
+  
+  // Two-tailed: multiply by 2
+  return Math.min(1, 2 * (rightTail as number));
+};
+
+// ============================================================================
+// CHI-SQUARE DISTRIBUTION FUNCTIONS (Week 2 Day 3)
+// ============================================================================
+
+/**
+ * CHISQ.DIST - Chi-Square Distribution
+ * Returns the chi-square distribution
+ * 
+ * Chi-Square relationship to Gamma:
+ * CHISQ.DIST(x, k) = GAMMA.DIST(x, k/2, 2) 
+ * Using regularized gamma: P(k/2, x/2)
+ * 
+ * @param x - Value at which to evaluate (must be >= 0)
+ * @param deg_freedom - Degrees of freedom
+ * @param cumulative - TRUE for CDF, FALSE for PDF
+ * @returns Probability or density
+ * 
+ * @example
+ * =CHISQ.DIST(2, 1, TRUE) → 0.8427... (cumulative)
+ * =CHISQ.DIST(2, 1, FALSE) → 0.1037... (density)
+ */
+export const CHISQ_DIST: FormulaFunction = (x, deg_freedom, cumulative) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const df = toNumber(deg_freedom);
+  if (df instanceof Error) return df;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Validate inputs
+  if (xNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (df < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const k = Math.floor(df);
+  
+  if (xNum === 0) {
+    if (cum) {
+      return 0;
+    } else {
+      // PDF at x=0: 0 for k>2, infinity for k=2, not defined for k<2
+      if (k === 2) {
+        return 0.5; // lim x→0 of chi-square PDF with k=2
+      } else if (k > 2) {
+        return 0;
+      } else {
+        return Infinity;
+      }
+    }
+  }
+  
+  if (cum) {
+    // CDF: P(k/2, x/2) using regularized gamma
+    return regularizedGammaP(k / 2, xNum / 2);
+  } else {
+    // PDF: (1/2^(k/2)) * (1/Γ(k/2)) * x^(k/2-1) * e^(-x/2)
+    // Using logs for stability
+    const a = k / 2;
+    const logPdf = -a * Math.log(2) - logGamma(a) + (a - 1) * Math.log(xNum) - xNum / 2;
+    return Math.exp(logPdf);
+  }
+};
+
+/**
+ * CHISQ.DIST.RT - Right-Tailed Chi-Square Distribution
+ * Returns the right-tailed chi-square distribution (survival function)
+ * 
+ * @param x - Value at which to evaluate
+ * @param deg_freedom - Degrees of freedom
+ * @returns Right-tail probability
+ * 
+ * @example
+ * =CHISQ.DIST.RT(2, 1) → 0.1573... (right tail)
+ */
+export const CHISQ_DIST_RT: FormulaFunction = (x, deg_freedom) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const df = toNumber(deg_freedom);
+  if (df instanceof Error) return df;
+  
+  if (xNum < 0 || df < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const k = Math.floor(df);
+  
+  // Right tail: Q(k/2, x/2) = 1 - P(k/2, x/2)
+  return regularizedGammaQ(k / 2, xNum / 2);
+};
+
+/**
+ * CHISQ.INV - Inverse Chi-Square Distribution
+ * Returns the inverse of the left-tailed chi-square distribution
+ * 
+ * @param probability - Probability (0 to 1)
+ * @param deg_freedom - Degrees of freedom
+ * @returns Chi-square value
+ * 
+ * @example
+ * =CHISQ.INV(0.95, 10) → 18.307... (approximately)
+ */
+export const CHISQ_INV: FormulaFunction = (probability, deg_freedom) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  const df = toNumber(deg_freedom);
+  if (df instanceof Error) return df;
+  
+  // Validate inputs
+  if (p < 0 || p > 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (df < 1) {
+    return new Error('#NUM!');
+  }
+  
+  const k = Math.floor(df);
+  
+  // Edge cases
+  if (p === 0) return 0;
+  if (p === 1) return Infinity;
+  
+  // Use bisection method for robustness
+  let low = 0;
+  let high = k + 10 * Math.sqrt(k); // Upper bound estimate based on df
+  
+  // Ensure high is actually higher than target
+  let highCDF = CHISQ_DIST(high, k, true);
+  if (highCDF instanceof Error) return highCDF;
+  
+  while ((highCDF as number) < p && high < 1e10) {
+    high *= 2;
+    highCDF = CHISQ_DIST(high, k, true);
+    if (highCDF instanceof Error) return highCDF;
+  }
+  
+  // Bisection
+  const maxIterations = 100;
+  const tolerance = 1e-10;
+  
+  for (let i = 0; i < maxIterations; i++) {
+    const mid = (low + high) / 2;
+    
+    const cdf = CHISQ_DIST(mid, k, true);
+    if (cdf instanceof Error) return cdf;
+    
+    const error = (cdf as number) - p;
+    
+    if (Math.abs(error) < tolerance) {
+      return mid;
+    }
+    
+    if (error > 0) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  
+  return (low + high) / 2;
+};
+
+/**
+ * CHISQ.INV.RT - Inverse Right-Tailed Chi-Square Distribution
+ * Returns the inverse of the right-tailed chi-square distribution
+ * 
+ * Note: CHISQ.INV.RT(p) = CHISQ.INV(1-p)
+ * 
+ * @param probability - Right-tail probability (0 to 1)
+ * @param deg_freedom - Degrees of freedom
+ * @returns Chi-square value
+ * 
+ * @example
+ * =CHISQ.INV.RT(0.05, 10) → 18.307... (approximately)
+ */
+export const CHISQ_INV_RT: FormulaFunction = (probability, deg_freedom) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  // CHISQ.INV.RT(p) = CHISQ.INV(1-p)
+  return CHISQ_INV(1 - p, deg_freedom);
+};
+
+/**
+ * CHISQ.TEST - Chi-Square Test for Independence
+ * Returns the chi-square test statistic and p-value
+ * 
+ * Formula:
+ * χ² = Σ((observed - expected)² / expected)
+ * df = count - 1
+ * p-value = CHISQ.DIST.RT(χ², df)
+ * 
+ * @param actual_range - Array of observed values
+ * @param expected_range - Array of expected values
+ * @returns P-value for the chi-square test
+ * 
+ * @example
+ * =CHISQ.TEST(A1:A5, B1:B5) → p-value for goodness of fit
+ */
+export const CHISQ_TEST: FormulaFunction = (actual_range, expected_range) => {
+  const actual = filterNumbers(flattenArray([actual_range]));
+  const expected = filterNumbers(flattenArray([expected_range]));
+  
+  // Validate inputs
+  if (actual.length === 0 || expected.length === 0) {
+    return new Error('#N/A');
+  }
+  
+  if (actual.length !== expected.length) {
+    return new Error('#N/A');
+  }
+  
+  // Check for zero or negative expected values
+  for (const exp of expected) {
+    if (exp <= 0) {
+      return new Error('#DIV/0!');
+    }
+  }
+  
+  // Calculate chi-square statistic: Σ((O-E)²/E)
+  let chiSq = 0;
+  for (let i = 0; i < actual.length; i++) {
+    const diff = actual[i] - expected[i];
+    chiSq += (diff * diff) / expected[i];
+  }
+  
+  // Degrees of freedom
+  const df = actual.length - 1;
+  
+  if (df < 1) {
+    return new Error('#DIV/0!');
+  }
+  
+  // P-value: right-tail probability
+  return CHISQ_DIST_RT(chiSq, df);
+};
+
+// =============================================================================
+// GAMMA DISTRIBUTION FAMILY
+// =============================================================================
+
+/**
+ * GAMMA.DIST - Gamma Distribution
+ * Returns the gamma distribution CDF or PDF
+ * 
+ * @param x - Value at which to evaluate the distribution
+ * @param alpha - Shape parameter (k)
+ * @param beta - Scale parameter (θ)
+ * @param cumulative - TRUE for CDF, FALSE for PDF
+ * @returns Gamma distribution value
+ * 
+ * @example
+ * =GAMMA.DIST(10, 9, 2, TRUE) → 0.0679... (CDF)
+ * =GAMMA.DIST(10, 9, 2, FALSE) → 0.0325... (PDF)
+ * 
+ * Mathematical form:
+ * CDF: P(k, x/θ) using regularizedGammaP
+ * PDF: (1/(Γ(k)θ^k)) * x^(k-1) * e^(-x/θ)
+ */
+export const GAMMA_DIST: FormulaFunction = (x, alpha, beta, cumulative) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const alphaNum = toNumber(alpha);
+  if (alphaNum instanceof Error) return alphaNum;
+  
+  const betaNum = toNumber(beta);
+  if (betaNum instanceof Error) return betaNum;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Validate inputs
+  if (xNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (alphaNum <= 0 || betaNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (xNum === 0) {
+    if (cum) {
+      return 0;
+    } else {
+      // PDF at x=0
+      if (alphaNum < 1) {
+        return Infinity;
+      } else if (alphaNum === 1) {
+        return 1 / betaNum;
+      } else {
+        return 0;
+      }
+    }
+  }
+  
+  if (cum) {
+    // CDF: P(α, x/β) using regularized gamma
+    return regularizedGammaP(alphaNum, xNum / betaNum);
+  } else {
+    // PDF: (1/(Γ(α)β^α)) * x^(α-1) * e^(-x/β)
+    // Using logs for stability
+    const logPdf = -logGamma(alphaNum) - alphaNum * Math.log(betaNum) + 
+                   (alphaNum - 1) * Math.log(xNum) - xNum / betaNum;
+    return Math.exp(logPdf);
+  }
+};
+
+/**
+ * GAMMA.INV - Inverse Gamma Distribution
+ * Returns the inverse of the gamma cumulative distribution
+ * 
+ * @param probability - Probability corresponding to the distribution
+ * @param alpha - Shape parameter (k)
+ * @param beta - Scale parameter (θ)
+ * @returns Value x such that GAMMA.DIST(x, alpha, beta, TRUE) = probability
+ * 
+ * @example
+ * =GAMMA.INV(0.0679, 9, 2) → 10... (approximately)
+ * 
+ * Uses bisection method with adaptive bounds
+ */
+export const GAMMA_INV: FormulaFunction = (probability, alpha, beta) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  const alphaNum = toNumber(alpha);
+  if (alphaNum instanceof Error) return alphaNum;
+  
+  const betaNum = toNumber(beta);
+  if (betaNum instanceof Error) return betaNum;
+  
+  // Validate inputs
+  if (p < 0 || p > 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (alphaNum <= 0 || betaNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  // Edge cases
+  if (p === 0) return 0;
+  if (p === 1) return Infinity;
+  
+  // Initial bounds for bisection
+  // Mean of gamma = α*β, use this for estimation
+  const mean = alphaNum * betaNum;
+  const stdDev = Math.sqrt(alphaNum) * betaNum;
+  
+  let low = 0;
+  let high = mean + 10 * stdDev;
+  
+  // Ensure high is actually above target
+  let highCDF = GAMMA_DIST(high, alphaNum, betaNum, true);
+  while (typeof highCDF === 'number' && highCDF < p) {
+    high *= 2;
+    highCDF = GAMMA_DIST(high, alphaNum, betaNum, true);
+  }
+  
+  // Bisection method
+  const tolerance = 1e-10;
+  const maxIterations = 100;
+  
+  for (let i = 0; i < maxIterations; i++) {
+    const mid = (low + high) / 2;
+    const midCDF = GAMMA_DIST(mid, alphaNum, betaNum, true);
+    
+    if (typeof midCDF !== 'number') {
+      return new Error('#NUM!');
+    }
+    
+    const error = midCDF - p;
+    
+    if (Math.abs(error) < tolerance) {
+      return mid;
+    }
+    
+    if (error < 0) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+    
+    if (high - low < tolerance) {
+      return mid;
+    }
+  }
+  
+  return (low + high) / 2;
+};
+
+/**
+ * LOGNORM.DIST - Log-Normal Distribution
+ * Returns the lognormal cumulative distribution or density
+ * 
+ * @param x - Value at which to evaluate the distribution
+ * @param mean - Mean of ln(x)
+ * @param standard_dev - Standard deviation of ln(x)
+ * @param cumulative - TRUE for CDF, FALSE for PDF
+ * @returns Log-normal distribution value
+ * 
+ * @example
+ * =LOGNORM.DIST(4, 3.5, 1.2, TRUE) → 0.0390... (CDF)
+ * 
+ * Mathematical form:
+ * If Y = ln(X), then Y ~ Normal(μ, σ)
+ * CDF: Φ((ln(x) - μ) / σ) where Φ is standard normal CDF
+ * PDF: (1/(x*σ*√(2π))) * e^(-(ln(x)-μ)²/(2σ²))
+ */
+export const LOGNORM_DIST: FormulaFunction = (x, mean, standard_dev, cumulative) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const meanNum = toNumber(mean);
+  if (meanNum instanceof Error) return meanNum;
+  
+  const stdNum = toNumber(standard_dev);
+  if (stdNum instanceof Error) return stdNum;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Validate inputs
+  if (xNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (stdNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  const lnX = Math.log(xNum);
+  const z = (lnX - meanNum) / stdNum;
+  
+  if (cum) {
+    // CDF: Use standard normal CDF (Φ)
+    // Φ(z) = 0.5 * (1 + erf(z / √2))
+    const erfArg = z / Math.SQRT2;
+    const cdf = 0.5 * (1 + erf(erfArg));
+    return cdf;
+  } else {
+    // PDF: (1/(x*σ*√(2π))) * e^(-z²/2)
+    const coefficient = 1 / (xNum * stdNum * Math.sqrt(2 * Math.PI));
+    const exponent = Math.exp(-z * z / 2);
+    return coefficient * exponent;
+  }
+};
+
+/**
+ * LOGNORM.INV - Inverse Log-Normal Distribution
+ * Returns the inverse of the lognormal cumulative distribution
+ * 
+ * @param probability - Probability corresponding to the distribution
+ * @param mean - Mean of ln(x)
+ * @param standard_dev - Standard deviation of ln(x)
+ * @returns Value x such that LOGNORM.DIST(x, mean, std_dev, TRUE) = probability
+ * 
+ * @example
+ * =LOGNORM.INV(0.0390, 3.5, 1.2) → 4... (approximately)
+ * 
+ * Mathematical form:
+ * x = e^(μ + σ*Φ^(-1)(p))
+ * where Φ^(-1) is inverse standard normal
+ */
+export const LOGNORM_INV: FormulaFunction = (probability, mean, standard_dev) => {
+  const p = toNumber(probability);
+  if (p instanceof Error) return p;
+  
+  const meanNum = toNumber(mean);
+  if (meanNum instanceof Error) return meanNum;
+  
+  const stdNum = toNumber(standard_dev);
+  if (stdNum instanceof Error) return stdNum;
+  
+  // Validate inputs
+  if (p <= 0 || p >= 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (stdNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  // Inverse standard normal using rational approximation (Beasley-Springer-Moro)
+  const inversePhi = (prob: number): number => {
+    const a0 = 2.50662823884;
+    const a1 = -18.61500062529;
+    const a2 = 41.39119773534;
+    const a3 = -25.44106049637;
+    
+    const b0 = -8.47351093090;
+    const b1 = 23.08336743743;
+    const b2 = -21.06224101826;
+    const b3 = 3.13082909833;
+    
+    const c0 = 0.3374754822726147;
+    const c1 = 0.9761690190917186;
+    const c2 = 0.1607979714918209;
+    const c3 = 0.0276438810333863;
+    const c4 = 0.0038405729373609;
+    const c5 = 0.0003951896511919;
+    const c6 = 0.0000321767881768;
+    const c7 = 0.0000002888167364;
+    const c8 = 0.0000003960315187;
+    
+    let y = prob - 0.5;
+    
+    if (Math.abs(y) < 0.42) {
+      const r = y * y;
+      return y * (((a3 * r + a2) * r + a1) * r + a0) /
+             ((((b3 * r + b2) * r + b1) * r + b0) * r + 1);
+    } else {
+      let r = prob;
+      if (y > 0) r = 1 - prob;
+      r = Math.log(-Math.log(r));
+      const z = c0 + r * (c1 + r * (c2 + r * (c3 + r * (c4 + r * (c5 + r * (c6 + r * (c7 + r * c8)))))));
+      if (y < 0) return -z;
+      return z;
+    }
+  };
+  
+  const z = inversePhi(p);
+  const lnX = meanNum + stdNum * z;
+  return Math.exp(lnX);
+};
+
+/**
+ * WEIBULL.DIST - Weibull Distribution
+ * Returns the Weibull distribution CDF or PDF
+ * 
+ * @param x - Value at which to evaluate the distribution
+ * @param alpha - Shape parameter (k)
+ * @param beta - Scale parameter (λ)
+ * @param cumulative - TRUE for CDF, FALSE for PDF
+ * @returns Weibull distribution value
+ * 
+ * @example
+ * =WEIBULL.DIST(105, 20, 100, TRUE) → 0.9295... (CDF)
+ * =WEIBULL.DIST(105, 20, 100, FALSE) → 0.0350... (PDF)
+ * 
+ * Mathematical form:
+ * CDF: 1 - e^(-(x/λ)^k)
+ * PDF: (k/λ) * (x/λ)^(k-1) * e^(-(x/λ)^k)
+ */
+export const WEIBULL_DIST: FormulaFunction = (x, alpha, beta, cumulative) => {
+  const xNum = toNumber(x);
+  if (xNum instanceof Error) return xNum;
+  
+  const alphaNum = toNumber(alpha);
+  if (alphaNum instanceof Error) return alphaNum;
+  
+  const betaNum = toNumber(beta);
+  if (betaNum instanceof Error) return betaNum;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Validate inputs
+  if (xNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (alphaNum <= 0 || betaNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (xNum === 0) {
+    if (cum) {
+      return 0;
+    } else {
+      // PDF at x=0
+      if (alphaNum < 1) {
+        return Infinity;
+      } else if (alphaNum === 1) {
+        return 1 / betaNum;
+      } else {
+        return 0;
+      }
+    }
+  }
+  
+  const z = xNum / betaNum;
+  const zPowK = Math.pow(z, alphaNum);
+  
+  if (cum) {
+    // CDF: 1 - e^(-(x/λ)^k)
+    return 1 - Math.exp(-zPowK);
+  } else {
+    // PDF: (k/λ) * (x/λ)^(k-1) * e^(-(x/λ)^k)
+    const coefficient = alphaNum / betaNum;
+    const power = Math.pow(z, alphaNum - 1);
+    const exponential = Math.exp(-zPowK);
+    return coefficient * power * exponential;
+  }
+};
+
+// =============================================================================
+// BETA DISTRIBUTION FAMILY
+// =============================================================================
+
+/**
+ * BETA.DIST - Beta Distribution
+ * Returns the beta probability distribution function
+ * 
+ * @param x - Value between A and B at which to evaluate
+ * @param alpha - First shape parameter (α > 0)
+ * @param beta - Second shape parameter (β > 0)
+ * @param A - Lower bound (default 0)
+ * @param B - Upper bound (default 1)
+ * @param cumulative - TRUE for CDF, FALSE for PDF
+ * @returns Beta distribution value
+ * 
+ * @example
+ * =BETA.DIST(0.4, 2, 3, 0, 1, TRUE) → 0.4096... (CDF)
+ * =BETA.DIST(0.4, 2, 3, 0, 1, FALSE) → 1.536... (PDF)
+ * 
+ * Mathematical form:
+ * CDF: I_x(α, β) using incompleteBeta
+ * PDF: (x^(α-1) * (1-x)^(β-1)) / B(α,β)
+ */
+export const BETA_DIST: FormulaFunction = (...args) => {
+  // Handle variable arguments: x, alpha, beta, [A], [B], cumulative
+  if (args.length < 4) {
+    return new Error('#N/A');
+  }
+  
+  const x = toNumber(args[0]);
+  if (x instanceof Error) return x;
+  
+  const alpha = toNumber(args[1]);
+  if (alpha instanceof Error) return alpha;
+  
+  const beta = toNumber(args[2]);
+  if (beta instanceof Error) return beta;
+  
+  // A and B are optional, defaults are 0 and 1
+  let A: number = 0;
+  let B: number = 1;
+  let cumulativeArg = args[3];
+  
+  if (args.length >= 6) {
+    // All 6 arguments provided: x, alpha, beta, A, B, cumulative
+    const AVal = toNumber(args[3]);
+    if (AVal instanceof Error) return AVal;
+    A = AVal;
+    
+    const BVal = toNumber(args[4]);
+    if (BVal instanceof Error) return BVal;
+    B = BVal;
+    
+    cumulativeArg = args[5];
+  } else if (args.length === 5) {
+    // 5 arguments: x, alpha, beta, A, cumulative OR x, alpha, beta, B, cumulative
+    // Assume it's x, alpha, beta, A, cumulative (more common)
+    const fourthArg = toNumber(args[3]);
+    if (fourthArg instanceof Error) return fourthArg;
+    
+    // Check if fourth arg could be cumulative (boolean)
+    const fourthVal = args[3];
+    if (typeof fourthVal === 'boolean' || fourthVal === 'TRUE' || fourthVal === 'FALSE' || 
+        fourthVal === 0 || fourthVal === 1) {
+      // It's: x, alpha, beta, cumulative (4 args, treating as BETA.DIST with defaults)
+      cumulativeArg = args[3];
+    } else {
+      // It's: x, alpha, beta, A, cumulative (5 args)
+      A = fourthArg;
+      cumulativeArg = args[4];
+    }
+  }
+  
+  const cum = toBoolean(cumulativeArg);
+  if (cum instanceof Error) return cum;
+  
+  // Validate inputs
+  if (alpha <= 0 || beta <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (A >= B) {
+    return new Error('#NUM!');
+  }
+  
+  if (x < A || x > B) {
+    return new Error('#NUM!');
+  }
+  
+  // Transform x to [0, 1] interval
+  const xNorm = (x - A) / (B - A);
+  
+  if (xNorm === 0) {
+    if (cum) {
+      return 0;
+    } else {
+      // PDF at x=0
+      if (alpha < 1) {
+        return Infinity;
+      } else if (alpha === 1) {
+        return beta / (B - A);
+      } else {
+        return 0;
+      }
+    }
+  }
+  
+  if (xNorm === 1) {
+    if (cum) {
+      return 1;
+    } else {
+      // PDF at x=1
+      if (beta < 1) {
+        return Infinity;
+      } else if (beta === 1) {
+        return alpha / (B - A);
+      } else {
+        return 0;
+      }
+    }
+  }
+  
+  if (cum) {
+    // CDF: incomplete beta I_x(α, β)
+    return incompleteBeta(xNorm, alpha, beta);
+  } else {
+    // PDF: (x^(α-1) * (1-x)^(β-1)) / B(α,β) scaled by interval length
+    // Using logs for stability
+    const logPdf = (alpha - 1) * Math.log(xNorm) + (beta - 1) * Math.log(1 - xNorm) -
+                   logGamma(alpha) - logGamma(beta) + logGamma(alpha + beta);
+    // Scale by interval to maintain proper density
+    return Math.exp(logPdf) / (B - A);
+  }
+};
+
+/**
+ * BETA.INV - Inverse Beta Distribution
+ * Returns the inverse of the cumulative beta probability density function
+ * 
+ * @param probability - Probability associated with the distribution
+ * @param alpha - First shape parameter (α > 0)
+ * @param beta - Second shape parameter (β > 0)
+ * @param A - Lower bound (default 0)
+ * @param B - Upper bound (default 1)
+ * @returns Value x such that BETA.DIST(x, alpha, beta, A, B, TRUE) = probability
+ * 
+ * @example
+ * =BETA.INV(0.6854, 8, 10, 1, 3) → 1.5... (approximately)
+ * 
+ * Uses bisection method
+ */
+export const BETA_INV: FormulaFunction = (...args) => {
+  if (args.length < 3) {
+    return new Error('#N/A');
+  }
+  
+  const probability = toNumber(args[0]);
+  if (probability instanceof Error) return probability;
+  
+  const alpha = toNumber(args[1]);
+  if (alpha instanceof Error) return alpha;
+  
+  const beta = toNumber(args[2]);
+  if (beta instanceof Error) return beta;
+  
+  // A and B are optional, defaults are 0 and 1
+  let A: number = 0;
+  let B: number = 1;
+  
+  if (args.length >= 4) {
+    const AVal = toNumber(args[3]);
+    if (AVal instanceof Error) return AVal;
+    A = AVal;
+  }
+  
+  if (args.length >= 5) {
+    const BVal = toNumber(args[4]);
+    if (BVal instanceof Error) return BVal;
+    B = BVal;
+  }
+  
+  // Validate inputs
+  if (probability < 0 || probability > 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (alpha <= 0 || beta <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (A >= B) {
+    return new Error('#NUM!');
+  }
+  
+  // Edge cases
+  if (probability === 0) return A;
+  if (probability === 1) return B;
+  
+  // Bisection method on normalized [0,1] interval
+  const tolerance = 1e-10;
+  const maxIterations = 100;
+  
+  let low = 0;
+  let high = 1;
+  
+  for (let i = 0; i < maxIterations; i++) {
+    const mid = (low + high) / 2;
+    const midCDF = incompleteBeta(mid, alpha, beta);
+    
+    if (typeof midCDF !== 'number') {
+      return new Error('#NUM!');
+    }
+    
+    const error = midCDF - probability;
+    
+    if (Math.abs(error) < tolerance) {
+      // Transform back to [A, B] interval
+      return A + mid * (B - A);
+    }
+    
+    if (error < 0) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+    
+    if (high - low < tolerance) {
+      // Transform back to [A, B] interval
+      return A + mid * (B - A);
+    }
+  }
+  
+  const mid = (low + high) / 2;
+  return A + mid * (B - A);
+};
+
+/**
+ * HYPGEOM.DIST - Hypergeometric Distribution
+ * Returns the hypergeometric distribution probability
+ * 
+ * @param sample_s - Number of successes in the sample
+ * @param number_sample - Size of the sample
+ * @param population_s - Number of successes in the population
+ * @param number_pop - Population size
+ * @param cumulative - TRUE for CDF, FALSE for PMF
+ * @returns Hypergeometric probability
+ * 
+ * @example
+ * =HYPGEOM.DIST(1, 4, 8, 20, FALSE) → 0.3633... (PMF)
+ * =HYPGEOM.DIST(1, 4, 8, 20, TRUE) → 0.4654... (CDF)
+ * 
+ * Mathematical form:
+ * PMF: C(K,k) * C(N-K, n-k) / C(N, n)
+ * Where: k=successes in sample, n=sample size, K=successes in population, N=population size
+ * 
+ * Using log-space to avoid overflow: log(C(n,k)) = logGamma(n+1) - logGamma(k+1) - logGamma(n-k+1)
+ */
+export const HYPGEOM_DIST: FormulaFunction = (sample_s, number_sample, population_s, number_pop, cumulative) => {
+  const k = toNumber(sample_s);
+  if (k instanceof Error) return k;
+  
+  const n = toNumber(number_sample);
+  if (n instanceof Error) return n;
+  
+  const K = toNumber(population_s);
+  if (K instanceof Error) return K;
+  
+  const N = toNumber(number_pop);
+  if (N instanceof Error) return N;
+  
+  const cum = toBoolean(cumulative);
+  if (cum instanceof Error) return cum;
+  
+  // Convert to integers
+  const kInt = Math.floor(k);
+  const nInt = Math.floor(n);
+  const KInt = Math.floor(K);
+  const NInt = Math.floor(N);
+  
+  // Validate inputs
+  if (kInt < 0 || nInt < 0 || KInt < 0 || NInt < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (kInt > nInt || kInt > KInt) {
+    return new Error('#NUM!');
+  }
+  
+  if (nInt > NInt || KInt > NInt) {
+    return new Error('#NUM!');
+  }
+  
+  if (nInt - kInt > NInt - KInt) {
+    return new Error('#NUM!');
+  }
+  
+  // Helper function: log of binomial coefficient C(n, k) = n! / (k! * (n-k)!)
+  // Using logGamma: log(C(n,k)) = logGamma(n+1) - logGamma(k+1) - logGamma(n-k+1)
+  const logBinomial = (n: number, k: number): number => {
+    if (k < 0 || k > n) return -Infinity;
+    if (k === 0 || k === n) return 0;
+    return logGamma(n + 1) - logGamma(k + 1) - logGamma(n - k + 1);
+  };
+  
+  // PMF calculation in log-space
+  const calculatePMF = (x: number): number => {
+    if (x < Math.max(0, nInt + KInt - NInt) || x > Math.min(nInt, KInt)) {
+      return 0;
+    }
+    
+    // log(P(X=x)) = log(C(K,x)) + log(C(N-K, n-x)) - log(C(N, n))
+    const logProb = logBinomial(KInt, x) + 
+                    logBinomial(NInt - KInt, nInt - x) - 
+                    logBinomial(NInt, nInt);
+    
+    return Math.exp(logProb);
+  };
+  
+  if (cum) {
+    // CDF: sum of PMF from 0 to k
+    let cdf = 0;
+    const minX = Math.max(0, nInt + KInt - NInt);
+    const maxX = kInt;
+    
+    for (let x = minX; x <= maxX; x++) {
+      cdf += calculatePMF(x);
+    }
+    
+    return cdf;
+  } else {
+    // PMF at k
+    return calculatePMF(kInt);
+  }
 };

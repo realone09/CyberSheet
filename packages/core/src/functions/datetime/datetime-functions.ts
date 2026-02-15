@@ -9,31 +9,37 @@ import type { FormulaFunction, FormulaValue } from '../../types/formula-types';
 import { toNumber, toString } from '../../utils/type-utils';
 
 /**
- * Excel serial date epoch (January 1, 1900)
- * Note: Excel incorrectly treats 1900 as a leap year for serials <= 60
+ * Excel serial date epoch
+ * Excel serial 0 = December 30, 1899 (NOT December 31!)
+ * Excel serial 1 = December 31, 1899
+ * Excel serial 2 = January 1, 1900
+ * 
+ * Note: Excel incorrectly treats 1900 as a leap year (serial 60 = Feb 29, 1900)
  * 
  * CRITICAL: Use UTC to avoid timezone-based off-by-one errors!
- * Date.UTC(1900, 0, 1) creates midnight UTC on January 1, 1900
+ * 
+ * Excel serial 1 = January 1, 1900, so epoch is December 31, 1899 (day before serial 1)
  */
-const EXCEL_EPOCH = Date.UTC(1900, 0, 1);
+const EXCEL_EPOCH = Date.UTC(1899, 11, 31); // December 31, 1899
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * Convert Excel serial number to JavaScript Date (UTC)
  * 
  * Excel serial numbering:
+ * - Serial 0 = December 30, 1899 (our epoch)
  * - Serial 1 = January 1, 1900
  * - Serial 2 = January 2, 1900
  * - Serial 60 = February 29, 1900 (doesn't exist - Excel bug)
  * - Serial 61 = March 1, 1900
  * 
- * For serials > 60, we need to add +1 to compensate for Excel's 1900 leap year bug
+ * For serials 1-60: days_from_epoch = serial
+ * For serials > 60: days_from_epoch = serial - 1 (skip the fake Feb 29)
  */
 function serialToDate(serial: number): Date {
-  // Excel serial 1 = January 1, 1900
-  // Subtract 1 because Excel serial 1 = day 1, not day 0
-  const adjusted = serial > 60 ? serial - 2 : serial - 1;
-  return new Date(EXCEL_EPOCH + adjusted * MS_PER_DAY);
+  // For serials > 60, subtract 1 to skip the fake Feb 29, 1900
+  const daysFromEpoch = serial > 60 ? serial - 1 : serial;
+  return new Date(EXCEL_EPOCH + daysFromEpoch * MS_PER_DAY);
 }
 
 /**
@@ -89,14 +95,26 @@ export const DATE: FormulaFunction = (year, month, day) => {
   if (m instanceof Error) return m;
   if (d instanceof Error) return d;
 
-  // JavaScript Date uses 0-based months
-  const date = new Date(y, m - 1, d);
+  // Use Date.UTC to create a UTC date, avoiding timezone issues
+  // JavaScript months are 0-based, so subtract 1 from month
+  const utcDate = Date.UTC(y, m - 1, d);
   
-  if (isNaN(date.getTime())) {
+  if (isNaN(utcDate)) {
     return new Error('#VALUE!');
   }
 
-  return dateToSerial(date);
+  // Calculate days since Excel epoch (Dec 30, 1899)
+  const diff = utcDate - EXCEL_EPOCH;
+  let serial = Math.floor(diff / MS_PER_DAY);
+  
+  // Excel's leap year bug: it treats 1900 as a leap year (it wasn't)
+  // Serial 60 = Feb 29, 1900 (fake date), serial 61 = March 1, 1900
+  // For dates after Feb 28, 1900 (serial > 59), add 1 to account for fake leap day
+  if (serial > 59) {
+    serial += 1;
+  }
+  
+  return serial;
 };
 
 /**

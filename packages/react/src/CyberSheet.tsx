@@ -13,6 +13,7 @@ export type CyberSheetProps = {
   fontFamily?: string; // global font family configuration
   fontSize?: number; // global font size configuration (in pixels)
   onRendererReady?: (renderer: CanvasRenderer) => void;
+  onSelectionChange?: (selection: { start: { row: number; col: number }; end: { row: number; col: number } }) => void;
 };
 
 export type PhysicsOptions = {
@@ -31,13 +32,18 @@ export type PhysicsOptions = {
   snapIntervalMs?: number;           // how often to check snap (default 200)
 };
 
-export const CyberSheet = ({ workbook, sheetName, rendererOptions, style, physicsOptions, zoom, fontFamily, fontSize, onRendererReady }: CyberSheetProps) => {
+export const CyberSheet = ({ workbook, sheetName, rendererOptions, style, physicsOptions, zoom, fontFamily, fontSize, onRendererReady, onSelectionChange }: CyberSheetProps) => {
   const containerRef = useRef(null as any);
   const rendererRef = useRef(null as any);
   const sheetRef = useRef(undefined as any);
   const [selections, setSelections] = useState<Array<{ start: { row: number; col: number }; end: { row: number; col: number } }>>([]);
   const selectionsRef = useRef(selections as any);
   useEffect(() => { selectionsRef.current = selections; }, [selections]);
+  useEffect(() => {
+    if (!onSelectionChange || selections.length === 0) return;
+    const active = selections[selections.length - 1];
+    onSelectionChange(active);
+  }, [onSelectionChange, selections]);
   // Physics state
   const velRef = useRef({ vx: 0, vy: 0 } as any);
   const lastWheelTimeRef = useRef(0 as any);

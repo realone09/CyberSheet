@@ -9,11 +9,16 @@ import type { Address, Cell, CellValue } from './types';
 import type { Worksheet } from './worksheet';
 
 import type { FormulaValue, FormulaFunction, LambdaFunction, FormulaContext } from './types/formula-types';
+import { ErrorStrategy } from './types/formula-types';
 
 // Import modular components
 import { FunctionRegistry } from './registry/FunctionRegistry';
-import { registerBuiltInFunctions } from './functions/function-initializer';
 import { OperatorRegistry } from './operators/operators';
+import { ErrorStrategyDispatcher } from './ErrorStrategyDispatcher';
+
+// Wave 0 Day 4 - Phase 2.6: Registration Unification
+// Import unified metadata (single source of truth)
+import { ALL_FUNCTION_METADATA } from './functions/metadata';
 
 // Re-export types for backward compatibility
 export type { FormulaValue, FormulaFunction, LambdaFunction, FormulaContext };
@@ -106,9 +111,13 @@ export class FormulaEngine {
   private operatorRegistry = new OperatorRegistry();
   private dependencyGraph = new DependencyGraph();
   private calculating = new Set<string>();
+  private errorDispatcher = new ErrorStrategyDispatcher();
 
   constructor() {
-    registerBuiltInFunctions(this.functionRegistry);
+    // Wave 0 Day 4 - Phase 2.6: Registration Unification
+    // Register all functions from unified metadata (single source of truth)
+    // No tuples, no legacy formats, no partial metadata
+    this.functionRegistry.registerBatch(ALL_FUNCTION_METADATA);
   }
 
   /**
@@ -175,6 +184,12 @@ export class FormulaEngine {
     // String literal
     if (expr.startsWith('"') && expr.endsWith('"')) {
       return expr.slice(1, -1);
+    }
+
+    // Error literal (#DIV/0!, #VALUE!, #REF!, #NAME?, #NUM!, #N/A, #NULL!, #GETTING_DATA)
+    if (expr.startsWith('#') && expr.endsWith('!')) {
+      // Return as Error object
+      return new Error(expr);
     }
 
     // Number literal
@@ -1094,14 +1109,23 @@ export class FormulaEngine {
     }
     
     try {
-      // Check if function needs context
-      if (funcMetadata.needsContext) {
-        // Call context-aware function with context as first parameter
-        return (func as any)(context, ...args);
-      } else {
-        // Call regular function without context
-        return (func as any)(...args);
-      }
+      // Phase 1: Wire metadata → dispatcher
+      // Route execution through ErrorStrategyDispatcher based on metadata.errorStrategy
+      
+      // Prepare handler wrapper based on needsContext
+      const wrappedHandler = funcMetadata.needsContext
+        ? (...handlerArgs: unknown[]) => (func as any)(context, ...handlerArgs)
+        : (...handlerArgs: unknown[]) => (func as any)(...handlerArgs);
+      
+      // Dispatch through strategy-specific wrapper
+      // Cast to StrictFunctionMetadata (all registered functions must have complete metadata)
+      return this.errorDispatcher.dispatch(
+        funcMetadata.errorStrategy || ErrorStrategy.PROPAGATE_FIRST, // Fallback for safety
+        args,
+        wrappedHandler,
+        context,
+        funcMetadata as any // Type assertion: registry guarantees complete metadata
+      );
     } catch (error) {
       return new Error('#VALUE!');
     }
@@ -1125,12 +1149,16 @@ export class FormulaEngine {
                         'PERCENTILE', 'PERCENTILE.INC', 'PERCENTILE.EXC',
                         'CORREL', 'COVARIANCE.P', 'COVARIANCE.S', 'RSQ',
                         'FORECAST', 'FORECAST.LINEAR', 'SLOPE', 'INTERCEPT',
-                        'STEYX', 'TREND', 'PEARSON',
+                        'STEYX', 'TREND', 'PEARSON', 'T.TEST', 'F.TEST', 'CHISQ.TEST',
                         // Financial functions (Week 8 Days 4-5)
                         'NPV', 'XNPV', 'PV', 'FV', 'PMT', 'IPMT', 'PPMT',
                         'IRR', 'XIRR', 'MIRR', 'NPER', 'RATE', 'EFFECT', 'NOMINAL',
+                        'FVSCHEDULE',
                         // Math array functions (Week 11 Day 2)
                         'PRODUCT', 'SUMPRODUCT', 'SUMX2MY2', 'SUMX2PY2', 'SUMXMY2',
+                        // Math aggregation functions (Week 2 Day 6)
+                        // Adding back temporarily to debug
+                        'AGGREGATE', 'SUBTOTAL',
                         // Text array functions (Week 11 Day 3)
                         'CONCAT', 'CONCATENATE'];
     return arrayFuncs.includes(name.toUpperCase());
@@ -1343,10 +1371,49 @@ export class FormulaEngine {
   }
 
   /**
-   * Registers built-in Excel functions
+   * @deprecated [WAVE_0_DAY_1] Use registerFunctionStrict() instead
+   * 
+   * Legacy method that bypasses strict metadata enforcement.
+   * This method will be removed in Wave 1.
+   * 
+   * SDK-Grade Migration Path:
+   * - For 300-function implementations, use registerFunctionStrict()
+   * - This method exists only for backward compatibility during Wave 0
    */
   registerFunction(name: string, func: FormulaFunction): void {
-    this.functionRegistry.register(name.toUpperCase(), func);
+    throw new Error(
+      `[WAVE_0_DAY_1] registerFunction() is deprecated. ` +
+      `Use registerFunctionStrict() with complete StrictFunctionMetadata. ` +
+      `Partial metadata is no longer supported.`
+    );
+  }
+
+  /**
+   * SDK-Grade: Register function with strict metadata enforcement
+   * 
+   * Wave 0 Day 1: TypeScript enforces completeness at compile-time
+   * All 98 functions must be backfilled with complete metadata (Day 2)
+   * 
+   * @param metadata - Complete StrictFunctionMetadata (all fields required)
+   * 
+   * @example
+   * engine.registerFunctionStrict({
+   *   name: 'SUM',
+   *   handler: (args) => args.reduce((a, b) => a + b, 0),
+   *   category: FunctionCategory.MATH,
+   *   minArgs: 1,
+   *   maxArgs: 255,
+   *   isSpecial: false,
+   *   needsContext: false,
+   *   volatile: false,
+   *   complexityClass: ComplexityClass.O_N,
+   *   precisionClass: PrecisionClass.EXACT,
+   *   errorStrategy: ErrorStrategy.PROPAGATE_FIRST,
+   *   iterationPolicy: null
+   * });
+   */
+  registerFunctionStrict(metadata: import('./types/formula-types').StrictFunctionMetadata): void {
+    this.functionRegistry.register(metadata);
   }
 
   /**
@@ -1360,6 +1427,12 @@ export class FormulaEngine {
       const cell = worksheet.getCell(addr);
       if (cell?.formula) {
         const value = this.evaluate(cell.formula, { worksheet, currentCell: addr });
+        
+        // Thunks should NEVER be returned from functions - they're only for internal lazy evaluation
+        if (typeof value === 'function') {
+          throw new Error('[FormulaEngine] CRITICAL: Function returned a thunk instead of a value. This is a handler bug.');
+        }
+        
         // Only set value if it's not an error (CellValue doesn't support Error type)
         if (!(value instanceof Error)) {
           // Handle arrays: for now, store as string representation
@@ -1367,7 +1440,7 @@ export class FormulaEngine {
           if (Array.isArray(value)) {
             worksheet.setCellValue(addr, JSON.stringify(value));
           } else {
-            worksheet.setCellValue(addr, value);
+            worksheet.setCellValue(addr, value as CellValue); // Type assertion safe after thunk check
           }
         }
       }

@@ -312,19 +312,23 @@ export const ISTEXT: FormulaFunction = (value: any) => {
 };
 
 /**
- * ISBLANK - Checks if a value is blank
+ * ISBLANK - Checks if a value is blank (null or undefined)
  * 
  * Syntax: ISBLANK(value)
- * Returns TRUE if the value is blank (null, undefined, or empty string), FALSE otherwise
+ * Returns TRUE if the value is blank, FALSE otherwise
+ * 
+ * IMPORTANT: Excel considers empty string "" as NOT blank!
+ * Only truly empty cells (null/undefined) are blank.
  * 
  * @example
- * =ISBLANK(A1) → TRUE if A1 is empty
- * =ISBLANK("") → TRUE
+ * =ISBLANK(A1) → TRUE if A1 is truly empty (null/undefined)
+ * =ISBLANK("") → FALSE (empty string is not blank in Excel)
  * =ISBLANK(0) → FALSE
  * =ISBLANK(FALSE) → FALSE
  */
 export const ISBLANK: FormulaFunction = (value: any) => {
-  return value === null || value === undefined || value === '';
+  // Excel only considers null/undefined as blank, NOT empty strings
+  return value === null || value === undefined;
 };
 
 /**
@@ -468,4 +472,106 @@ export const T: FormulaFunction = (value: any) => {
   
   // Everything else returns empty string
   return '';
+};
+
+// ============================================================================
+// Week 3: Advanced Info Functions
+// ============================================================================
+
+/**
+ * ERROR.TYPE - Returns a number corresponding to an error type
+ * 
+ * Syntax: ERROR.TYPE(error_val)
+ * Returns a number indicating the error type:
+ * - 1: #NULL!
+ * - 2: #DIV/0!
+ * - 3: #VALUE!
+ * - 4: #REF!
+ * - 5: #NAME?
+ * - 6: #NUM!
+ * - 7: #N/A
+ * - 8: #GETTING_DATA
+ * 
+ * Returns #N/A if the value is not an error
+ * 
+ * @example
+ * =ERROR.TYPE(#DIV/0!) → 2
+ * =ERROR.TYPE(#VALUE!) → 3
+ * =ERROR.TYPE(#N/A) → 7
+ * =ERROR.TYPE(100) → #N/A
+ */
+export const ERROR_TYPE: FormulaFunction = (errorVal: any) => {
+  // If not an error, return #N/A
+  if (!(errorVal instanceof Error)) {
+    return new Error('#N/A');
+  }
+
+  // Map error message to error type number
+  // Note: Error.message might have the # prefix or might not, so we normalize
+  let errorMessage = errorVal.message;
+  
+  // Ensure error message starts with # for consistent matching
+  if (!errorMessage.startsWith('#')) {
+    errorMessage = '#' + errorMessage;
+  }
+  
+  switch (errorMessage) {
+    case '#NULL!':
+      return 1;
+    case '#DIV/0!':
+      return 2;
+    case '#VALUE!':
+      return 3;
+    case '#REF!':
+      return 4;
+    case '#NAME?':
+      return 5;
+    case '#NUM!':
+      return 6;
+    case '#N/A':
+      return 7;
+    case '#GETTING_DATA':
+      return 8;
+    default:
+      // Unknown error type, return #N/A
+      return new Error('#N/A');
+  }
+};
+
+/**
+ * ISOMITTED - Checks if a value in a LAMBDA function is omitted
+ * 
+ * Syntax: ISOMITTED(argument)
+ * Returns TRUE if the argument was omitted when calling a LAMBDA function
+ * Returns FALSE if the argument was provided
+ * 
+ * Note: In our implementation, we use a special OMITTED symbol to represent
+ * omitted arguments. This is primarily used with LAMBDA functions.
+ * 
+ * @example
+ * In LAMBDA: =LAMBDA(x, [y], IF(ISOMITTED(y), x*2, x+y))
+ * Then: =myLambda(5) → checks if y is omitted
+ * 
+ * For standalone testing:
+ * =ISOMITTED(A1) → FALSE (if A1 has a value)
+ * =ISOMITTED() would require special handling
+ */
+export const ISOMITTED: FormulaFunction = (value: any) => {
+  // Check for undefined or our special OMITTED marker
+  if (value === undefined) {
+    return true;
+  }
+  
+  // Check for special OMITTED symbol (used by LAMBDA engine)
+  // In a full implementation, this would check for a specific Symbol
+  if (typeof value === 'symbol' && value.toString() === 'Symbol(OMITTED)') {
+    return true;
+  }
+  
+  // Check for empty/null which might be treated as omitted
+  if (value === null) {
+    return true;
+  }
+  
+  return false;
 };

@@ -112,6 +112,7 @@ export const XNPV: FormulaFunction = (rate, values, dates) => {
   
   for (let i = 0; i < cashFlows.length; i++) {
     const daysDiff = dateValues[i] - firstDate;
+    // Excel uses 365 days per year for XNPV (not 365.25)
     const yearsDiff = daysDiff / 365;
     xnpv += cashFlows[i] / Math.pow(1 + rateNum, yearsDiff);
   }
@@ -859,3 +860,1277 @@ export const NOMINAL: FormulaFunction = (effect_rate, npery) => {
   
   return nominal;
 };
+
+/**
+ * MIRR - Modified Internal Rate of Return
+ * Calculates the modified internal rate of return for a series of periodic cash flows,
+ * considering both the cost of investment and the interest received on reinvestment of cash.
+ * 
+ * Formula: MIRR = (FV(positive, reinvest_rate) / PV(negative, finance_rate))^(1/n) - 1
+ * 
+ * @param values - Array of cash flows (must contain at least one positive and one negative)
+ * @param finance_rate - Interest rate paid on money used in cash flows
+ * @param reinvest_rate - Interest rate received on reinvested cash flows
+ * @returns Modified internal rate of return
+ * 
+ * @example
+ * =MIRR({-120000, 39000, 30000, 21000, 37000, 46000}, 0.10, 0.12) → 0.1260 (12.6%)
+ */
+export const MIRR: FormulaFunction = (values, finance_rate, reinvest_rate) => {
+  const financeRate = toNumber(finance_rate);
+  const reinvestRate = toNumber(reinvest_rate);
+  
+  if (financeRate instanceof Error) return financeRate;
+  if (reinvestRate instanceof Error) return reinvestRate;
+  
+  const cashFlows = filterNumbers(Array.isArray(values) ? values : [values]);
+  
+  if (cashFlows.length < 2) {
+    return new Error('#NUM!');
+  }
+  
+  // Check for at least one positive and one negative value
+  const hasPositive = cashFlows.some(v => v > 0);
+  const hasNegative = cashFlows.some(v => v < 0);
+  if (!hasPositive || !hasNegative) {
+    return new Error('#NUM!');
+  }
+  
+  const n = cashFlows.length;
+  
+  // Calculate NPV of negative cash flows (investments) at finance_rate
+  let npvNegative = 0;
+  for (let i = 0; i < n; i++) {
+    if (cashFlows[i] < 0) {
+      npvNegative += cashFlows[i] / Math.pow(1 + financeRate, i);
+    }
+  }
+  
+  // Calculate FV of positive cash flows (returns) at reinvest_rate
+  let fvPositive = 0;
+  for (let i = 0; i < n; i++) {
+    if (cashFlows[i] > 0) {
+      fvPositive += cashFlows[i] * Math.pow(1 + reinvestRate, n - i - 1);
+    }
+  }
+  
+  // MIRR formula
+  if (npvNegative === 0 || fvPositive === 0) {
+    return new Error('#NUM!');
+  }
+  
+  const mirr = Math.pow(-fvPositive / npvNegative, 1 / (n - 1)) - 1;
+  
+  if (!isFinite(mirr)) {
+    return new Error('#NUM!');
+  }
+  
+  return mirr;
+};
+
+/**
+ * FVSCHEDULE - Future Value with Variable Interest Rates
+ * Calculates the future value of an initial principal after applying a series of compound interest rates.
+ * 
+ * Formula: FV = principal × (1 + rate1) × (1 + rate2) × ... × (1 + rateN)
+ * 
+ * @param principal - Present value (initial amount)
+ * @param schedule - Array of interest rates to apply
+ * @returns Future value
+ * 
+ * @example
+ * =FVSCHEDULE(1, {0.09, 0.11, 0.10}) → 1.3308 (33.08% total growth)
+ */
+export const FVSCHEDULE: FormulaFunction = (principal, schedule) => {
+  const principalNum = toNumber(principal);
+  if (principalNum instanceof Error) return principalNum;
+  
+  const scheduleArray = flattenArray(Array.isArray(schedule) ? schedule : [schedule]);
+  const rates = filterNumbers(scheduleArray);
+  
+  if (rates.length === 0) {
+    return principalNum; // No rates = no change
+  }
+  
+  let fv = principalNum;
+  for (const rate of rates) {
+    fv = fv * (1 + rate);
+  }
+  
+  return fv;
+};
+
+/**
+ * DISC - Discount Rate for a Security
+ * Calculates the discount rate for a security (bill, bond, etc.).
+ * 
+ * Formula: DISC = (redemption - pr) / redemption × (B / DSM)
+ * Where B = days in year (basis), DSM = days from settlement to maturity
+ * 
+ * @param settlement - Security's settlement date (when you buy it)
+ * @param maturity - Security's maturity date (when it expires)
+ * @param pr - Security's price per $100 face value
+ * @param redemption - Security's redemption value per $100 face value
+ * @param basis - Day count basis (0=30/360, 1=actual/actual, 2=actual/360, 3=actual/365, 4=30E/360)
+ * @returns Annual discount rate
+ * 
+ * @example
+ * =DISC(DATE(2021,1,25), DATE(2021,6,15), 97.975, 100, 1) → 0.0244 (2.44%)
+ */
+export const DISC: FormulaFunction = (settlement, maturity, pr, redemption, basis = 0) => {
+  const settlementNum = toNumber(settlement);
+  const maturityNum = toNumber(maturity);
+  const prNum = toNumber(pr);
+  const redemptionNum = toNumber(redemption);
+  const basisNum = toNumber(basis);
+  
+  if (settlementNum instanceof Error) return settlementNum;
+  if (maturityNum instanceof Error) return maturityNum;
+  if (prNum instanceof Error) return prNum;
+  if (redemptionNum instanceof Error) return redemptionNum;
+  if (basisNum instanceof Error) return basisNum;
+  
+  // Validate inputs
+  if (settlementNum >= maturityNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (prNum <= 0 || redemptionNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+  
+  const basisInt = Math.floor(basisNum);
+  
+  // Calculate days between settlement and maturity
+  const dsm = maturityNum - settlementNum;
+  
+  // Days in year based on basis
+  let daysInYear: number;
+  switch (basisInt) {
+    case 0: // 30/360
+    case 4: // 30E/360
+      daysInYear = 360;
+      break;
+    case 1: // actual/actual
+      // Use actual days in the year containing the maturity date
+      daysInYear = 365; // Simplified - Excel uses more complex leap year logic
+      break;
+    case 2: // actual/360
+      daysInYear = 360;
+      break;
+    case 3: // actual/365
+      daysInYear = 365;
+      break;
+    default:
+      daysInYear = 360;
+  }
+  
+  // DISC formula
+  const disc = ((redemptionNum - prNum) / redemptionNum) * (daysInYear / dsm);
+  
+  return disc;
+};
+
+/**
+ * INTRATE - Interest Rate for a Fully Invested Security
+ * Calculates the interest rate for a fully invested security.
+ * 
+ * Formula: INTRATE = (redemption - investment) / investment × (B / DSM)
+ * Where B = days in year (basis), DSM = days from settlement to maturity
+ * 
+ * @param settlement - Security's settlement date
+ * @param maturity - Security's maturity date
+ * @param investment - Amount invested in the security
+ * @param redemption - Amount to be received at maturity
+ * @param basis - Day count basis (0=30/360, 1=actual/actual, 2=actual/360, 3=actual/365, 4=30E/360)
+ * @returns Annual interest rate
+ * 
+ * @example
+ * =INTRATE(DATE(2021,2,15), DATE(2021,5,15), 1000000, 1014420, 2) → 0.0578 (5.78%)
+ */
+export const INTRATE: FormulaFunction = (settlement, maturity, investment, redemption, basis = 0) => {
+  const settlementNum = toNumber(settlement);
+  const maturityNum = toNumber(maturity);
+  const investmentNum = toNumber(investment);
+  const redemptionNum = toNumber(redemption);
+  const basisNum = toNumber(basis);
+  
+  if (settlementNum instanceof Error) return settlementNum;
+  if (maturityNum instanceof Error) return maturityNum;
+  if (investmentNum instanceof Error) return investmentNum;
+  if (redemptionNum instanceof Error) return redemptionNum;
+  if (basisNum instanceof Error) return basisNum;
+  
+  // Validate inputs
+  if (settlementNum >= maturityNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (investmentNum <= 0 || redemptionNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+  
+  const basisInt = Math.floor(basisNum);
+  
+  // Calculate days between settlement and maturity
+  const dsm = maturityNum - settlementNum;
+  
+  // Days in year based on basis
+  let daysInYear: number;
+  switch (basisInt) {
+    case 0: // 30/360
+    case 4: // 30E/360
+      daysInYear = 360;
+      break;
+    case 1: // actual/actual
+      daysInYear = 365; // Simplified
+      break;
+    case 2: // actual/360
+      daysInYear = 360;
+      break;
+    case 3: // actual/365
+      daysInYear = 365;
+      break;
+    default:
+      daysInYear = 360;
+  }
+  
+  // INTRATE formula
+  const intrate = ((redemptionNum - investmentNum) / investmentNum) * (daysInYear / dsm);
+  
+  return intrate;
+};
+
+/**
+ * CUMIPMT - Cumulative Interest Paid Between Two Periods
+ * Calculates the cumulative interest paid on a loan between two periods.
+ * 
+ * Formula: Sum of IPMT for each period from start_period to end_period
+ * 
+ * @param rate - Interest rate per period
+ * @param nper - Total number of payment periods
+ * @param pv - Present value (loan amount)
+ * @param start_period - First period in the calculation (must be >= 1)
+ * @param end_period - Last period in the calculation (must be <= nper)
+ * @param type - 0 = payment at end of period, 1 = payment at beginning
+ * @returns Cumulative interest paid (negative value)
+ * 
+ * @example
+ * =CUMIPMT(0.09/12, 30*12, 125000, 13, 24, 0) → -11135.23 (interest paid in year 2)
+ */
+export const CUMIPMT: FormulaFunction = (rate, nper, pv, start_period, end_period, type = 0) => {
+  const rateNum = toNumber(rate);
+  const nperNum = toNumber(nper);
+  const pvNum = toNumber(pv);
+  const startNum = toNumber(start_period);
+  const endNum = toNumber(end_period);
+  const typeNum = toNumber(type);
+  
+  if (rateNum instanceof Error) return rateNum;
+  if (nperNum instanceof Error) return nperNum;
+  if (pvNum instanceof Error) return pvNum;
+  if (startNum instanceof Error) return startNum;
+  if (endNum instanceof Error) return endNum;
+  if (typeNum instanceof Error) return typeNum;
+  
+  // Validate inputs
+  if (rateNum <= 0 || nperNum <= 0 || pvNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (startNum < 1 || endNum < startNum || endNum > nperNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (typeNum !== 0 && typeNum !== 1) {
+    return new Error('#NUM!');
+  }
+  
+  const typeInt = Math.floor(typeNum);
+  const startInt = Math.floor(startNum);
+  const endInt = Math.floor(endNum);
+  
+  // Sum IPMT for each period
+  let cumipmt = 0;
+  for (let period = startInt; period <= endInt; period++) {
+    const ipmt = IPMT(rateNum, period, nperNum, pvNum, 0, typeInt);
+    if (ipmt instanceof Error) return ipmt;
+    cumipmt += ipmt as number;
+  }
+  
+  return cumipmt;
+};
+
+/**
+ * CUMPRINC - Cumulative Principal Paid Between Two Periods
+ * Calculates the cumulative principal paid on a loan between two periods.
+ * 
+ * Formula: Sum of PPMT for each period from start_period to end_period
+ * 
+ * @param rate - Interest rate per period
+ * @param nper - Total number of payment periods
+ * @param pv - Present value (loan amount)
+ * @param start_period - First period in the calculation (must be >= 1)
+ * @param end_period - Last period in the calculation (must be <= nper)
+ * @param type - 0 = payment at end of period, 1 = payment at beginning
+ * @returns Cumulative principal paid (negative value)
+ * 
+ * @example
+ * =CUMPRINC(0.09/12, 30*12, 125000, 13, 24, 0) → -934.11 (principal paid in year 2)
+ */
+export const CUMPRINC: FormulaFunction = (rate, nper, pv, start_period, end_period, type = 0) => {
+  const rateNum = toNumber(rate);
+  const nperNum = toNumber(nper);
+  const pvNum = toNumber(pv);
+  const startNum = toNumber(start_period);
+  const endNum = toNumber(end_period);
+  const typeNum = toNumber(type);
+  
+  if (rateNum instanceof Error) return rateNum;
+  if (nperNum instanceof Error) return nperNum;
+  if (pvNum instanceof Error) return pvNum;
+  if (startNum instanceof Error) return startNum;
+  if (endNum instanceof Error) return endNum;
+  if (typeNum instanceof Error) return typeNum;
+  
+  // Validate inputs
+  if (rateNum <= 0 || nperNum <= 0 || pvNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (startNum < 1 || endNum < startNum || endNum > nperNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (typeNum !== 0 && typeNum !== 1) {
+    return new Error('#NUM!');
+  }
+  
+  const typeInt = Math.floor(typeNum);
+  const startInt = Math.floor(startNum);
+  const endInt = Math.floor(endNum);
+  
+  // Sum PPMT for each period
+  let cumprinc = 0;
+  for (let period = startInt; period <= endInt; period++) {
+    const ppmt = PPMT(rateNum, period, nperNum, pvNum, 0, typeInt);
+    if (ppmt instanceof Error) return ppmt;
+    cumprinc += ppmt as number;
+  }
+  
+  return cumprinc;
+};
+
+/**
+ * DB - Declining Balance Depreciation
+ * Returns the depreciation of an asset for a specified period using the fixed-declining balance method.
+ * 
+ * Formula: Depreciation = (cost - total_depreciation) * rate
+ * Where rate = 1 - ((salvage / cost) ^ (1 / life)), rounded to 3 decimals
+ * 
+ * @param cost - Initial cost of the asset
+ * @param salvage - Value at the end of depreciation (salvage value)
+ * @param life - Number of periods over which the asset is depreciated
+ * @param period - Period for which to calculate depreciation
+ * @param month - Number of months in the first year (default 12)
+ * @returns Depreciation for the specified period
+ * 
+ * @example
+ * =DB(1000000, 100000, 6, 1, 7) → $186,083.33 (first year with 7 months)
+ */
+export const DB: FormulaFunction = (cost, salvage, life, period, month = 12) => {
+  const costNum = toNumber(cost);
+  const salvageNum = toNumber(salvage);
+  const lifeNum = toNumber(life);
+  const periodNum = toNumber(period);
+  const monthNum = toNumber(month);
+  
+  if (costNum instanceof Error) return costNum;
+  if (salvageNum instanceof Error) return salvageNum;
+  if (lifeNum instanceof Error) return lifeNum;
+  if (periodNum instanceof Error) return periodNum;
+  if (monthNum instanceof Error) return monthNum;
+  
+  // Validate inputs
+  if (costNum < 0 || salvageNum < 0 || lifeNum <= 0 || periodNum <= 0 || monthNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (salvageNum > costNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (periodNum > lifeNum + 1) {
+    return new Error('#NUM!');
+  }
+  
+  if (monthNum > 12) {
+    return new Error('#NUM!');
+  }
+  
+  const lifeInt = Math.floor(lifeNum);
+  const periodInt = Math.floor(periodNum);
+  const monthInt = Math.floor(monthNum);
+  
+  // Calculate depreciation rate
+  const rate = 1 - Math.pow(salvageNum / costNum, 1 / lifeInt);
+  // Round to 3 decimal places as per Excel
+  const roundedRate = Math.round(rate * 1000) / 1000;
+  
+  // Calculate depreciation for each period
+  let totalDepreciation = 0;
+  let depreciation = 0;
+  
+  for (let i = 1; i <= periodInt; i++) {
+    if (i === 1) {
+      // First period uses partial year based on month parameter
+      depreciation = costNum * roundedRate * monthInt / 12;
+    } else if (i === lifeInt + 1) {
+      // Last period (partial year)
+      depreciation = (costNum - totalDepreciation) * roundedRate * (12 - monthInt) / 12;
+    } else {
+      // Full year
+      depreciation = (costNum - totalDepreciation) * roundedRate;
+    }
+    
+    if (i === periodInt) {
+      return depreciation;
+    }
+    
+    totalDepreciation += depreciation;
+  }
+  
+  return depreciation;
+};
+
+/**
+ * DDB - Double-Declining Balance Depreciation
+ * Returns the depreciation of an asset for a specified period using the double-declining balance method or another method you specify.
+ * 
+ * Formula: Depreciation = (cost - total_depreciation) * (factor / life)
+ * Limited to not exceed (cost - salvage - total_depreciation) in final periods
+ * 
+ * @param cost - Initial cost of the asset
+ * @param salvage - Value at the end of depreciation (salvage value)
+ * @param life - Number of periods over which the asset is depreciated
+ * @param period - Period for which to calculate depreciation
+ * @param factor - Rate at which balance declines (default 2 for double-declining)
+ * @returns Depreciation for the specified period
+ * 
+ * @example
+ * =DDB(2400, 300, 10, 1, 2) → $480.00 (first year double-declining)
+ */
+export const DDB: FormulaFunction = (cost, salvage, life, period, factor = 2) => {
+  const costNum = toNumber(cost);
+  const salvageNum = toNumber(salvage);
+  const lifeNum = toNumber(life);
+  const periodNum = toNumber(period);
+  const factorNum = toNumber(factor);
+  
+  if (costNum instanceof Error) return costNum;
+  if (salvageNum instanceof Error) return salvageNum;
+  if (lifeNum instanceof Error) return lifeNum;
+  if (periodNum instanceof Error) return periodNum;
+  if (factorNum instanceof Error) return factorNum;
+  
+  // Validate inputs
+  if (costNum < 0 || salvageNum < 0 || lifeNum <= 0 || periodNum <= 0 || factorNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (salvageNum > costNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (periodNum > lifeNum) {
+    return new Error('#NUM!');
+  }
+  
+  const periodInt = Math.floor(periodNum);
+  
+  // Calculate depreciation rate
+  const rate = factorNum / lifeNum;
+  
+  // Calculate depreciation for each period up to the requested period
+  let bookValue = costNum;
+  let depreciation = 0;
+  
+  for (let i = 1; i <= periodInt; i++) {
+    // Calculate depreciation for this period
+    depreciation = bookValue * rate;
+    
+    // Don't depreciate below salvage value
+    const remainingValue = bookValue - depreciation;
+    if (remainingValue < salvageNum) {
+      depreciation = bookValue - salvageNum;
+    }
+    
+    if (i === periodInt) {
+      return depreciation;
+    }
+    
+    bookValue -= depreciation;
+  }
+  
+  return depreciation;
+};
+
+/**
+ * SLN - Straight-Line Depreciation
+ * Returns depreciation per period using straight-line method
+ * 
+ * Formula: (cost - salvage) / life
+ * 
+ * @param cost - Initial cost of asset
+ * @param salvage - Salvage value at end of life
+ * @param life - Number of periods over which asset is depreciated
+ * @returns Depreciation per period
+ * 
+ * @example
+ * =SLN(30000, 7500, 10) → 2250 per period
+ */
+export function SLN(
+  cost: FormulaValue,
+  salvage: FormulaValue,
+  life: FormulaValue
+): FormulaValue {
+  // Convert inputs to numbers
+  const costNum = toNumber(cost);
+  if (costNum instanceof Error) return costNum;
+  
+  const salvageNum = toNumber(salvage);
+  if (salvageNum instanceof Error) return salvageNum;
+  
+  const lifeNum = toNumber(life);
+  if (lifeNum instanceof Error) return lifeNum;
+
+  // Validate inputs
+  if (lifeNum <= 0) {
+    return new Error('#NUM!');
+  }
+
+  if (costNum < 0 || salvageNum < 0) {
+    return new Error('#NUM!');
+  }
+
+  // Straight-line depreciation formula
+  const depreciation = (costNum - salvageNum) / lifeNum;
+
+  return depreciation;
+}
+
+/**
+ * SYD - Sum-of-Years' Digits Depreciation
+ * Returns accelerated depreciation using sum-of-years' digits method
+ * 
+ * Formula: ((life - period + 1) / sum_of_years) * (cost - salvage)
+ * where sum_of_years = life * (life + 1) / 2
+ * 
+ * @param cost - Initial cost of asset
+ * @param salvage - Salvage value at end of life
+ * @param life - Number of periods over which asset is depreciated
+ * @param period - Period for which to calculate depreciation
+ * @returns Depreciation for the specified period
+ * 
+ * @example
+ * =SYD(30000, 7500, 10, 1) → 4090.91 (first period gets highest depreciation)
+ * =SYD(30000, 7500, 10, 10) → 409.09 (last period gets lowest depreciation)
+ */
+export function SYD(
+  cost: FormulaValue,
+  salvage: FormulaValue,
+  life: FormulaValue,
+  period: FormulaValue
+): FormulaValue {
+  // Convert inputs to numbers
+  const costNum = toNumber(cost);
+  if (costNum instanceof Error) return costNum;
+  
+  const salvageNum = toNumber(salvage);
+  if (salvageNum instanceof Error) return salvageNum;
+  
+  const lifeNum = toNumber(life);
+  if (lifeNum instanceof Error) return lifeNum;
+  
+  const periodNum = toNumber(period);
+  if (periodNum instanceof Error) return periodNum;
+
+  // Validate inputs
+  if (lifeNum <= 0 || periodNum <= 0 || periodNum > lifeNum) {
+    return new Error('#NUM!');
+  }
+
+  if (costNum < 0 || salvageNum < 0) {
+    return new Error('#NUM!');
+  }
+
+  // Convert period to integer
+  const periodInt = Math.floor(periodNum);
+
+  // Calculate sum of years' digits: n(n+1)/2
+  const sumOfYears = (lifeNum * (lifeNum + 1)) / 2;
+
+  // Calculate remaining life at start of period
+  const remainingLife = lifeNum - periodInt + 1;
+
+  // SYD depreciation formula
+  const depreciation = ((remainingLife / sumOfYears) * (costNum - salvageNum));
+
+  return depreciation;
+}
+
+/**
+ * VDB - Variable Declining Balance Depreciation
+ * Returns the depreciation of an asset for any period using the double-declining balance method
+ * or another method you specify. Can automatically switch to straight-line when beneficial.
+ * 
+ * @param cost - Initial cost of the asset
+ * @param salvage - Value at the end of depreciation
+ * @param life - Number of periods over which the asset is depreciated
+ * @param start_period - Starting period (can be fractional)
+ * @param end_period - Ending period (can be fractional)
+ * @param factor - Rate at which balance declines (default 2)
+ * @param no_switch - If true, don't switch to straight-line (default false)
+ * @returns Total depreciation between start_period and end_period
+ * 
+ * @example
+ * =VDB(2400, 300, 10, 0, 1) → depreciation for first period
+ * =VDB(2400, 300, 10, 0, 0.875) → partial period depreciation
+ */
+export function VDB(
+  cost: FormulaValue,
+  salvage: FormulaValue,
+  life: FormulaValue,
+  start_period: FormulaValue,
+  end_period: FormulaValue,
+  factor: FormulaValue = 2,
+  no_switch: FormulaValue = false
+): FormulaValue {
+  // Convert inputs to numbers
+  const costNum = toNumber(cost);
+  if (costNum instanceof Error) return costNum;
+  
+  const salvageNum = toNumber(salvage);
+  if (salvageNum instanceof Error) return salvageNum;
+  
+  const lifeNum = toNumber(life);
+  if (lifeNum instanceof Error) return lifeNum;
+  
+  const startPeriod = toNumber(start_period);
+  if (startPeriod instanceof Error) return startPeriod;
+  
+  const endPeriod = toNumber(end_period);
+  if (endPeriod instanceof Error) return endPeriod;
+  
+  const factorNum = toNumber(factor);
+  if (factorNum instanceof Error) return factorNum;
+  
+  // Convert no_switch to boolean
+  let noSwitch = false;
+  if (typeof no_switch === 'boolean') {
+    noSwitch = no_switch;
+  } else if (typeof no_switch === 'number') {
+    noSwitch = no_switch !== 0;
+  }
+
+  // Validate inputs
+  if (costNum < 0 || salvageNum < 0 || lifeNum <= 0 || factorNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (salvageNum > costNum) {
+    return new Error('#NUM!');
+  }
+  
+  if (startPeriod < 0 || endPeriod < 0 || endPeriod < startPeriod || endPeriod > lifeNum) {
+    return new Error('#NUM!');
+  }
+
+  // Helper function to calculate depreciation for a single period using DDB
+  const calcDDBDepreciation = (bookValue: number, rate: number, salvage: number): number => {
+    let depreciation = bookValue * rate;
+    
+    // Don't depreciate below salvage value
+    if (bookValue - depreciation < salvage) {
+      depreciation = bookValue - salvage;
+    }
+    
+    return Math.max(0, depreciation);
+  };
+
+  // Helper function to calculate when to switch to SLN
+  const calcSLNDepreciation = (bookValue: number, salvage: number, periodsRemaining: number): number => {
+    if (periodsRemaining <= 0) return 0;
+    return (bookValue - salvage) / periodsRemaining;
+  };
+
+  const rate = factorNum / lifeNum;
+  let totalDepreciation = 0;
+  
+  // Calculate book value at start_period
+  let bookValue = costNum;
+  let currentPeriod = 0;
+  
+  // Calculate book value up to start_period
+  while (currentPeriod < startPeriod) {
+    const periodsRemaining = lifeNum - currentPeriod;
+    const ddbDep = calcDDBDepreciation(bookValue, rate, salvageNum);
+    const slnDep = calcSLNDepreciation(bookValue, salvageNum, periodsRemaining);
+    
+    let periodDepreciation: number;
+    if (noSwitch || ddbDep >= slnDep) {
+      periodDepreciation = ddbDep;
+    } else {
+      periodDepreciation = slnDep;
+    }
+    
+    const periodStep = Math.min(1, startPeriod - currentPeriod);
+    const actualDepreciation = periodDepreciation * periodStep;
+    
+    bookValue -= actualDepreciation;
+    currentPeriod += periodStep;
+  }
+  
+  // Calculate depreciation from start_period to end_period
+  currentPeriod = startPeriod;
+  while (currentPeriod < endPeriod) {
+    const periodsRemaining = lifeNum - currentPeriod;
+    const ddbDep = calcDDBDepreciation(bookValue, rate, salvageNum);
+    const slnDep = calcSLNDepreciation(bookValue, salvageNum, periodsRemaining);
+    
+    let periodDepreciation: number;
+    if (noSwitch || ddbDep >= slnDep) {
+      periodDepreciation = ddbDep;
+    } else {
+      periodDepreciation = slnDep;
+    }
+    
+    const periodStep = Math.min(1, endPeriod - currentPeriod);
+    const actualDepreciation = periodDepreciation * periodStep;
+    
+    totalDepreciation += actualDepreciation;
+    bookValue -= actualDepreciation;
+    currentPeriod += periodStep;
+  }
+  
+  return totalDepreciation;
+}
+
+/**
+ * AMORDEGRC - Depreciation for French Accounting System
+ * Returns the depreciation for each accounting period using coefficients based on asset life.
+ * Includes special depreciation coefficient for assets with life between 3-6 years.
+ * 
+ * @param cost - Cost of the asset
+ * @param date_purchased - Date when asset was purchased
+ * @param first_period - Date of end of first period
+ * @param salvage - Salvage value at end of life
+ * @param period - The period
+ * @param rate - Rate of depreciation
+ * @param basis - Day count basis (0-4)
+ * @returns Depreciation for the specified period
+ * 
+ * @example
+ * =AMORDEGRC(2400, DATE(2008,8,19), DATE(2008,12,31), 300, 1, 0.15, 1)
+ */
+export function AMORDEGRC(
+  cost: FormulaValue,
+  date_purchased: FormulaValue,
+  first_period: FormulaValue,
+  salvage: FormulaValue,
+  period: FormulaValue,
+  rate: FormulaValue,
+  basis: FormulaValue = 0
+): FormulaValue {
+  // Convert inputs to numbers
+  const costNum = toNumber(cost);
+  if (costNum instanceof Error) return costNum;
+  
+  const datePurchased = toNumber(date_purchased);
+  if (datePurchased instanceof Error) return datePurchased;
+  
+  const firstPeriod = toNumber(first_period);
+  if (firstPeriod instanceof Error) return firstPeriod;
+  
+  const salvageNum = toNumber(salvage);
+  if (salvageNum instanceof Error) return salvageNum;
+  
+  const periodNum = toNumber(period);
+  if (periodNum instanceof Error) return periodNum;
+  
+  const rateNum = toNumber(rate);
+  if (rateNum instanceof Error) return rateNum;
+  
+  const basisNum = toNumber(basis);
+  if (basisNum instanceof Error) return basisNum;
+
+  // Validate inputs
+  if (costNum < 0 || salvageNum < 0 || rateNum <= 0 || periodNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+
+  // Calculate asset life from rate
+  const life = 1 / rateNum;
+  
+  // Determine depreciation coefficient based on life
+  let coefficient = 1.0;
+  if (life > 3 && life <= 4) {
+    coefficient = 1.5;
+  } else if (life > 4 && life <= 6) {
+    coefficient = 2.0;
+  } else if (life > 6) {
+    coefficient = 2.5;
+  }
+
+  const periodInt = Math.floor(periodNum);
+  
+  // Calculate number of months in first period (simplified - assumes full year = 12 months)
+  const monthsInFirstPeriod = Math.min(12, Math.max(0, (firstPeriod - datePurchased) / 30));
+  
+  // Calculate depreciation
+  let totalDepreciation = 0;
+  let bookValue = costNum;
+  
+  for (let i = 0; i <= periodInt; i++) {
+    let periodDepreciation: number;
+    
+    if (i === 0) {
+      // First period - prorated
+      periodDepreciation = (bookValue * rateNum * coefficient * monthsInFirstPeriod) / 12;
+    } else {
+      // Full periods
+      periodDepreciation = bookValue * rateNum * coefficient;
+    }
+    
+    // Don't depreciate below salvage
+    if (bookValue - periodDepreciation < salvageNum) {
+      periodDepreciation = bookValue - salvageNum;
+    }
+    
+    if (i === periodInt) {
+      return Math.max(0, periodDepreciation);
+    }
+    
+    totalDepreciation += periodDepreciation;
+    bookValue -= periodDepreciation;
+  }
+  
+  return 0;
+}
+
+/**
+ * AMORLINC - Linear Depreciation for French Accounting System
+ * Returns the depreciation for each accounting period using linear depreciation.
+ * Similar to AMORDEGRC but uses linear method instead of accelerated.
+ * 
+ * @param cost - Cost of the asset
+ * @param date_purchased - Date when asset was purchased
+ * @param first_period - Date of end of first period
+ * @param salvage - Salvage value at end of life
+ * @param period - The period
+ * @param rate - Rate of depreciation
+ * @param basis - Day count basis (0-4)
+ * @returns Linear depreciation for the specified period
+ * 
+ * @example
+ * =AMORLINC(2400, DATE(2008,8,19), DATE(2008,12,31), 300, 1, 0.15, 1)
+ */
+export function AMORLINC(
+  cost: FormulaValue,
+  date_purchased: FormulaValue,
+  first_period: FormulaValue,
+  salvage: FormulaValue,
+  period: FormulaValue,
+  rate: FormulaValue,
+  basis: FormulaValue = 0
+): FormulaValue {
+  // Convert inputs to numbers
+  const costNum = toNumber(cost);
+  if (costNum instanceof Error) return costNum;
+  
+  const datePurchased = toNumber(date_purchased);
+  if (datePurchased instanceof Error) return datePurchased;
+  
+  const firstPeriod = toNumber(first_period);
+  if (firstPeriod instanceof Error) return firstPeriod;
+  
+  const salvageNum = toNumber(salvage);
+  if (salvageNum instanceof Error) return salvageNum;
+  
+  const periodNum = toNumber(period);
+  if (periodNum instanceof Error) return periodNum;
+  
+  const rateNum = toNumber(rate);
+  if (rateNum instanceof Error) return rateNum;
+  
+  const basisNum = toNumber(basis);
+  if (basisNum instanceof Error) return basisNum;
+
+  // Validate inputs
+  if (costNum < 0 || salvageNum < 0 || rateNum <= 0 || periodNum < 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+
+  const periodInt = Math.floor(periodNum);
+  
+  // Calculate number of months in first period (simplified - assumes full year = 12 months)
+  const monthsInFirstPeriod = Math.min(12, Math.max(0, (firstPeriod - datePurchased) / 30));
+  
+  // Calculate linear depreciation per period
+  const depreciableAmount = costNum - salvageNum;
+  const life = 1 / rateNum;
+  const annualDepreciation = depreciableAmount / life;
+  
+  // Calculate depreciation for requested period
+  let totalDepreciation = 0;
+  let bookValue = costNum;
+  
+  for (let i = 0; i <= periodInt; i++) {
+    let periodDepreciation: number;
+    
+    if (i === 0) {
+      // First period - prorated based on months
+      periodDepreciation = (annualDepreciation * monthsInFirstPeriod) / 12;
+    } else {
+      // Full periods - linear depreciation
+      periodDepreciation = annualDepreciation;
+    }
+    
+    // Don't depreciate below salvage
+    if (bookValue - periodDepreciation < salvageNum) {
+      periodDepreciation = bookValue - salvageNum;
+    }
+    
+    if (i === periodInt) {
+      return Math.max(0, periodDepreciation);
+    }
+    
+    totalDepreciation += periodDepreciation;
+    bookValue -= periodDepreciation;
+  }
+  
+  return 0;
+}
+
+/**
+ * ACCRINT - Accrued Interest for Security with Periodic Interest Payments
+ * Returns the accrued interest for a security that pays periodic interest.
+ * 
+ * @param issue - Issue date of the security
+ * @param first_interest - First interest date
+ * @param settlement - Settlement date
+ * @param rate - Annual coupon rate
+ * @param par - Par value (default 1000)
+ * @param frequency - Number of coupon payments per year (1, 2, or 4)
+ * @param basis - Day count basis (0-4)
+ * @param calc_method - Calculation method (default TRUE)
+ * @returns Accrued interest
+ * 
+ * @example
+ * =ACCRINT(DATE(2008,2,2), DATE(2008,3,15), DATE(2008,5,1), 0.1, 1000, 2, 0)
+ */
+export function ACCRINT(
+  issue: FormulaValue,
+  first_interest: FormulaValue,
+  settlement: FormulaValue,
+  rate: FormulaValue,
+  par: FormulaValue = 1000,
+  frequency: FormulaValue = 2,
+  basis: FormulaValue = 0,
+  calc_method: FormulaValue = true
+): FormulaValue {
+  // Convert inputs to numbers
+  const issueDate = toNumber(issue);
+  if (issueDate instanceof Error) return issueDate;
+  
+  const firstInterest = toNumber(first_interest);
+  if (firstInterest instanceof Error) return firstInterest;
+  
+  const settlementDate = toNumber(settlement);
+  if (settlementDate instanceof Error) return settlementDate;
+  
+  const rateNum = toNumber(rate);
+  if (rateNum instanceof Error) return rateNum;
+  
+  const parNum = toNumber(par);
+  if (parNum instanceof Error) return parNum;
+  
+  const freqNum = toNumber(frequency);
+  if (freqNum instanceof Error) return freqNum;
+  
+  const basisNum = toNumber(basis);
+  if (basisNum instanceof Error) return basisNum;
+
+  // Validate inputs
+  if (rateNum <= 0 || parNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (freqNum !== 1 && freqNum !== 2 && freqNum !== 4) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+  
+  if (issueDate >= settlementDate) {
+    return new Error('#NUM!');
+  }
+
+  // Helper function to calculate days between dates based on basis
+  const daysBetween = (start: number, end: number, basis: number): number => {
+    const days = end - start;
+    // Simplified day count - in real Excel, this uses complex day count conventions
+    return days;
+  };
+
+  // Helper function to get days in year based on basis
+  const daysInYear = (basis: number): number => {
+    switch (basis) {
+      case 0: // 30/360 US
+      case 4: // 30/360 European
+        return 360;
+      case 1: // Actual/actual
+      case 2: // Actual/360
+        return 360;
+      case 3: // Actual/365
+        return 365;
+      default:
+        return 360;
+    }
+  };
+
+  const freq = Math.floor(freqNum);
+  const daysPerYear = daysInYear(basisNum);
+  const couponPeriod = daysPerYear / freq;
+  
+  // Calculate accrued interest
+  // Simplified calculation: count days from issue to settlement
+  const daysAccrued = daysBetween(issueDate, settlementDate, basisNum);
+  const couponPayment = parNum * rateNum / freq;
+  
+  // Calculate number of full periods and partial period
+  const fullPeriods = Math.floor(daysAccrued / couponPeriod);
+  const partialDays = daysAccrued - (fullPeriods * couponPeriod);
+  
+  // Accrued interest = (par * rate / freq) * (days_accrued / days_per_period)
+  const accruedInterest = (parNum * rateNum / freq) * (daysAccrued / couponPeriod);
+  
+  return accruedInterest;
+}
+
+/**
+ * ACCRINTM - Accrued Interest at Maturity
+ * Returns the accrued interest for a security that pays interest at maturity.
+ * 
+ * @param issue - Issue date of the security
+ * @param settlement - Maturity date
+ * @param rate - Annual coupon rate
+ * @param par - Par value (default 1000)
+ * @param basis - Day count basis (0-4)
+ * @returns Accrued interest at maturity
+ * 
+ * @example
+ * =ACCRINTM(DATE(2008,4,1), DATE(2008,6,15), 0.1, 1000, 0)
+ */
+export function ACCRINTM(
+  issue: FormulaValue,
+  settlement: FormulaValue,
+  rate: FormulaValue,
+  par: FormulaValue = 1000,
+  basis: FormulaValue = 0
+): FormulaValue {
+  // Convert inputs to numbers
+  const issueDate = toNumber(issue);
+  if (issueDate instanceof Error) return issueDate;
+  
+  const settlementDate = toNumber(settlement);
+  if (settlementDate instanceof Error) return settlementDate;
+  
+  const rateNum = toNumber(rate);
+  if (rateNum instanceof Error) return rateNum;
+  
+  const parNum = toNumber(par);
+  if (parNum instanceof Error) return parNum;
+  
+  const basisNum = toNumber(basis);
+  if (basisNum instanceof Error) return basisNum;
+
+  // Validate inputs
+  if (rateNum <= 0 || parNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+  
+  if (issueDate >= settlementDate) {
+    return new Error('#NUM!');
+  }
+
+  // Helper function to get days in year based on basis
+  const daysInYear = (basis: number): number => {
+    switch (basis) {
+      case 0: // 30/360 US
+      case 4: // 30/360 European
+        return 360;
+      case 1: // Actual/actual
+      case 2: // Actual/360
+        return 360;
+      case 3: // Actual/365
+        return 365;
+      default:
+        return 360;
+    }
+  };
+
+  const daysPerYear = daysInYear(basisNum);
+  
+  // Calculate days between issue and settlement (simplified)
+  const daysAccrued = settlementDate - issueDate;
+  
+  // Accrued interest = par * rate * (days_accrued / days_per_year)
+  const accruedInterest = parNum * rateNum * (daysAccrued / daysPerYear);
+  
+  return accruedInterest;
+}
+
+/**
+ * PRICE - Price of Security Paying Periodic Interest
+ * Returns the price per $100 face value of a security that pays periodic interest.
+ * 
+ * @param settlement - Settlement date
+ * @param maturity - Maturity date
+ * @param rate - Annual coupon rate
+ * @param yld - Annual yield
+ * @param redemption - Redemption value per $100 face value
+ * @param frequency - Number of coupon payments per year (1, 2, or 4)
+ * @param basis - Day count basis (0-4)
+ * @returns Price per $100 face value
+ * 
+ * @example
+ * =PRICE(DATE(2008,2,15), DATE(2017,11,15), 0.0575, 0.065, 100, 2, 0)
+ */
+export function PRICE(
+  settlement: FormulaValue,
+  maturity: FormulaValue,
+  rate: FormulaValue,
+  yld: FormulaValue,
+  redemption: FormulaValue,
+  frequency: FormulaValue,
+  basis: FormulaValue = 0
+): FormulaValue {
+  // Convert inputs to numbers
+  const settlementDate = toNumber(settlement);
+  if (settlementDate instanceof Error) return settlementDate;
+  
+  const maturityDate = toNumber(maturity);
+  if (maturityDate instanceof Error) return maturityDate;
+  
+  const rateNum = toNumber(rate);
+  if (rateNum instanceof Error) return rateNum;
+  
+  const yldNum = toNumber(yld);
+  if (yldNum instanceof Error) return yldNum;
+  
+  const redemptionNum = toNumber(redemption);
+  if (redemptionNum instanceof Error) return redemptionNum;
+  
+  const freqNum = toNumber(frequency);
+  if (freqNum instanceof Error) return freqNum;
+  
+  const basisNum = toNumber(basis);
+  if (basisNum instanceof Error) return basisNum;
+
+  // Validate inputs
+  if (rateNum < 0 || yldNum < 0 || redemptionNum <= 0) {
+    return new Error('#NUM!');
+  }
+  
+  if (freqNum !== 1 && freqNum !== 2 && freqNum !== 4) {
+    return new Error('#NUM!');
+  }
+  
+  if (basisNum < 0 || basisNum > 4) {
+    return new Error('#NUM!');
+  }
+  
+  if (settlementDate >= maturityDate) {
+    return new Error('#NUM!');
+  }
+
+  const freq = Math.floor(freqNum);
+  
+  // Helper function to get days in year based on basis
+  const daysInYear = (basis: number): number => {
+    switch (basis) {
+      case 0: // 30/360 US
+      case 4: // 30/360 European
+        return 360;
+      case 1: // Actual/actual
+      case 2: // Actual/360
+        return 360;
+      case 3: // Actual/365
+        return 365;
+      default:
+        return 360;
+    }
+  };
+
+  const daysPerYear = daysInYear(basisNum);
+  const couponPeriod = daysPerYear / freq;
+  
+  // Calculate days from settlement to maturity
+  const daysToMaturity = maturityDate - settlementDate;
+  
+  // Calculate number of coupon periods
+  const numPeriods = Math.ceil(daysToMaturity / couponPeriod);
+  
+  // Calculate fraction of period from settlement to next coupon
+  const daysToNextCoupon = couponPeriod - (daysToMaturity % couponPeriod);
+  const fractionToNextCoupon = daysToNextCoupon / couponPeriod;
+  
+  // Coupon payment per period
+  const couponPayment = (rateNum / freq) * 100;
+  
+  // Calculate present value of all cash flows
+  let price = 0;
+  
+  // Present value of coupon payments
+  for (let i = 1; i <= numPeriods; i++) {
+    const periods = i - 1 + fractionToNextCoupon;
+    const discountFactor = Math.pow(1 + yldNum / freq, -periods);
+    price += couponPayment * discountFactor;
+  }
+  
+  // Present value of redemption
+  const periodsToRedemption = numPeriods - 1 + fractionToNextCoupon;
+  const redemptionPV = redemptionNum * Math.pow(1 + yldNum / freq, -periodsToRedemption);
+  price += redemptionPV;
+  
+  // Subtract accrued interest
+  const accruedInterest = couponPayment * (1 - fractionToNextCoupon);
+  price -= accruedInterest;
+  
+  return price;
+}
+
+
