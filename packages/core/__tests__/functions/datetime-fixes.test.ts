@@ -73,7 +73,7 @@ describe('Date & Time Fixes - Week 7 Days 3-4', () => {
 
     test('TODAY returns correct day', () => {
       const day = evaluate('=DAY(TODAY())');
-      const expectedDay = new Date().getDate();
+      const expectedDay = new Date().getUTCDate();
       expect(day).toBe(expectedDay);
     });
 
@@ -276,7 +276,7 @@ describe('Date & Time Fixes - Week 7 Days 3-4', () => {
       
       const day = evaluate(`=DAY(${result})`);
       const hour = evaluate(`=HOUR(${result})`);
-      const expectedDay = new Date().getDate();
+      const expectedDay = new Date().getUTCDate();
 
       expect(day).toBe(expectedDay); // Same day (wrapped time doesn't add days)
       expect(hour).toBe(6); // 30 hours mod 24 = 6 AM
@@ -291,9 +291,9 @@ describe('Date & Time Fixes - Week 7 Days 3-4', () => {
       const day = evaluate(`=DAY(${now})`);
 
       const currentDate = new Date();
-      expect(year).toBe(currentDate.getFullYear());
-      expect(month).toBe(currentDate.getMonth() + 1);
-      expect(day).toBe(currentDate.getDate());
+      expect(year).toBe(currentDate.getUTCFullYear());
+      expect(month).toBe(currentDate.getUTCMonth() + 1);
+      expect(day).toBe(currentDate.getUTCDate());
     });
   });
 

@@ -147,13 +147,13 @@ describe('Date & Time Component Extraction', () => {
 
     test('extracts month from TODAY', () => {
       const result = evaluate('=MONTH(TODAY())');
-      const expectedMonth = new Date().getMonth() + 1;
+      const expectedMonth = new Date().getUTCMonth() + 1;
       expect(result).toBe(expectedMonth);
     });
 
     test('extracts month from NOW', () => {
       const result = evaluate('=MONTH(NOW())');
-      const expectedMonth = new Date().getMonth() + 1;
+      const expectedMonth = new Date().getUTCMonth() + 1;
       expect(result).toBe(expectedMonth);
     });
 
@@ -230,13 +230,13 @@ describe('Date & Time Component Extraction', () => {
 
     test('extracts day from TODAY', () => {
       const result = evaluate('=DAY(TODAY())');
-      const expectedDay = new Date().getDate();
+      const expectedDay = new Date().getUTCDate();
       expect(result).toBe(expectedDay);
     });
 
     test('extracts day from NOW', () => {
       const result = evaluate('=DAY(NOW())');
-      const expectedDay = new Date().getDate();
+      const expectedDay = new Date().getUTCDate();
       expect(result).toBe(expectedDay);
     });
 
@@ -451,9 +451,9 @@ describe('Date & Time Component Extraction', () => {
       const second = evaluate('=SECOND(NOW())');
       
       const now = new Date();
-      expect(year).toBe(now.getFullYear());
-      expect(month).toBe(now.getMonth() + 1);
-      expect(day).toBe(now.getDate());
+      expect(year).toBe(now.getUTCFullYear());
+      expect(month).toBe(now.getUTCMonth() + 1);
+      expect(day).toBe(now.getUTCDate());
       expect(hour).toBeGreaterThanOrEqual(0);
       expect(hour).toBeLessThan(24);
       expect(minute).toBeGreaterThanOrEqual(0);
