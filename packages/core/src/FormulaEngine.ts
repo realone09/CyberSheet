@@ -192,6 +192,35 @@ export class FormulaEngine {
       return new Error(expr);
     }
 
+    // Array literal - Excel {} syntax
+    if (expr.startsWith('{') && expr.endsWith('}')) {
+      const content = expr.slice(1, -1).trim();
+      
+      // Empty array
+      if (content === '') {
+        return [];
+      }
+      
+      // Check for 2D array (contains semicolons for row separator)
+      if (content.includes(';')) {
+        const rows = content.split(';');
+        return rows.map(row => {
+          const values = row.split(',').map(v => {
+            const trimmed = v.trim();
+            return this.evaluateExpression(trimmed, context);
+          });
+          return values;
+        });
+      }
+      
+      // 1D array (comma-separated values)
+      const values = content.split(',').map(v => {
+        const trimmed = v.trim();
+        return this.evaluateExpression(trimmed, context);
+      });
+      return values;
+    }
+
     // Number literal
     if (/^-?\d+(\.\d+)?$/.test(expr)) {
       return parseFloat(expr);
