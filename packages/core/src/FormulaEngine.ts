@@ -576,8 +576,8 @@ export class FormulaEngine {
   }
 
   /**
-   * Parses cell reference (e.g., "A1" -> {row: 0, col: 0})
-   * Converts Excel-style 1-based references (A1, B2) to 0-based internal addresses
+   * Parses cell reference (e.g., "A1" -> {row: 1, col: 1})
+   * Returns 1-based Address per type contract
    */
   private parseCellReference(ref: string): Address {
     const match = ref.match(/^([A-Z]+)(\d+)$/i);
@@ -590,9 +590,8 @@ export class FormulaEngine {
     for (let i = 0; i < colStr.length; i++) {
       col = col * 26 + (colStr.charCodeAt(i) - 65 + 1);
     }
-    // Convert from 1-based Excel notation to 0-based internal storage
-    col = col - 1;
-    const row = parseInt(rowStr, 10) - 1;
+    // Return 1-based coordinates per Address type contract
+    const row = parseInt(rowStr, 10);
 
     return { row, col };
   }
