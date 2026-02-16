@@ -26,13 +26,13 @@ describe('Statistical Functions - Correlation & Regression (Week 8 Day 2-3)', ()
 
   const evaluate = (formula: string) => engine.evaluate(formula, context);
 
-  // Helper to set up X and Y data
+  // Helper to set up X and Y data (1-based addressing)
   const setupData = (xVals: number[], yVals: number[]) => {
     for (let i = 0; i < xVals.length; i++) {
-      worksheet.setCellValue({ row: i, col: 0 }, xVals[i]);
+      worksheet.setCellValue({ row: i + 1, col: 1 }, xVals[i]);
     }
     for (let i = 0; i < yVals.length; i++) {
-      worksheet.setCellValue({ row: i, col: 1 }, yVals[i]);
+      worksheet.setCellValue({ row: i + 1, col: 2 }, yVals[i]);
     }
   };
 
