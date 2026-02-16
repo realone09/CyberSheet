@@ -72,13 +72,13 @@ describe('Wave 0 Day 3: ErrorStrategy Enforcement', () => {
     });
 
     test('Metadata: COUNT has SKIP_ERRORS strategy', () => {
-      const countMeta = STATISTICAL_METADATA.find(m => m.name === 'COUNT');
+      const countMeta = MATH_METADATA.find(m => m.name === 'COUNT');
       expect(countMeta).toBeDefined();
       expect(countMeta?.errorStrategy).toBe(ErrorStrategy.SKIP_ERRORS);
     });
 
     test('Metadata: COUNTA has SKIP_ERRORS strategy', () => {
-      const countaMeta = STATISTICAL_METADATA.find(m => m.name === 'COUNTA');
+      const countaMeta = MATH_METADATA.find(m => m.name === 'COUNTA');
       expect(countaMeta).toBeDefined();
       expect(countaMeta?.errorStrategy).toBe(ErrorStrategy.SKIP_ERRORS);
     });
@@ -102,7 +102,7 @@ describe('Wave 0 Day 3: ErrorStrategy Enforcement', () => {
     });
 
     test('Metadata: SUMIF has SKIP_ERRORS strategy', () => {
-      const sumifMeta = MATH_METADATA.find(m => m.name === 'SUMIF');
+      const sumifMeta = STATISTICAL_METADATA.find(m => m.name === 'SUMIF');
       expect(sumifMeta).toBeDefined();
       expect(sumifMeta?.errorStrategy).toBe(ErrorStrategy.SKIP_ERRORS);
     });
@@ -172,7 +172,7 @@ describe('Wave 0 Day 3: ErrorStrategy Enforcement', () => {
     });
 
     test('Metadata: CHOOSE has LAZY_EVALUATION strategy', () => {
-      const chooseMeta = LOGICAL_METADATA.find(m => m.name === 'CHOOSE');
+      const chooseMeta = LOOKUP_METADATA.find(m => m.name === 'CHOOSE');
       expect(chooseMeta).toBeDefined();
       expect(chooseMeta?.errorStrategy).toBe(ErrorStrategy.LAZY_EVALUATION);
     });
