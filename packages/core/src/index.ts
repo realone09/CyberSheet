@@ -17,3 +17,5 @@ export * from './StyleCache';
 export * from './CommandManager';
 export * from './CellLayout';
 export * from './ConditionalFormattingEngine';
+export * from './models/ChartObject';
+export * from './models/AdvancedChartOptions';
