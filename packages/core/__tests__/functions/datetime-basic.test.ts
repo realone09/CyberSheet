@@ -230,21 +230,21 @@ describe('Date & Time Functions - Basic', () => {
     test('extracting year from TODAY', () => {
       const result = evaluate('=YEAR(TODAY())');
       const today = new Date();
-      const expectedYear = today.getFullYear();
+      const expectedYear = today.getUTCFullYear();
       expect(result).toBe(expectedYear);
     });
 
     test('extracting month from TODAY', () => {
       const result = evaluate('=MONTH(TODAY())');
       const today = new Date();
-      const expectedMonth = today.getMonth() + 1; // getMonth() is 0-based (0-11), Excel uses 1-based (1-12)
+      const expectedMonth = today.getUTCMonth() + 1; // getUTCMonth() is 0-based (0-11), Excel uses 1-based (1-12)
       expect(result).toBe(expectedMonth);
     });
 
     test('extracting day from TODAY', () => {
       const result = evaluate('=DAY(TODAY())');
       const today = new Date();
-      const expectedDay = today.getDate();
+      const expectedDay = today.getUTCDate();
       expect(result).toBe(expectedDay);
     });
   });
