@@ -232,28 +232,28 @@ describe('Statistical Functions - Week 2 Day 3 (Chi-Square)', () => {
   describe('CHISQ.TEST - Chi-Square Test', () => {
     beforeEach(() => {
       // Set up sample data in worksheet
-      // Observed values: rows 0-4, col 0
+      // Observed values: rows 1-5 (1-based), col 1
       const observed = [10, 15, 20, 25, 30];
       observed.forEach((val, i) => {
-        worksheet.setCellValue({ row: i, col: 0 }, val);
+        worksheet.setCellValue({ row: i + 1, col: 1 }, val);
       });
       
-      // Expected values (close match): rows 0-4, col 1
+      // Expected values (close match): rows 1-5 (1-based), col 2
       const expected1 = [11, 14, 21, 24, 30];
       expected1.forEach((val, i) => {
-        worksheet.setCellValue({ row: i, col: 1 }, val);
+        worksheet.setCellValue({ row: i + 1, col: 2 }, val);
       });
       
-      // Expected values (poor match): rows 0-4, col 2
+      // Expected values (poor match): rows 1-5 (1-based), col 3
       const expected2 = [5, 10, 15, 20, 50];
       expected2.forEach((val, i) => {
-        worksheet.setCellValue({ row: i, col: 2 }, val);
+        worksheet.setCellValue({ row: i + 1, col: 3 }, val);
       });
       
-      // Identical expected: rows 0-4, col 3
+      // Identical expected: rows 1-5 (1-based), col 4
       const expected3 = [10, 15, 20, 25, 30];
       expected3.forEach((val, i) => {
-        worksheet.setCellValue({ row: i, col: 3 }, val);
+        worksheet.setCellValue({ row: i + 1, col: 4 }, val);
       });
     });
 
