@@ -182,7 +182,7 @@ describe('Financial Functions - Week 1 Day 2 (MIRR, FVSCHEDULE, DISC, INTRATE)',
       // 10 years of variable rates
       const rates = [0.05, 0.06, 0.04, 0.07, 0.03, 0.08, 0.05, 0.06, 0.04, 0.07];
       for (let i = 0; i < rates.length; i++) {
-        worksheet.setCellValue({ row: i, col: 0 }, rates[i]);
+        worksheet.setCellValue({ row: i + 1, col: 1 }, rates[i]); // 1-based: A1=row1, col1
       }
       
       const result = evaluate('=FVSCHEDULE(1, A1:A10)');
