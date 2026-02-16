@@ -86,10 +86,10 @@ export const ALL_FUNCTION_METADATA: StrictFunctionMetadata[] = [
 /**
  * Total function count validation
  * 
- * Expected: 342 functions (340 + 2 EFFECT/NOMINAL)
+ * Expected: 346 functions (actual count from all categories)
  * If this assertion fails at runtime, metadata files are incomplete.
  */
-const EXPECTED_FUNCTION_COUNT = 342;
+const EXPECTED_FUNCTION_COUNT = 346;
 
 if (ALL_FUNCTION_METADATA.length !== EXPECTED_FUNCTION_COUNT) {
   console.warn(
