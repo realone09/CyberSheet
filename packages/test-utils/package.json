@@ -20,7 +20,7 @@
     "test:a11y": "jest --config jest.config.js src/vanilla/__tests__/CFPresetPicker.a11y.test.ts"
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.0",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "jest-axe": "^8.0.0"
   },
