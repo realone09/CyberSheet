@@ -3,7 +3,7 @@
 // exponential backoff with jitter, error classification, and is deterministic
 // enough to unit test.
 
-import { ProviderError, ProviderErrorKind } from './ProviderResolution';
+import { ProviderError } from './ProviderResolution';
 
 export interface HttpProviderOptions {
   timeoutMs?: number;
@@ -44,30 +44,30 @@ export class HttpProviderAdapter {
 
   private classifyError(err: any, status?: number): ProviderError {
     if (err?.name === 'AbortError' || status === 0) {
-      return { kind: ProviderErrorKind.TIMEOUT, retryable: true, message: 'Request timed out' };
+      return { kind: 'TIMEOUT', retryable: true, message: 'Request timed out' };
     }
 
     if (status) {
       if (status === 401 || status === 403) {
-        return { kind: ProviderErrorKind.AUTH, retryable: false, message: 'Unauthorized' };
+        return { kind: 'AUTH', retryable: false, message: 'Unauthorized' };
       }
       if (status === 429) {
-        return { kind: ProviderErrorKind.RATE_LIMIT, retryable: true, message: 'Rate limit exceeded' };
+        return { kind: 'RATE_LIMIT', retryable: true, message: 'Rate limit exceeded' };
       }
       if (status >= 500 && status <= 599) {
-        return { kind: ProviderErrorKind.SERVER, retryable: true, message: `Server error ${status}` };
+        return { kind: 'SERVER', retryable: true, message: `Server error ${status}` };
       }
     }
 
     if (err instanceof SyntaxError) {
-      return { kind: ProviderErrorKind.PARSE, retryable: false, message: 'Invalid JSON' };
+      return { kind: 'PARSE', retryable: false, message: 'Invalid JSON' };
     }
 
     if (err?.code === 'ENOTFOUND' || err?.code === 'ECONNREFUSED' || err?.code === 'ECONNRESET') {
-      return { kind: ProviderErrorKind.NETWORK, retryable: true, message: 'Network failure' };
+      return { kind: 'NETWORK', retryable: true, message: 'Network failure' };
     }
 
-    return { kind: ProviderErrorKind.UNKNOWN, retryable: false, message: err?.message || String(err) };
+    return { kind: 'UNKNOWN', retryable: false, message: err?.message || String(err) };
   }
 
   private async attempt<T>(config: HttpRequestConfig): Promise<HttpResponse<T>> {
@@ -135,7 +135,7 @@ export class HttpProviderAdapter {
 
       // if rate limit and Retry-After header available, respect it
       let delay = this.backoffDelay(attempt);
-      if (err.type === ProviderErrorKind.RATE_LIMIT && resp.status === 429 && resp.error?.retryAfter) {
+      if (err.kind === 'RATE_LIMIT' && resp.status === 429 && resp.error?.retryAfter) {
         const ra = parseInt(resp.error.retryAfter, 10);
         if (!isNaN(ra)) {
           delay = Math.max(delay, ra * 1000); // seconds -> ms
