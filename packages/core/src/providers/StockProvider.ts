@@ -9,69 +9,70 @@ import { IDataTypeProvider } from './IDataTypeProvider';
  * 
  * Week 3 Phase 2 (v2.3-provider-layer)
  */
+import { FormulaValue, FormulaContext } from '../types/formula-types';
+import { IDataTypeProvider } from './IDataTypeProvider';
+import { ProviderRegistry } from './ProviderRegistry';
+import { HttpProviderAdapter, HttpRequestConfig } from './HttpProviderAdapter';
+import { ProviderError } from './ProviderResolution';
+
+/**
+ * Stock data provider that fetches from an HTTP service (e.g. Alpha Vantage).
+ * Logic is provider-agnostic; HTTP specifics are handled by the adapter.
+ */
 export class StockProvider implements IDataTypeProvider {
   id = 'stock-provider';
   type = 'stock';
 
-  // Mock stock data (symbol -> field -> value)
-  private mockData: Record<string, Record<string, FormulaValue>> = {
-    'AAPL': {
-      Price: 178.50,
-      Volume: 52000000,
-      MarketCap: 2800000000000,
-      Change: 2.5
-    },
-    'GOOG': {
-      Price: 1350.00,
-      Volume: 25000000,
-      MarketCap: 1700000000000,
-      Change: -1.2
-    },
-    'MSFT': {
-      Price: 420.00,
-      Volume: 30000000,
-      MarketCap: 3100000000000,
-      Change: 0.8
-    },
-    'TSLA': {
-      Price: 245.00,
-      Volume: 95000000,
-      MarketCap: 780000000000,
-      Change: 5.3
-    }
-  };
+  // internal cache populated during prefetch
+  private cache: Record<string, Record<string, FormulaValue>> = {};
+
+  constructor(
+    private http: HttpProviderAdapter,
+    private registry: ProviderRegistry
+  ) {}
 
   getValue(field: string, entity: any, context: FormulaContext): FormulaValue {
-    // Extract symbol from entity
     const symbol = entity?.symbol || entity?.id;
-    
-    if (!symbol) {
-      return new Error('#REF!'); // No symbol in entity
-    }
+    if (!symbol) return new Error('#REF!');
 
-    // Check if symbol exists
-    const stockData = this.mockData[symbol];
-    if (!stockData) {
-      return new Error('#REF!'); // Unknown stock symbol
-    }
+    const data = this.cache[symbol];
+    if (!data) return new Error('#REF!');
 
-    // Check if field exists
-    const value = stockData[field];
-    if (value === undefined) {
-      return new Error('#REF!'); // Unknown field
-    }
-
-    return value;
+    const val = data[field];
+    if (val === undefined) return new Error('#REF!');
+    return val;
   }
 
   /**
-   * Optional: In production, this would fetch real stock data from an API
+   * Fetch values for given stock symbols and seed registry cache.
+   * Expects entityRefs to be an array of symbols.
    */
   async prefetch(entityRefs: string[], context: FormulaContext): Promise<void> {
-    // Mock implementation - in production, would call external API
-    // e.g., await fetch(`https://api.stocks.com/batch?symbols=${symbols.join(',')}`)
-    
-    // For now, data is pre-populated in mockData
-    return Promise.resolve();
+    const symbols = Array.from(new Set(entityRefs));
+    if (symbols.length === 0) return;
+
+    // build request (caller could customize; here we just join)
+    const url = `https://api.example.com/stocks?symbols=${symbols.join(',')}`;
+    const resp = await this.http.request<Record<string, Record<string, any>>>({ url });
+
+    if (resp.error) {
+      // propagate error by seeding registry with error values
+      for (const sym of symbols) {
+        const ref = { type: this.type, id: sym, field: '' };
+        // The orchestrator will later map ProviderError to spreadsheet error;
+        // here we'll just store the error object so resolution context can see it.
+        this.registry.setCachedValue(this.type, sym, '__ERROR__', resp.error as any);
+      }
+      return;
+    }
+
+    // normalize and cache each symbol
+    this.cache = resp.data || {};
+    for (const sym of symbols) {
+      const data = this.cache[sym] || {};
+      for (const [field, value] of Object.entries(data)) {
+        this.registry.setCachedValue(this.type, sym, field, value as FormulaValue);
+      }
+    }
   }
 }

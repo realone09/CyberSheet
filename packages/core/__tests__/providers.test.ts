@@ -19,26 +19,55 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { FormulaEngine } from '../src/FormulaEngine';
 import { Worksheet } from '../src/worksheet';
-import { StockProvider, GeographyProvider } from '../src/providers';
+import { StockProvider, GeographyProvider, HttpProviderAdapter } from '../src/providers';
 import type { EntityValue } from '../src/types/entity-types';
 
 describe('Provider System', () => {
   let engine: FormulaEngine;
   let sheet: Worksheet;
+  let fakeFetch: jest.Mock;
 
   beforeEach(() => {
     engine = new FormulaEngine();
     sheet = new Worksheet('TestSheet', 100, 26);
     
-    // Register providers
-    engine.providers.register(new StockProvider());
-    engine.providers.register(new GeographyProvider());
+    // create an HTTP adapter backed by a fake fetch so we can inspect calls later
+    const sleepFn = (ms: number) => Promise.resolve();
+    fakeFetch = jest.fn();
+    const adapter = new HttpProviderAdapter(fakeFetch as any, sleepFn, { timeoutMs: 100, retries: 1 });
+
+    // instantiate providers with adapter and registry reference so they can seed cache
+    const stockProvider = new StockProvider(adapter, engine.providers);
+    const geoProvider = new GeographyProvider(adapter, engine.providers);
+
+    engine.providers.register(stockProvider);
+    engine.providers.register(geoProvider);
+
+    // pre-populate their internal cache so existing synchronous tests still pass
+    (stockProvider as any).cache = {
+      AAPL: { Price: 178.5, Volume: 52000000, MarketCap: 2800000000000, Change: 2.5 },
+      GOOG: { Price: 1350, Volume: 25000000, MarketCap: 1700000000000, Change: -1.2 },
+      MSFT: { Price: 420, Volume: 30000000, MarketCap: 3100000000000, Change: 0.8 },
+      TSLA: { Price: 245, Volume: 95000000, MarketCap: 780000000000, Change: 5.3 }
+    };
+    (geoProvider as any).cache = {
+      USA: { Capital: 'Washington, D.C.', Population: 331000000, Area: 9834000, Currency: 'USD' },
+      France: { Capital: 'Paris', Population: 67000000, Area: 551695, Currency: 'EUR' },
+      Japan: { Capital: 'Tokyo', Population: 126000000, Area: 377975, Currency: 'JPY' },
+      Germany: { Capital: 'Berlin', Population: 83000000, Area: 357022, Currency: 'EUR' },
+      Canada: { Capital: 'Ottawa', Population: 38000000, Area: 9985000, Currency: 'CAD' }
+    };
   });
 
   // Helper to evaluate formula with context
   const evalFormula = (formula: string) => {
     return engine.evaluate(formula, { worksheet: sheet, currentCell: { row: 1, col: 2 } });
   };
+
+  // convenience for accessing the providers we constructed above
+  const getStockProvider = () => engine.providers.getProvider('stock') as StockProvider;
+  const getGeoProvider = () => engine.providers.getProvider('geography') as GeographyProvider;
+
 
   // Helper to create entity with dynamic properties
   const createStockEntity = (symbol: string): EntityValue => {
@@ -205,6 +234,42 @@ describe('Provider System', () => {
     
     expect(result).toBeInstanceOf(Error);
     expect((result as Error).message).toBe('#REF!');
+  });
+  // =================================================================
+  // SECTION 5: Adapter integration (new tests)
+  // =================================================================
+
+  test('[P31] StockProvider.prefetch uses HTTP adapter and seeds cache', async () => {
+    const stockProvider = getStockProvider();
+    // configure fakeFetch to return a simple payload for symbol AAPL
+    fakeFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ AAPL: { Price: 99, Volume: 123 } }),
+      headers: { get: () => null }
+    });
+
+    // call prefetch with a symbol
+    await stockProvider.prefetch(['AAPL'], { worksheet: sheet, currentCell: { row: 1, col: 1 } });
+    // after prefetch, registry cache should contain the value
+    const val = engine.providers.getValue('stock', 'AAPL', 'Price', { symbol: 'AAPL' }, { worksheet: sheet, currentCell: { row: 1, col: 1 } });
+    expect(val).toBe(99);
+    expect(fakeFetch).toHaveBeenCalled();
+  });
+
+  test('[P32] StockProvider.prefetch handles RATE_LIMIT error', async () => {
+    const stockProvider = getStockProvider();
+    fakeFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: () => '1' },
+      json: async () => ({})
+    });
+
+    await stockProvider.prefetch(['GOOG'], { worksheet: sheet, currentCell: { row: 1, col: 1 } });
+    const err = engine.providers.getValue('stock', 'GOOG', 'Price', { symbol: 'GOOG' }, { worksheet: sheet, currentCell: { row: 1, col: 1 } });
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe('#REF!');
   });
 
   test('[P15] Unknown geography field returns #REF!', () => {
