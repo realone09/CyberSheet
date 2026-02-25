@@ -9,75 +9,55 @@ import { IDataTypeProvider } from './IDataTypeProvider';
  * 
  * Week 3 Phase 2 (v2.3-provider-layer)
  */
+import { FormulaValue, FormulaContext } from '../types/formula-types';
+import { IDataTypeProvider } from './IDataTypeProvider';
+import { ProviderRegistry } from './ProviderRegistry';
+import { HttpProviderAdapter } from './HttpProviderAdapter';
+import { ProviderErrorKind } from './ProviderResolution';
+
 export class GeographyProvider implements IDataTypeProvider {
   id = 'geography-provider';
   type = 'geography';
 
-  // Mock geography data (country -> field -> value)
-  private mockData: Record<string, Record<string, FormulaValue>> = {
-    'USA': {
-      Capital: 'Washington, D.C.',
-      Population: 331000000,
-      Area: 9834000,
-      Currency: 'USD'
-    },
-    'France': {
-      Capital: 'Paris',
-      Population: 67000000,
-      Area: 551695,
-      Currency: 'EUR'
-    },
-    'Japan': {
-      Capital: 'Tokyo',
-      Population: 126000000,
-      Area: 377975,
-      Currency: 'JPY'
-    },
-    'Germany': {
-      Capital: 'Berlin',
-      Population: 83000000,
-      Area: 357022,
-      Currency: 'EUR'
-    },
-    'Canada': {
-      Capital: 'Ottawa',
-      Population: 38000000,
-      Area: 9985000,
-      Currency: 'CAD'
-    }
-  };
+  private cache: Record<string, Record<string, FormulaValue>> = {};
+
+  constructor(
+    private http: HttpProviderAdapter,
+    private registry: ProviderRegistry
+  ) {}
 
   getValue(field: string, entity: any, context: FormulaContext): FormulaValue {
-    // Extract country code from entity
     const country = entity?.country || entity?.code || entity?.id;
-    
-    if (!country) {
-      return new Error('#REF!'); // No country in entity
-    }
+    if (!country) return new Error('#REF!');
 
-    // Check if country exists
-    const geoData = this.mockData[country];
-    if (!geoData) {
-      return new Error('#REF!'); // Unknown country
-    }
+    const data = this.cache[country];
+    if (!data) return new Error('#REF!');
 
-    // Check if field exists
-    const value = geoData[field];
-    if (value === undefined) {
-      return new Error('#REF!'); // Unknown field
-    }
-
-    return value;
+    const val = data[field];
+    if (val === undefined) return new Error('#REF!');
+    return val;
   }
 
-  /**
-   * Optional: In production, this would fetch real geography data from an API
-   */
   async prefetch(entityRefs: string[], context: FormulaContext): Promise<void> {
-    // Mock implementation - in production, would call external API
-    // e.g., await fetch(`https://api.geography.com/batch?countries=${countries.join(',')}`)
-    
-    // For now, data is pre-populated in mockData
-    return Promise.resolve();
+    const countries = Array.from(new Set(entityRefs));
+    if (countries.length === 0) return;
+
+    const url = `https://api.example.com/geography?codes=${countries.join(',')}`;
+    const resp = await this.http.request<Record<string, Record<string, any>>>({ url });
+
+    if (resp.error) {
+      for (const c of countries) {
+        this.registry.setCachedValue(this.type, c, '__ERROR__', resp.error as any);
+      }
+      return;
+    }
+
+    this.cache = resp.data || {};
+    for (const c of countries) {
+      const data = this.cache[c] || {};
+      for (const [field, value] of Object.entries(data)) {
+        this.registry.setCachedValue(this.type, c, field, value as FormulaValue);
+      }
+    }
   }
 }
