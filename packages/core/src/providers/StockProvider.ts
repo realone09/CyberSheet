@@ -1,19 +1,13 @@
 import { FormulaValue, FormulaContext } from '../types/formula-types';
 import { IDataTypeProvider } from './IDataTypeProvider';
+import { ProviderRegistry } from './ProviderRegistry';
+import { HttpProviderAdapter } from './HttpProviderAdapter';
+import { ProviderError } from './ProviderResolution';
 
 /**
- * Mock stock data provider for testing and demonstration.
- * 
- * Supports fields: Price, Volume, MarketCap, Change
- * Returns numeric values or #REF! error if field not found.
- * 
- * Week 3 Phase 2 (v2.3-provider-layer)
+ * Stock data provider that fetches from an HTTP service (e.g. Alpha Vantage).
+ * Logic is provider-agnostic; HTTP specifics are handled by the adapter.
  */
-import { FormulaValue, FormulaContext } from '../types/formula-types';
-import { IDataTypeProvider } from './IDataTypeProvider';
-import { ProviderRegistry } from './ProviderRegistry';
-import { HttpProviderAdapter, HttpRequestConfig } from './HttpProviderAdapter';
-import { ProviderError } from './ProviderResolution';
 
 /**
  * Stock data provider that fetches from an HTTP service (e.g. Alpha Vantage).

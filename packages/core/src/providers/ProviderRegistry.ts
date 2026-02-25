@@ -1,5 +1,6 @@
 import { FormulaValue, FormulaContext } from '../types/formula-types';
 import { IDataTypeProvider } from './IDataTypeProvider';
+import { ProviderRef } from './ProviderResolution';
 
 /**
  * Registry for external data type providers.
@@ -73,6 +74,13 @@ export class ProviderRegistry {
   }
 
   /**
+   * Retrieve the raw provider instance (used for testing/integration hooks).
+   */
+  getProvider(entityType: string): IDataTypeProvider | undefined {
+    return this.providers.get(entityType);
+  }
+
+  /**
    * Clear all cached values.
    * Call before each formula evaluation for fresh data.
    */
@@ -91,9 +99,41 @@ export class ProviderRegistry {
    * Set a cached value directly (used by orchestrator to seed resolved values)
    * @internal
    */
-  setCachedValue(entityType: string, entityId: string, field: string, value: FormulaValue): void {
-    const cacheKey = `${entityType}:${entityId}.${field}`;
-    this.cache.set(cacheKey, value);
+  setCachedValue(entityType: string, entityId: string, field: string, value: FormulaValue): void;
+  setCachedValue(ref: ProviderRef, value: FormulaValue): void;
+  setCachedValue(
+    entityTypeOrRef: string | ProviderRef,
+    entityIdOrValue: string | FormulaValue,
+    field?: string,
+    value?: FormulaValue
+  ): void {
+    let cacheKey: string;
+    let cacheValue: FormulaValue;
+
+    if (typeof entityTypeOrRef === 'string') {
+      // Old signature: (entityType, entityId, field, value)
+      cacheKey = `${entityTypeOrRef}:${entityIdOrValue}.${field}`;
+      cacheValue = value!;
+    } else {
+      // New signature: (ref, value)
+      const ref = entityTypeOrRef;
+      cacheKey = `${ref.type}:${ref.id}.${ref.field}`;
+      cacheValue = entityIdOrValue as FormulaValue;
+    }
+
+    this.cache.set(cacheKey, cacheValue);
+  }
+
+  /**
+   * Check if a value is already cached for the given provider reference.
+   * Used by BatchResolver to avoid redundant fetches.
+   * 
+   * @param ref - Provider reference
+   * @returns true if value is cached (either success or error)
+   */
+  hasCachedValue(ref: ProviderRef): boolean {
+    const cacheKey = `${ref.type}:${ref.id}.${ref.field}`;
+    return this.cache.has(cacheKey);
   }
 
   /**

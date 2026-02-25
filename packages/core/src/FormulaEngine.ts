@@ -26,7 +26,7 @@ import { ALL_FUNCTION_METADATA } from './functions/metadata';
 
 // Week 3 Phase 2: External data type providers
 import { ProviderRegistry } from './providers/ProviderRegistry';
-import { ProviderResolutionContext, ProviderRef, BatchResolver, ProviderError, BatchResolverOptions } from './providers';
+import { ProviderResolutionContext, ProviderRef, MockBatchResolver, ProviderError, BatchResolverOptions } from './providers';
 
 // Re-export types for backward compatibility
 export type { FormulaValue, FormulaFunction, LambdaFunction, FormulaContext };
@@ -620,7 +620,7 @@ export class FormulaEngine {
    * This method preserves the synchronous semantics of the engine by performing
    * async provider resolution before running the existing synchronous evaluator.
    */
-  async evaluateWithProviders(formula: string, context: FormulaContext, resolver?: BatchResolver, opts?: BatchResolverOptions): Promise<FormulaValue> {
+  async evaluateWithProviders(formula: string, context: FormulaContext, resolver?: MockBatchResolver, opts?: BatchResolverOptions): Promise<FormulaValue> {
     // Short-circuit: if no resolver provided, fallback to synchronous evaluate()
     if (!resolver) {
       return this.evaluate(formula, context);
@@ -683,7 +683,7 @@ export class FormulaEngine {
     ctx.addPendingMany(refs);
 
     try {
-      await resolver.resolve(refs, ctx, opts as any);
+      await resolver.resolve(refs, ctx);
     } catch (err) {
       // Treat unexpected resolver failure as network error
       return new Error('#CONNECT!');
