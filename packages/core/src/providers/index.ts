@@ -3,6 +3,7 @@
  * 
  * Week 3 Phase 2 (v2.3-provider-layer)
  * PR #3 - Batch resolution layer (Feb 25, 2026)
+ * PR #4 - HTTP driver layer (Feb 25, 2026)
  */
 
 export { IDataTypeProvider } from './IDataTypeProvider';
@@ -17,3 +18,8 @@ export { ProviderResolutionContext, ProviderRef, ProviderError, MockBatchResolve
 // Batch resolution layer (PR #3)
 export { BatchResolver, BatchResolverOptions } from './BatchResolver';
 export { ThrottlePolicy, WindowThrottle } from './ThrottlePolicy';
+
+// HTTP driver layer (PR #4)
+export { QuotaManager } from './QuotaManager';
+export { HttpObservability } from './HttpObservability';
+export { AlphaVantageDriver, AlphaVantageQuote } from './AlphaVantageDriver';
