@@ -156,10 +156,98 @@ export type EngineOpMap = {
    * The inverse is computed on the Worker thread (which owns the authoritative
    * Worksheet state) using recordingApplyPatch.  The returned WorksheetPatch
    * is a plain serialisable object — no transfer list required.
+   *
+   * When called inside an open transaction the Worker additionally accumulates
+   * the per-op inverse in TransactionContext.inverseStack for rollback use.
    */
   applyPatch: {
     payload: { patch: WorksheetPatch };
-    result:  WorksheetPatch;   // inverse patch for undo
+    result:  WorksheetPatch;   // inverse patch for undo / per-op rollback
+  };
+
+  // ── Phase 11: Transaction layer ────────────────────────────────────────
+
+  /**
+   * Open a transaction on the Worker's Worksheet.
+   *
+   * While a transaction is open:
+   *   - applyPatch ops are accepted and accumulated (no recalc between ops).
+   *   - Nested beginTransaction calls are rejected with TransactionError.
+   *   - getCellValue returns transactional state (post-write, pre-recalc).
+   *
+   * Throws TransactionError(ALREADY_OPEN) if a transaction is already open.
+   */
+  beginTransaction: {
+    payload: Record<never, never>;
+    result:  void;
+  };
+
+  /**
+   * Commit the open transaction.
+   *
+   * Actions (in order):
+   *   1. Stop PatchRecorder — produces aggregate forward patch.
+   *   2. Compute aggregate inverse from forward patch.
+   *   3. Run recalc exactly once — evaluates the full dirty subgraph.
+   *   4. Assert post-commit invariants.
+   *   5. Return aggregate patch + inverse + recalc stats.
+   *
+   * Throws TransactionError(NOT_OPEN) if no transaction is active.
+   */
+  commitTransaction: {
+    payload: Record<never, never>;
+    result:  {
+      patch:      WorksheetPatch;  // aggregate forward patch (all ops combined)
+      inverse:    WorksheetPatch;  // aggregate inverse  (single undo entry)
+      evaluated:  number;          // cells recalculated at commit
+      hasCycles:  boolean;         // true if circular references detected
+    };
+  };
+
+  /**
+   * Roll back the open transaction.
+   *
+   * Actions (in order):
+   *   1. Abort PatchRecorder (discard forward recording).
+   *   2. Apply per-op inverses LIFO — restores pre-transaction state.
+   *   3. Run recalc exactly once — formula values restored.
+   *
+   * Throws TransactionError(NOT_OPEN_ROLLBACK) if no transaction is active.
+   */
+  rollbackTransaction: {
+    payload: Record<never, never>;
+    result:  void;
+  };
+
+  /**
+   * Run a full recalculation pass outside a transaction.
+   *
+   * Evaluates the dirty subgraph in topological order and clears the dirty
+   * set.  Returns the number of cells evaluated and whether cycles were found.
+   *
+   * This op is exposed standalone so Phase 13+ collaborative sync can apply
+   * a batch of remote patches (each via applyPatch) and then trigger a single
+   * recalc pass, decoupling mutation acceptance from formula evaluation.
+   *
+   * Throws if called while a transaction is open (recalc is deferred to commit).
+   */
+  recalc: {
+    payload: Record<never, never>;
+    result:  { evaluated: number; hasCycles: boolean };
+  };
+
+  /**
+   * Query whether the Worker has cells awaiting evaluation.
+   *
+   * Returns true when:
+   *   - A transaction is open (recalc is deferred); or
+   *   - Cells have been mutated since the last recalc pass.
+   *
+   * Useful in dev mode to surface pending evaluation to the UI.
+   */
+  hasPendingEvaluation: {
+    payload: Record<never, never>;
+    result:  boolean;
   };
 };
 

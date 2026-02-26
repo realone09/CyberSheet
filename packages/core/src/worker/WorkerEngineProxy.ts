@@ -257,4 +257,69 @@ export class WorkerEngineProxy {
   applyPatch(patch: WorksheetPatch): Promise<WorksheetPatch> {
     return this._send('applyPatch', { patch });
   }
+
+  // ── Transaction (Phase 11) ────────────────────────────────────────────────
+
+  /**
+   * Open a transaction on the worker.
+   * Throws `TransactionError(ALREADY_OPEN)` if a transaction is already open.
+   * While a transaction is open, recalc is suppressed until commitTransaction.
+   */
+  beginTransaction(): Promise<void> {
+    return this._send('beginTransaction', {});
+  }
+
+  /**
+   * Commit the open transaction.
+   *
+   * The worker:
+   *   1. Stops recording (yields aggregate forward patch).
+   *   2. Runs recalc exactly once.
+   *   3. Asserts the dirty set is empty (unless volatiles are present).
+   *   4. Returns `{ patch, inverse, evaluated, hasCycles }`.
+   *
+   * Throws `TransactionError(NOT_OPEN)` if no transaction is open.
+   */
+  commitTransaction(): Promise<{
+    patch:     WorksheetPatch;
+    inverse:   WorksheetPatch;
+    evaluated: number;
+    hasCycles: boolean;
+  }> {
+    return this._send('commitTransaction', {});
+  }
+
+  /**
+   * Roll back the open transaction.
+   *
+   * The worker applies all accumulated inverse patches in LIFO order,
+   * then runs recalc once to drain the dirty set.
+   *
+   * Throws `TransactionError(NOT_OPEN_ROLLBACK)` if no transaction is open.
+   */
+  rollbackTransaction(): Promise<void> {
+    return this._send('rollbackTransaction', {});
+  }
+
+  /**
+   * Trigger an explicit recalc on the worker outside a transaction.
+   *
+   * Returns the number of cells evaluated and whether any dependency cycles
+   * were detected.
+   *
+   * Throws if a transaction is currently open — the caller should commit or
+   * roll back first.
+   */
+  recalc(): Promise<{ evaluated: number; hasCycles: boolean }> {
+    return this._send('recalc', {});
+  }
+
+  /**
+   * Returns `true` if there are cells that need evaluation — either because a
+   * transaction is open (recalc deferred) or because `notifyChanged` has been
+   * called without a subsequent recalc.
+   */
+  hasPendingEvaluation(): Promise<boolean> {
+    return this._send('hasPendingEvaluation', {});
+  }
 }
