@@ -2,6 +2,14 @@ import { Address, Cell, CellStyle, CellComment, CellIcon, ColumnFilter, Range, S
 import { ConditionalFormattingRule } from './ConditionalFormattingEngine';
 import { Emitter } from './events';
 import { SearchOptions, SearchRange, SearchResult } from './types/search-types';
+import {
+  buildMatcher,
+  cellValueToString,
+  compareRowMajor,
+  compareColMajor,
+  isStrictlyAfterRowMajor,
+  isStrictlyBeforeRowMajor,
+} from './search-engine';
 
 function key(addr: Address): string {
   return `${addr.row}:${addr.col}`;
@@ -540,16 +548,53 @@ export class Worksheet {
     options: SearchOptions,
     range?: SearchRange
   ): Generator<Address, void, undefined> {
-    // TODO: Phase 1 implementation
-    // 1. Determine iteration order (rows vs columns)
-    // 2. Apply matchCase transformation
-    // 3. Handle wildcards (*, ?, ~)
-    // 4. Check lookIn (values, formulas, comments)
-    // 5. Apply lookAt (part vs whole)
-    // 6. Yield matching addresses
-    
-    // STUB: Return empty generator for now
-    return;
+    // Empty pattern matches nothing (Excel semantics).
+    if (options.what === '') return;
+
+    const { lookIn = 'values', searchOrder = 'rows' } = options;
+    const matcher = buildMatcher(options);
+
+    // ── 1. Collect addresses of all populated cells ──────────────────────────
+    // We only visit cells that exist in the sparse Map; empty slots are skipped.
+    const addresses: Address[] = [];
+    for (const k of this.cells.keys()) {
+      const colonIdx = k.indexOf(':');
+      const row = parseInt(k.slice(0, colonIdx), 10);
+      const col = parseInt(k.slice(colonIdx + 1), 10);
+
+      // ── 2. Apply range filter ───────────────────────────────────────────────
+      if (range) {
+        if (row < range.start.row || row > range.end.row) continue;
+        if (col < range.start.col || col > range.end.col) continue;
+      }
+
+      addresses.push({ row, col });
+    }
+
+    // ── 3. Sort by search order ─────────────────────────────────────────────
+    addresses.sort(searchOrder === 'columns' ? compareColMajor : compareRowMajor);
+
+    // ── 4. Yield matches ─────────────────────────────────────────────────────
+    for (const addr of addresses) {
+      const cell = this.cells.get(key(addr));
+      if (!cell) continue;
+
+      let text: string | null = null;
+
+      if (lookIn === 'values') {
+        text = cellValueToString(cell.value);
+      } else if (lookIn === 'formulas') {
+        // Search the formula string if present; fall back to display value.
+        text = cell.formula != null ? cell.formula : cellValueToString(cell.value);
+      } else if (lookIn === 'comments') {
+        if (cell.comments && cell.comments.length > 0) {
+          text = cell.comments.map(c => c.text).join(' ');
+        }
+      }
+
+      if (text === null) continue;
+      if (matcher(text)) yield addr;
+    }
   }
 
   /**
@@ -586,14 +631,37 @@ export class Worksheet {
     after?: Address,
     range?: SearchRange
   ): Address | null {
-    // TODO: Phase 1 implementation
-    // 1. Determine start position (after address or range.start)
-    // 2. Use findIterator internally
-    // 3. Return first yielded address
-    // 4. Handle searchDirection (next vs previous)
-    
-    // STUB: Return null for now
-    return null;
+    const { searchDirection = 'next' } = options;
+
+    // Eagerly collect all matches from the iterator (O(n) scan).
+    // PM directive: correctness first, no premature optimisation.
+    const allMatches = [...this.findIterator(options, range)];
+    if (allMatches.length === 0) return null;
+
+    if (searchDirection === 'next') {
+      // ── Forward search ──────────────────────────────────────────────────
+      if (!after) return allMatches[0];
+
+      // Find first match strictly after `after` in iteration order.
+      for (const addr of allMatches) {
+        if (isStrictlyAfterRowMajor(addr, after)) return addr;
+      }
+
+      // Wrap-around: no match after `after` → return from the beginning.
+      return allMatches[0];
+    } else {
+      // ── Backward search (previous) ───────────────────────────────────────
+      // Phase 1: row-major backward only (column-major backward deferred).
+      if (!after) return allMatches[allMatches.length - 1];
+
+      // Scan in reverse; return first match strictly before `after`.
+      for (let i = allMatches.length - 1; i >= 0; i--) {
+        if (isStrictlyBeforeRowMajor(allMatches[i], after)) return allMatches[i];
+      }
+
+      // Wrap-around: no match before `after` → return from the end.
+      return allMatches[allMatches.length - 1];
+    }
   }
 
   /**
@@ -633,13 +701,9 @@ export class Worksheet {
     options: SearchOptions,
     range?: SearchRange
   ): Address[] {
-    // TODO: Phase 1 implementation
-    // 1. Use findIterator internally
-    // 2. Collect all yields into array
-    // 3. Return complete result set
-    
-    // STUB: Return empty array for now
-    return [];
+    // findAll is a thin eager wrapper over the lazy iterator.
+    // PM mandate: no independent scan loop here — must go through findIterator.
+    return [...this.findIterator(options, range)];
   }
 
   // ==================== Private Helpers ====================

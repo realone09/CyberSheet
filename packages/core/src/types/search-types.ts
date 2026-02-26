@@ -7,8 +7,7 @@
  * Phase 1: Core Search API (find, findAll, findIterator)
  */
 
-import type { Address, CellValue } from './formula-types';
-import type { CellStyle } from './style-types';
+import type { Address, CellValue, CellStyle } from '../types';
 
 /**
  * Search scope - what content to search within
