@@ -1,4 +1,4 @@
-import { Address, Cell, CellStyle, CellComment, CellIcon, ColumnFilter, Range, SheetEvents, IFormulaEngine } from './types';
+import { Address, Cell, CellStyle, CellComment, CellIcon, ColumnFilter, MergedRegion, Range, SheetEvents, IFormulaEngine } from './types';
 import { ConditionalFormattingRule } from './ConditionalFormattingEngine';
 import { Emitter } from './events';
 import { SearchOptions, SearchRange, SearchResult } from './types/search-types';
@@ -12,6 +12,8 @@ import {
 } from './search-engine';
 import type { ICellStore } from './storage/ICellStore';
 import { CellStoreV1 } from './storage/CellStoreV1';
+import type { IMergeStore } from './storage/MergeStore';
+import { MergeStoreV1, MergeConflictError } from './storage/MergeStore';
 
 export class Worksheet {
   readonly name: string;
@@ -22,7 +24,11 @@ export class Worksheet {
   private filters = new Map<number, ColumnFilter>();
   private events = new Emitter<SheetEvents>();
   private formulaEngine?: IFormulaEngine;
-  private merges: Range[] = [];
+  /**
+   * Merge store — IMergeStore boundary; swap implementation without touching any other Worksheet code.
+   * To rollback: replace MergeStoreV1 with MergeStoreLegacy (same interface, O(n) ops).
+   */
+  private mergeStore: IMergeStore = new MergeStoreV1();
   private conditionalRules: ConditionalFormattingRule[] = [];
   private workbook?: any; // Reference to parent Workbook (for StyleCache access)
   rowCount: number;
@@ -41,7 +47,10 @@ export class Worksheet {
   }
 
   getCell(addr: Address): Cell | undefined {
-    return this.cells.get(addr.row, addr.col);
+    // Redirect non-anchor merged cells to their anchor.
+    const anchor = this.mergeStore.getAnchor(addr.row, addr.col);
+    const { row, col } = anchor ?? addr;
+    return this.cells.get(row, col);
   }
 
   /**
@@ -53,8 +62,19 @@ export class Worksheet {
    * All mutation helpers (setCellValue, setCellFormula, setCellStyle, etc.)
    * must go through this method.
    */
+  /**
+   * Resolve the effective address for any cell.
+   * If the address is a non-anchor member of a merged region, returns the anchor.
+   * Otherwise returns the address unchanged.
+   * O(1) via MergeStoreV1.getAnchor().
+   */
+  private resolveAnchor(addr: Address): Address {
+    return this.mergeStore.getAnchor(addr.row, addr.col) ?? addr;
+  }
+
   private ensureCell(addr: Address): Cell {
-    return this.cells.getOrCreate(addr.row, addr.col);
+    const resolved = this.resolveAnchor(addr);
+    return this.cells.getOrCreate(resolved.row, resolved.col);
   }
 
   getCellValue(addr: Address): Cell['value'] {
@@ -348,43 +368,147 @@ export class Worksheet {
 
   setFormulaEngine(engine?: IFormulaEngine) { this.formulaEngine = engine; }
 
-  // Merge APIs
+  // ==================== Merge APIs (Phase 2) ====================
+
+  /**
+   * Merge a rectangular range of cells.
+   *
+   * **Behavior**:
+   *   - Only the anchor (top-left) cell retains its value, formula, and style.
+   *   - All non-anchor cells are cleared (their data is discarded).
+   *   - Reads/writes to non-anchor cells are automatically redirected to anchor.
+   *   - Overlapping an existing merge is a hard error (MergeConflictError).
+   *   - A 1×1 range is rejected (already a single cell, no merge possible).
+   *
+   * @throws MergeConflictError if any cell in the range is already in a merge.
+   * @throws RangeError if the range is a single cell.
+   */
   mergeCells(range: Range): void {
     const norm = this.normalizeRange(range);
-    // Remove overlaps and add
-    this.merges = this.merges.filter(m => !this.rangesOverlap(m, norm));
-    this.merges.push(norm);
-    this.events.emit({ type: 'sheet-mutated' });
-  }
+    const region: MergedRegion = {
+      startRow: norm.start.row,
+      startCol: norm.start.col,
+      endRow:   norm.end.row,
+      endCol:   norm.end.col,
+    };
 
-  cancelMerge(range: Range): void {
-    const norm = this.normalizeRange(range);
-    this.merges = this.merges.filter(m => !this.rangesOverlap(m, norm));
-    this.events.emit({ type: 'sheet-mutated' });
-  }
+    // Throws MergeConflictError on any overlap — propagates to caller.
+    this.mergeStore.add(region);
 
-  getMergedRangeForCell(addr: Address): Range | null {
-    for (const m of this.merges) {
-      if (addr.row >= m.start.row && addr.row <= m.end.row && addr.col >= m.start.col && addr.col <= m.end.col) {
-        return m;
+    // Clear non-anchor cells from ICellStore — their data is now inaccessible
+    // and must not participate in searches or formula evaluation.
+    for (let r = region.startRow; r <= region.endRow; r++) {
+      for (let c = region.startCol; c <= region.endCol; c++) {
+        if (r === region.startRow && c === region.startCol) continue; // keep anchor
+        this.cells.delete(r, c);
       }
     }
-    return null;
+
+    this.events.emit({ type: 'merge-added', region });
+    this.events.emit({ type: 'sheet-mutated' });
   }
 
-  getMergedRanges(): Range[] { return this.merges.slice(); }
+  /**
+   * Remove the merge that overlaps with the given range.
+   *
+   * Removes ALL merges whose region intersects the provided range.
+   * For the common case of removing a merged cell by clicking on it,
+   * pass the range of the merged region (or just a single address within it).
+   *
+   * Non-merged ranges are silently ignored (no error).
+   */
+  cancelMerge(range: Range): void {
+    const norm = this.normalizeRange(range);
+    const removed = this.mergeStore.removeOverlapping(
+      norm.start.row, norm.start.col, norm.end.row, norm.end.col
+    );
+    for (const region of removed) {
+      this.events.emit({ type: 'merge-removed', region });
+    }
+    if (removed.length > 0) this.events.emit({ type: 'sheet-mutated' });
+  }
+
+  /**
+   * Return the merged region containing [addr], or null if not merged.
+   * O(1) via MergeStoreV1.getRegion().
+   */
+  getMergedRangeForCell(addr: Address): Range | null {
+    const region = this.mergeStore.getRegion(addr.row, addr.col);
+    if (!region) return null;
+    return {
+      start: { row: region.startRow, col: region.startCol },
+      end:   { row: region.endRow,   col: region.endCol   },
+    };
+  }
+
+  /** All merged regions as Range[]. O(n_merges). */
+  getMergedRanges(): Range[] {
+    return this.mergeStore.getAll().map(r => ({
+      start: { row: r.startRow, col: r.startCol },
+      end:   { row: r.endRow,   col: r.endCol   },
+    }));
+  }
+
+  /**
+   * True if [addr] is inside any merged region (anchor or non-anchor).
+   * O(1). Used by SpillEngine to block spill over merged areas.
+   */
+  isInMerge(addr: Address): boolean {
+    return this.mergeStore.isInMerge(addr.row, addr.col);
+  }
+
+  /**
+   * Return the anchor address for a cell that’s inside a merged region,
+   * or null if the cell is not in any merge.
+   * O(1). Used by formula engine and rendering.
+   */
+  getMergeAnchorFor(addr: Address): Address | null {
+    return this.mergeStore.getAnchor(addr.row, addr.col);
+  }
+
+  /**
+   * Delete a cell: clears all its data.
+   *
+   * If the cell is a **merge anchor**, the merge is also cancelled
+   * (PM behavior: “Delete anchor unmerges”).
+   *
+   * If the cell is a **non-anchor** member of a merge, the call is redirected
+   * to the anchor and the merge is cancelled.
+   *
+   * After cancellation, all cells in the former merge region become independent
+   * empty cells.
+   */
+  deleteCell(addr: Address): void {
+    // Resolve to anchor in case a non-anchor cell was passed.
+    const resolved = this.resolveAnchor(addr);
+
+    // Clear all cell data (assign undefined, not delete — preserves mono-shape).
+    const cell = this.cells.get(resolved.row, resolved.col);
+    if (cell) {
+      cell.value       = null;
+      cell.formula     = undefined;
+      cell.style       = undefined;
+      cell.comments    = undefined;
+      cell.icon        = undefined;
+      cell.spillSource = undefined;
+      cell.spilledFrom = undefined;
+    }
+
+    // If anchor of a merged region, cancel the merge.
+    if (this.mergeStore.isAnchor(resolved.row, resolved.col)) {
+      const region = this.mergeStore.getRegion(resolved.row, resolved.col)!;
+      this.mergeStore.removeByAnchor(resolved.row, resolved.col);
+      this.events.emit({ type: 'merge-removed', region });
+    }
+
+    this.events.emit({ type: 'cell-changed', address: resolved, cell: { value: null } });
+  }
 
   private normalizeRange(r: Range): Range {
     return {
       start: { row: Math.min(r.start.row, r.end.row), col: Math.min(r.start.col, r.end.col) },
-      end: { row: Math.max(r.start.row, r.end.row), col: Math.max(r.start.col, r.end.col) },
+      end:   { row: Math.max(r.start.row, r.end.row), col: Math.max(r.start.col, r.end.col) },
     };
-  }
-
-  private rangesOverlap(a: Range, b: Range): boolean {
-    const rOverlap = a.start.row <= b.end.row && a.end.row >= b.start.row;
-    const cOverlap = a.start.col <= b.end.col && a.end.col >= b.start.col;
-    return rOverlap && cOverlap;
   }
 
   // ==================== Comment APIs ====================
@@ -601,8 +725,14 @@ export class Worksheet {
 
     // ── 1. Collect addresses of all populated cells ──────────────────────────
     // forEach visits only cells that exist in the store; empty slots are skipped.
+    // Non-anchor merged cells are never in the ICellStore (cleared at merge time),
+    // but we add an explicit guard as a safety net for any edge case.
     const addresses: Address[] = [];
     this.cells.forEach((row, col) => {
+      // Safety net: skip non-anchor merged cells.
+      // In normal operation these are absent from ICellStore, but guard defensively.
+      if (this.mergeStore.isNonAnchor(row, col)) return;
+
       // ── 2. Apply range filter ─────────────────────────────────────────────
       if (range) {
         if (row < range.start.row || row > range.end.row) return;

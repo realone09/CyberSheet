@@ -297,6 +297,22 @@ export type Cell = {
   spilledFrom?: Address;
 };
 
+/**
+ * A merged cell region.
+ *
+ * The anchor is always (startRow, startCol) — the top-left cell.
+ * Only the anchor carries the cell's value, formula, and style.
+ * All other cells in the region are "non-anchor" and redirect to the anchor.
+ *
+ * Naming follows the PM directive verbatim.
+ */
+export type MergedRegion = {
+  readonly startRow: number;
+  readonly startCol: number;
+  readonly endRow: number;
+  readonly endCol: number;
+};
+
 export type ColumnFilter = {
   // simple equals/contains for MVP plus list membership
   type: 'equals' | 'contains' | 'gt' | 'lt' | 'between' | 'empty' | 'notEmpty' | 'in';
@@ -328,7 +344,9 @@ export type SheetEvents =
   | { type: 'comment-added'; address: Address; comment: CellComment }
   | { type: 'comment-updated'; address: Address; commentId: string; comment: CellComment }
   | { type: 'comment-deleted'; address: Address; commentId: string }
-  | { type: 'icon-changed'; address: Address; icon: CellIcon | undefined };
+  | { type: 'icon-changed'; address: Address; icon: CellIcon | undefined }
+  | { type: 'merge-added'; region: MergedRegion }
+  | { type: 'merge-removed'; region: MergedRegion };
 
 export interface IFormulaEngine {
   // Evaluate value for a cell. Implementations should handle dependency tracking internally.
