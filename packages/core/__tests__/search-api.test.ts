@@ -382,8 +382,15 @@ describe('General Search API - Phase 1', () => {
       // TODO: Phase 3 - integrate with row/column hiding
     });
 
-    test.skip('should work with merged cells', () => {
-      // TODO: Phase 2 - merged cell handling
+    test('should work with merged cells (anchor-only match)', () => {
+      // Merge A1:C1 — value lives on anchor (row:1, col:1)
+      sheet.setCellValue({ row: 1, col: 1 }, 'MergedValue');
+      sheet.mergeCells({ start: { row: 1, col: 1 }, end: { row: 1, col: 3 } });
+
+      // findAll must return only the anchor address, not duplicates for cols 2 and 3
+      const results = sheet.findAll({ what: 'MergedValue' });
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual({ row: 1, col: 1 });
     });
 
     test('setCellFormula should register cell in Map (infra fix)', () => {

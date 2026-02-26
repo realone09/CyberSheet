@@ -44,6 +44,13 @@ export class SpillEngine {
         // Skip the source cell itself
         if (r === 0 && c === 0) continue;
 
+        // A merged cell in the spill path always blocks spilling.
+        // Merged regions occupy a visual block; spilling into them is undefined behaviour.
+        // This check is O(1) via MergeStoreV1.
+        if (worksheet.isInMerge(cellAddr)) {
+          return new Error('#SPILL!');
+        }
+
         const cell = worksheet.getCell(cellAddr);
 
         // If cell has a value, formula, or is spilled from another source, it's blocked
