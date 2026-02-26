@@ -33,7 +33,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([]);
     });
 
-    test.skip('should find single match in values (case-insensitive)', () => {
+    test('should find single match in values (case-insensitive)', () => {
       sheet.setCellValue({ row: 5, col: 2 }, 'Apple');
       
       const results = [...sheet.findIterator({ what: 'apple', matchCase: false })];
@@ -41,7 +41,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 5, col: 2 }]);
     });
 
-    test.skip('should find multiple matches in values', () => {
+    test('should find multiple matches in values', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 3, col: 5 }, 'Apple Pie');
       sheet.setCellValue({ row: 7, col: 2 }, 'Red Apple');
@@ -54,7 +54,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toContainEqual({ row: 7, col: 2 });
     });
 
-    test.skip('should respect case sensitivity', () => {
+    test('should respect case sensitivity', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 2, col: 1 }, 'apple');
       sheet.setCellValue({ row: 3, col: 1 }, 'APPLE');
@@ -64,7 +64,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 1, col: 1 }]);
     });
 
-    test.skip('should search by rows (default order)', () => {
+    test('should search by rows (default order)', () => {
       sheet.setCellValue({ row: 1, col: 5 }, 'A');
       sheet.setCellValue({ row: 1, col: 2 }, 'A');
       sheet.setCellValue({ row: 2, col: 1 }, 'A');
@@ -77,7 +77,7 @@ describe('General Search API - Phase 1', () => {
       expect(results[2]).toEqual({ row: 2, col: 1 });
     });
 
-    test.skip('should search by columns', () => {
+    test('should search by columns', () => {
       sheet.setCellValue({ row: 5, col: 1 }, 'A');
       sheet.setCellValue({ row: 2, col: 1 }, 'A');
       sheet.setCellValue({ row: 1, col: 2 }, 'A');
@@ -90,7 +90,7 @@ describe('General Search API - Phase 1', () => {
       expect(results[2]).toEqual({ row: 1, col: 2 });
     });
 
-    test.skip('should support partial match (default)', () => {
+    test('should support partial match (default)', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple Pie');
       sheet.setCellValue({ row: 2, col: 1 }, 'Pineapple');
       
@@ -99,7 +99,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toHaveLength(2);
     });
 
-    test.skip('should support whole match', () => {
+    test('should support whole match', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 2, col: 1 }, 'Apple Pie');
       
@@ -108,7 +108,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 1, col: 1 }]);
     });
 
-    test.skip('should handle wildcards (* for any chars)', () => {
+    test('should handle wildcards (* for any chars)', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 2, col: 1 }, 'Application');
       sheet.setCellValue({ row: 3, col: 1 }, 'Banana');
@@ -118,7 +118,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toHaveLength(2);
     });
 
-    test.skip('should handle wildcards (? for single char)', () => {
+    test('should handle wildcards (? for single char)', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Cat');
       sheet.setCellValue({ row: 2, col: 1 }, 'Cot');
       sheet.setCellValue({ row: 3, col: 1 }, 'Cart');
@@ -131,7 +131,7 @@ describe('General Search API - Phase 1', () => {
       ]);
     });
 
-    test.skip('should escape literal wildcards with ~', () => {
+    test('should escape literal wildcards with ~', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'File*');
       sheet.setCellValue({ row: 2, col: 1 }, 'FileSystem');
       
@@ -154,7 +154,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 1, col: 1 }]);
     });
 
-    test.skip('should search in comments', () => {
+    test('should search in comments', () => {
       sheet.addComment({ row: 1, col: 1 }, { author: 'Alice', text: 'Review this' });
       sheet.addComment({ row: 2, col: 1 }, { author: 'Bob', text: 'Approved' });
       
@@ -163,7 +163,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 1, col: 1 }]);
     });
 
-    test.skip('should respect search range', () => {
+    test('should respect search range', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 5, col: 5 }, 'Apple');
       sheet.setCellValue({ row: 10, col: 10 }, 'Apple');
@@ -176,7 +176,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 5, col: 5 }]);
     });
 
-    test.skip('should handle empty cells (skip)', () => {
+    test('should handle empty cells (skip)', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       // row 2, col 1 is empty (no value set)
       sheet.setCellValue({ row: 3, col: 1 }, 'Apple');
@@ -187,7 +187,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([]);
     });
 
-    test.skip('should handle error values (skip)', () => {
+    test('should handle error values (skip)', () => {
       // Note: Errors are stored as strings like "#N/A" in cell values
       sheet.setCellValue({ row: 1, col: 1 }, '#N/A');
       sheet.setCellValue({ row: 2, col: 1 }, 'Apple');
@@ -197,7 +197,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 2, col: 1 }]);
     });
 
-    test.skip('should handle date values', () => {
+    test('should handle date values', () => {
       // Dates are typically stored as formatted strings
       const dateStr = '2026-02-25';
       sheet.setCellValue({ row: 1, col: 1 }, dateStr);
@@ -217,7 +217,7 @@ describe('General Search API - Phase 1', () => {
       expect(result).toBeNull();
     });
 
-    test.skip('should find first match', () => {
+    test('should find first match', () => {
       sheet.setCellValue({ row: 5, col: 2 }, 'Apple');
       sheet.setCellValue({ row: 10, col: 3 }, 'Apple');
       
@@ -226,7 +226,7 @@ describe('General Search API - Phase 1', () => {
       expect(result).toEqual({ row: 5, col: 2 });
     });
 
-    test.skip('should return null if no match', () => {
+    test('should return null if no match', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Banana');
       
       const result = sheet.find({ what: 'Apple' });
@@ -234,7 +234,7 @@ describe('General Search API - Phase 1', () => {
       expect(result).toBeNull();
     });
 
-    test.skip('should start after specified address', () => {
+    test('should start after specified address', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 5, col: 5 }, 'Apple');
       sheet.setCellValue({ row: 10, col: 10 }, 'Apple');
@@ -244,7 +244,7 @@ describe('General Search API - Phase 1', () => {
       expect(result).toEqual({ row: 5, col: 5 });
     });
 
-    test.skip('should wrap around if searchDirection is next', () => {
+    test('should wrap around if searchDirection is next', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 10, col: 10 }, 'Apple');
       
@@ -257,7 +257,7 @@ describe('General Search API - Phase 1', () => {
       expect(result).toEqual({ row: 1, col: 1 });
     });
 
-    test.skip('should search backwards if searchDirection is previous', () => {
+    test('should search backwards if searchDirection is previous', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 5, col: 5 }, 'Apple');
       sheet.setCellValue({ row: 10, col: 10 }, 'Apple');
@@ -279,7 +279,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([]);
     });
 
-    test.skip('should return all matches', () => {
+    test('should return all matches', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 3, col: 5 }, 'Apple');
       sheet.setCellValue({ row: 7, col: 2 }, 'Apple');
@@ -292,7 +292,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toContainEqual({ row: 7, col: 2 });
     });
 
-    test.skip('should return empty array if no matches', () => {
+    test('should return empty array if no matches', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Banana');
       
       const results = sheet.findAll({ what: 'Apple' });
@@ -300,7 +300,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([]);
     });
 
-    test.skip('should respect search range', () => {
+    test('should respect search range', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       sheet.setCellValue({ row: 5, col: 5 }, 'Apple');
       sheet.setCellValue({ row: 10, col: 10 }, 'Apple');
@@ -317,7 +317,7 @@ describe('General Search API - Phase 1', () => {
   // ==================== Edge Cases ====================
 
   describe('Edge Cases', () => {
-    test.skip('should handle empty search term', () => {
+    test('should handle empty search term', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Apple');
       
       const results = sheet.findAll({ what: '' });
@@ -326,7 +326,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([]);
     });
 
-    test.skip('should handle special characters in search term', () => {
+    test('should handle special characters in search term', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 'Price: $100');
       
       const results = sheet.findAll({ what: '$100' });
@@ -334,7 +334,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toEqual([{ row: 1, col: 1 }]);
     });
 
-    test.skip('should handle numeric values', () => {
+    test('should handle numeric values', () => {
       sheet.setCellValue({ row: 1, col: 1 }, 42);
       sheet.setCellValue({ row: 2, col: 1 }, '42');
       
@@ -344,7 +344,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toHaveLength(2);
     });
 
-    test.skip('should handle boolean values', () => {
+    test('should handle boolean values', () => {
       sheet.setCellValue({ row: 1, col: 1 }, true);
       sheet.setCellValue({ row: 2, col: 1 }, 'TRUE');
       
@@ -353,7 +353,7 @@ describe('General Search API - Phase 1', () => {
       expect(results).toHaveLength(2);
     });
 
-    test.skip('should handle very large worksheets (performance)', () => {
+    test('should handle very large worksheets (performance)', () => {
       // Create 10,000 cells with values
       for (let i = 0; i < 100; i++) {
         for (let j = 0; j < 100; j++) {
@@ -373,7 +373,7 @@ describe('General Search API - Phase 1', () => {
   // ==================== Integration Tests ====================
 
   describe('Integration with Worksheet Features', () => {
-    test.skip('should find cells with formula results', () => {
+    test('should find cells with formula results', () => {
       const cell = sheet.getCell({ row: 1, col: 1 }) ?? { value: null };
       cell.formula = '=10+5';
       sheet.setCellValue({ row: 1, col: 1 }, 15);
@@ -423,7 +423,7 @@ describe('Search Performance Benchmarks', () => {
     expect(memDelta).toBeLessThan(1); // Should not allocate >1MB for 10 results
   });
 
-  test.skip('findAll should complete 100k cells in <500ms', () => {
+  test('findAll should complete 100k cells in <500ms', () => {
     const sheet = new Worksheet('PerfSheet', 1000, 100);
     
     // Fill with data
