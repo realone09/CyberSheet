@@ -44,6 +44,8 @@
 import { Worksheet } from '../worksheet';
 import { snapshotCodec }  from '../persistence/SnapshotCodec';
 import { recordingApplyPatch } from '../patch/PatchRecorder';
+import { TransactionContext } from '../transaction/TransactionContext';
+import { TransactionError } from '../transaction/TransactionError';
 import {
   type EngineRequest,
   type EngineResponse,
@@ -80,9 +82,20 @@ export class EngineWorkerHost {
   private ws: Worksheet;
   private readonly sheetName: string;
 
+  /**
+   * Active transaction, or null when idle.
+   * At most one transaction open at any time (nested transactions rejected).
+   */
+  private _txn: TransactionContext | null = null;
+
   constructor(sheetName = 'Sheet1') {
     this.sheetName = sheetName;
     this.ws = new Worksheet(sheetName);
+  }
+
+  /** True when a transaction is currently open. */
+  get inTransaction(): boolean {
+    return this._txn !== null;
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -134,6 +147,8 @@ export class EngineWorkerHost {
         return 'pong';
 
       case 'reset':
+        // Dispose any open transaction without rollback — we are replacing ws.
+        if (this._txn) { this._txn.dispose(); this._txn = null; }
         this.ws = new Worksheet(this.sheetName);
         return;
 
@@ -196,7 +211,79 @@ export class EngineWorkerHost {
         // The inverse is sent back to the main thread so the PatchUndoStack
         // can store it without requiring a separate round-trip.
         const inverse = recordingApplyPatch(this.ws, patch);
+        // If a transaction is open, accumulate the inverse for LIFO rollback.
+        if (this._txn) this._txn.addInverse(inverse);
         return inverse;
+      }
+
+      // ── Transaction (Phase 11) ────────────────────────────────────────
+      case 'beginTransaction': {
+        if (this._txn !== null) {
+          throw new TransactionError('ALREADY_OPEN');
+        }
+        this._txn = new TransactionContext(this.ws);
+        return;
+      }
+
+      case 'commitTransaction': {
+        if (this._txn === null) {
+          throw new TransactionError('NOT_OPEN');
+        }
+        const txn = this._txn;
+        this._txn = null;
+
+        // Commit: stop recorder, get aggregate patch + inverse.
+        const { patch, inverse } = txn.commit();
+
+        // Recalc exactly once — drain the full dirty subgraph.
+        const recalcResult = this.ws.recalc(() => { /* formula engine not wired in worker yet */ });
+
+        // Defensive invariant: dirty set must be clear after recalc
+        // (unless volatile cells exist — they re-seed the dirty set).
+        const hasVolatiles = this.ws.dagStats.volatiles > 0;
+        TransactionContext.assertCommitInvariants(
+          recalcResult.evaluated,
+          this.ws.dirtyCount,
+          hasVolatiles,
+        );
+
+        return {
+          patch,
+          inverse,
+          evaluated:  recalcResult.evaluated,
+          hasCycles:  recalcResult.cycles.length > 0,
+        };
+      }
+
+      case 'rollbackTransaction': {
+        if (this._txn === null) {
+          throw new TransactionError('NOT_OPEN_ROLLBACK');
+        }
+        const txn = this._txn;
+        this._txn = null;
+
+        // Rollback: abort recorder, apply per-op inverses LIFO.
+        txn.rollback();
+
+        // Recalc exactly once — restore formula values to pre-transaction state.
+        this.ws.recalc(() => {});
+        return;
+      }
+
+      case 'recalc': {
+        if (this._txn !== null) {
+          throw new TransactionError(
+            'NOT_OPEN',
+            'recalc cannot be called while a transaction is open; commit first.',
+          );
+        }
+        const result = this.ws.recalc(() => {});
+        return { evaluated: result.evaluated, hasCycles: result.cycles.length > 0 };
+      }
+
+      case 'hasPendingEvaluation': {
+        // True if a transaction is open (recalc deferred) OR dirty cells exist.
+        return this._txn !== null || this.ws.dirtyCount > 0;
       }
 
       default: {

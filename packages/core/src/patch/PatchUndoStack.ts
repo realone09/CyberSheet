@@ -103,6 +103,23 @@ export interface IPatchProxy {
 }
 
 // ---------------------------------------------------------------------------
+// ITransactionalProxy — extended interface for transactional operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Extended proxy interface for transactional batch operations.
+ * Implemented by WorkerEngineProxy (Phase 11+).
+ *
+ * Separate from IPatchProxy so that MockProxy in existing tests (which only
+ * implement applyPatch) do not need to be updated.
+ */
+export interface ITransactionalProxy extends IPatchProxy {
+  beginTransaction():    Promise<void>;
+  commitTransaction():   Promise<{ patch: WorksheetPatch; inverse: WorksheetPatch; evaluated: number; hasCycles: boolean }>;
+  rollbackTransaction(): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
 // UndoEntry
 // ---------------------------------------------------------------------------
 
@@ -275,6 +292,53 @@ export class PatchUndoStack {
   clear(): void {
     this.undoStack.length = 0;
     this.redoStack.length = 0;
+  }
+
+  /**
+   * Apply a batch of patches inside a single Worker transaction, then record
+   * the aggregate result as one undo entry.
+   *
+   * This is the correct API for multi-patch gestures (paste-range, drag-fill,
+   * bulk import, etc.) that must be undone as a single user action.
+   *
+   * The main thread:
+   *   1. Calls `proxy.beginTransaction()`.
+   *   2. Applies each patch via `proxy.applyPatch()` (per-op inverses ignored).
+   *   3. Calls `proxy.commitTransaction()` — worker runs recalc once, returns
+   *      aggregate `{ patch, inverse }`.
+   *   4. Pushes one undo entry containing the aggregate inverse.
+   *
+   * On any failure, `proxy.rollbackTransaction()` is called automatically
+   * to restore the pre-transaction state, and the error is re-thrown.
+   *
+   * @param proxy   A proxy that implements ITransactionalProxy.
+   * @param ops     The ordered list of patches to apply inside the transaction.
+   * @param label   Optional description for history display.
+   */
+  async applyTransactionally(
+    proxy: ITransactionalProxy,
+    ops: WorksheetPatch[],
+    label?: string,
+  ): Promise<void> {
+    await proxy.beginTransaction();
+    try {
+      for (const op of ops) {
+        // Per-op inverse returned but intentionally discarded — the aggregate
+        // inverse from commitTransaction supersedes all individual inverses.
+        await proxy.applyPatch(op);
+      }
+      const { patch, inverse } = await proxy.commitTransaction();
+      this.redoStack.length = 0;
+      this.undoStack.push({ forward: patch, inverse, label });
+      if (this.undoStack.length > this.maxSize) {
+        this.undoStack.shift();
+      }
+    } catch (err) {
+      // Best-effort rollback — if rollback itself throws, we re-throw the
+      // original error so the caller sees the root cause.
+      try { await proxy.rollbackTransaction(); } catch { /* ignore rollback error */ }
+      throw err;
+    }
   }
 
   /**
