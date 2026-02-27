@@ -65,6 +65,28 @@ export class SnapshotError extends SdkError {
   }
 }
 
+/**
+ * Thrown when a merge operation is rejected due to a conflict with an existing
+ * merged region. Wraps the internal `MergeConflictError`.
+ */
+export class MergeError extends SdkError {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(`MergeError: ${message}`);
+    this.name = 'MergeError';
+  }
+}
+
+/**
+ * Thrown when a patch operation fails due to invalid patch structure or
+ * a conflict with the current sheet state. Wraps internal errors.
+ */
+export class PatchError extends SdkError {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(`PatchError: ${message}`);
+    this.name = 'PatchError';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // SDK event types
 // ---------------------------------------------------------------------------
@@ -306,6 +328,24 @@ class SpreadsheetV1 implements SpreadsheetSDK {
     }
   }
 
+  /**
+   * Execute `fn` and re-wrap any non-SdkError throw as a typed `SdkError`.
+   * This ensures no internal implementation detail escapes the public surface.
+   *
+   * @param wrap  Factory that converts the raw error into a typed SdkError.
+   */
+  private _wrapMutation<T>(
+    fn: () => T,
+    wrap: (err: unknown) => SdkError,
+  ): T {
+    try {
+      return fn();
+    } catch (err) {
+      if (err instanceof SdkError) throw err;
+      throw wrap(err);
+    }
+  }
+
   // ── Metadata ─────────────────────────────────────────────────────────────
 
   get name(): string { return this._ws.name; }
@@ -315,18 +355,19 @@ class SpreadsheetV1 implements SpreadsheetSDK {
   setCell(row: number, col: number, value: ExtendedCellValue): void {
     this._guard('setCell');
     this._checkBounds(row, col);
-    // Record in undo stack via patch
-    const patch: WorksheetPatch = {
-      seq: 0,
-      ops: [{
-        op: 'setCellValue' as const,
-        row,
-        col,
-        before: this._ws.getCellValue({ row, col }),
-        after: value,
-      }],
-    };
-    this._undo.applyAndRecord(this._ws, patch);
+    this._wrapMutation(() => {
+      const patch: WorksheetPatch = {
+        seq: 0,
+        ops: [{
+          op: 'setCellValue' as const,
+          row,
+          col,
+          before: this._ws.getCellValue({ row, col }),
+          after: value,
+        }],
+      };
+      this._undo.applyAndRecord(this._ws, patch);
+    }, (err) => new PatchError(`setCell(${row},${col}) failed: ${(err as Error).message ?? err}`, err));
   }
 
   getCell(row: number, col: number): Cell | undefined {
@@ -345,7 +386,10 @@ class SpreadsheetV1 implements SpreadsheetSDK {
 
   applyPatch(patch: WorksheetPatch): WorksheetPatch {
     this._guard('applyPatch');
-    return recordingApplyPatch(this._ws, patch);
+    return this._wrapMutation(
+      () => recordingApplyPatch(this._ws, patch),
+      (err) => new PatchError(`applyPatch failed: ${(err as Error).message ?? err}`, err),
+    );
   }
 
   // ── Snapshot ──────────────────────────────────────────────────────────────
@@ -371,7 +415,10 @@ class SpreadsheetV1 implements SpreadsheetSDK {
 
   encodeSnapshot(): Uint8Array {
     this._guard('encodeSnapshot');
-    return snapshotCodec.encode(this._ws.extractSnapshot());
+    return this._wrapMutation(
+      () => snapshotCodec.encode(this._ws.extractSnapshot()),
+      (err) => new SnapshotError(`encode failed: ${(err as Error).message ?? err}`, err),
+    );
   }
 
   decodeAndRestore(bytes: Uint8Array): void {
@@ -389,12 +436,18 @@ class SpreadsheetV1 implements SpreadsheetSDK {
 
   undo(): boolean {
     this._guard('undo');
-    return this._undo.undo(this._ws);
+    return this._wrapMutation(
+      () => this._undo.undo(this._ws),
+      (err) => new PatchError(`undo failed: ${(err as Error).message ?? err}`, err),
+    );
   }
 
   redo(): boolean {
     this._guard('redo');
-    return this._undo.redo(this._ws);
+    return this._wrapMutation(
+      () => this._undo.redo(this._ws),
+      (err) => new PatchError(`redo failed: ${(err as Error).message ?? err}`, err),
+    );
   }
 
   get canUndo(): boolean { return this._undo.canUndo; }
@@ -404,20 +457,30 @@ class SpreadsheetV1 implements SpreadsheetSDK {
 
   mergeCells(startRow: number, startCol: number, endRow: number, endCol: number): void {
     this._guard('mergeCells');
-    const patch: WorksheetPatch = {
-      seq: 0,
-      ops: [{ op: 'mergeCells', startRow, startCol, endRow, endCol }],
-    };
-    this._undo.applyAndRecord(this._ws, patch);
+    this._wrapMutation(() => {
+      const patch: WorksheetPatch = {
+        seq: 0,
+        ops: [{ op: 'mergeCells', startRow, startCol, endRow, endCol }],
+      };
+      this._undo.applyAndRecord(this._ws, patch);
+    }, (err) => new MergeError(
+      `mergeCells(${startRow},${startCol},${endRow},${endCol}) failed: ${(err as Error).message ?? err}`,
+      err,
+    ));
   }
 
   cancelMerge(startRow: number, startCol: number, endRow: number, endCol: number): void {
     this._guard('cancelMerge');
-    const patch: WorksheetPatch = {
-      seq: 0,
-      ops: [{ op: 'cancelMerge', startRow, startCol, endRow, endCol }],
-    };
-    this._undo.applyAndRecord(this._ws, patch);
+    this._wrapMutation(() => {
+      const patch: WorksheetPatch = {
+        seq: 0,
+        ops: [{ op: 'cancelMerge', startRow, startCol, endRow, endCol }],
+      };
+      this._undo.applyAndRecord(this._ws, patch);
+    }, (err) => new MergeError(
+      `cancelMerge(${startRow},${startCol},${endRow},${endCol}) failed: ${(err as Error).message ?? err}`,
+      err,
+    ));
   }
 
   getMergedRanges(): Range[] {
