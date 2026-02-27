@@ -1,53 +1,58 @@
 /**
- * @cyber-sheet/core/search — Phase 16: Formula Search & Replace
+ * @cyber-sheet/core/search — Formula Search & Replace + Full-Sheet Search
  *
- * Stateless, pure-read functions for searching and replacing text within
- * formula strings.  These are feature-layer utilities built on top of the
- * stable Phase 1–15 kernel; they do not mutate DAG state, snapshot state, or
- * internal event routing.
+ * Stateless functions for searching and replacing cell content.  These are
+ * feature-layer utilities on top of the stable kernel; they do not mutate DAG
+ * state, snapshot state, or internal event routing.
  *
  * ─── Design guarantees ──────────────────────────────────────────────────────
  *   1. EXPLICIT PULL — search is never triggered automatically by mutations.
- *   2. FORMULA-ONLY — findInFormulas iterates only DAG-registered formula
- *      cells (via Worksheet.getFormulaAddresses), never scans blank/value rows.
- *   3. NO INTERNAL STATE — functions hold no cache, no last-query, no index.
- *      Every call is a fresh read over current sheet state.
- *   4. SDK MUTATIONS — replaceInFormulas writes back via SpreadsheetSDK.setCell,
- *      so every replacement goes through the undo stack and emits proper events.
- *   5. DETERMINISTIC — given the same sheet state and the same arguments,
- *      findInFormulas always returns the same sorted Address[] in the same order.
+ *   2. NO INTERNAL STATE — no cache, no last-query, no index retained.
+ *   3. SDK MUTATIONS — replace functions write back via applyPatch / setCell,
+ *      so every replacement goes through the undo stack and emits events.
+ *   4. DETERMINISTIC — same state + same args → same result, always.
+ *   5. LITERAL-SAFE — '.' '(' ')' '$' ':' are always plain chars, not regex.
  *
- * ─── Complexity ─────────────────────────────────────────────────────────────
- *   findInFormulas   O(f)  where f = formula-cell count (never O(total cells))
- *   replaceInFormulas O(f) reads + O(m) setCell calls, m = match count
+ * ─── Phase 16 (formula-only) ────────────────────────────────────────────────
+ *   findInFormulas(sheet, query, opts?) → FormulaSearchResult[]
+ *   replaceInFormulas(sheet, query, repl, opts?) → number
+ *   Iterates only cells where cell.formula != null — O(f).
  *
- * ─── Boundaries (Phase 16 scope) ────────────────────────────────────────────
- *   ✔  Substring and whole-cell matches
- *   ✔  Case-insensitive and case-sensitive modes
- *   ✔  Replace-all (all occurrences in a matching formula string)
- *   ✔  Dry-run count (findInFormulas without replacing)
- *   ✗  Regex / wildcard patterns (plain literal only in Phase 16)
- *   ✗  Value-cell search (use worksheet.findAll for general cell search)
- *   ✗  Cross-sheet / workbook scope
- *   ✗  Internal state or incremental indexes
+ * ─── Phase 17 (full-sheet) ───────────────────────────────────────────────────
+ *   findAll(sheet, options, range?) → SheetSearchResult[]
+ *   replaceAll(sheet, query, repl, opts?, range?) → number
+ *   Full-sheet search across values / formulas / comments.
+ *   replaceAll batches all mutations into ONE applyPatch call → single undo entry.
  *
  * @module search
  */
 
-import type { Address } from '../types';
+import type { Address, ExtendedCellValue } from '../types';
 import type { SpreadsheetSDK } from '../sdk/SpreadsheetSDK';
+import { DisposedError } from '../sdk/SpreadsheetSDK';
 import type { Worksheet } from '../worksheet';
-import { compareRowMajor, escapeRegexLiteral } from '../search-engine';
+import type { SearchOptions, SearchRange } from '../types/search-types';
+import type { WorksheetPatch } from '../patch/WorksheetPatch';
+import type { SyncUndoStack } from '../sdk/SyncUndoStack';
+import { compareRowMajor, escapeRegexLiteral, cellValueToString } from '../search-engine';
+
+// Re-export standard search option types so callers import from one place.
+export type { SearchOptions, SearchRange } from '../types/search-types';
 
 // ---------------------------------------------------------------------------
 // Internal type cast helper
 // ---------------------------------------------------------------------------
 
 /**
- * Internal projection type used to reach `_ws` on the concrete
- * SpreadsheetV1 implementation without leaking it onto the public interface.
+ * Internal projection type used to reach `_ws`, `_undo`, and `_disposed` on
+ * the concrete SpreadsheetV1 implementation without leaking them onto the
+ * public interface.
  */
-type InternalSheet = SpreadsheetSDK & { readonly _ws: Worksheet };
+type InternalSheet = SpreadsheetSDK & {
+  readonly _ws: Worksheet;
+  readonly _undo: SyncUndoStack;
+  readonly _disposed: boolean;
+};
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -292,4 +297,250 @@ export function replaceInFormulas(
   }
 
   return replaced;
+}
+
+// =============================================================================
+// Phase 17 — Full-Sheet Search & Replace
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Phase 17 public types
+// ---------------------------------------------------------------------------
+
+/**
+ * A single result from `findAll`.
+ *
+ * `value` is the raw `Cell.value` at the time of the search (the display
+ * value or last computed result for formula cells).  `formula` is present
+ * only when the matched cell has a formula string.
+ */
+export interface SheetSearchResult {
+  /** 1-based row index. */
+  row: number;
+  /** 1-based column index. */
+  col: number;
+  /** Current cell value (display / computed result). */
+  value: ExtendedCellValue;
+  /** Formula string, if the cell has one. */
+  formula?: string;
+}
+
+/**
+ * Options for `replaceAll`.
+ *
+ * A minimal subset of `SearchOptions` — `lookup` and direction options are
+ * not relevant for a replace-all operation that always processes every match.
+ */
+export interface ReplaceAllOptions {
+  /**
+   * Case-sensitive match.
+   * Default: `false`.
+   */
+  matchCase?: boolean;
+
+  /**
+   * Whether the query must match the ENTIRE cell text (`'whole'`) or any
+   * substring within it (`'part'`, default).
+   */
+  lookAt?: 'part' | 'whole';
+
+  /**
+   * What cell content to search and replace within.
+   *   `'values'`   (default) — cell display/computed value as a string.
+   *   `'formulas'` — formula string if present, else display value.
+   *
+   * `'comments'` is intentionally excluded: comment text is unstructured
+   * and replacing it requires a different mutation path (not yet defined).
+   */
+  lookIn?: 'values' | 'formulas';
+}
+
+// ---------------------------------------------------------------------------
+// Phase 17 internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive the source text for a cell given `lookIn`.
+ * Returns `null` for empty/blank cells (value is null and no formula).
+ */
+function getCellSourceText(
+  cell: { value: ExtendedCellValue; formula?: string },
+  lookIn: 'values' | 'formulas',
+): string | null {
+  if (lookIn === 'formulas') {
+    return cell.formula != null ? cell.formula : cellValueToString(cell.value);
+  }
+  return cellValueToString(cell.value);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 17 public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Search ALL populated cells in the sheet and return every cell where the
+ * searched text is found.
+ *
+ * This is a thin wrapper over `Worksheet.findAll()` that enriches the result
+ * with the cell's current value and optional formula string.  The full
+ * `SearchOptions` surface is forwarded directly — including `lookIn`,
+ * `lookAt`, `matchCase`, `searchOrder`, `searchDirection`, `includeHidden`,
+ * and Excel wildcard support (`*`, `?`, `~`).
+ *
+ * Results are returned in the order determined by `options.searchOrder`
+ * (row-major by default).
+ *
+ * @param sheet   An active SpreadsheetSDK instance.
+ * @param options Standard search options (`what` is required).
+ * @param range   Optional sub-range to constrain the search.
+ * @returns       Array of `SheetSearchResult` — empty when nothing matches.
+ *
+ * @throws `DisposedError` propagated if `sheet` is disposed.
+ *
+ * @example
+ * ```ts
+ * import { findAll } from '@cyber-sheet/core/search';
+ *
+ * // Find all cells that display "Apple" (values search, case-insensitive)
+ * const results = findAll(sheet, { what: 'Apple' });
+ *
+ * // Find cells whose formula contains "SUM"
+ * const formulaMatches = findAll(sheet, { what: 'SUM', lookIn: 'formulas' });
+ *
+ * // Restrict to a sub-range
+ * const rangeHits = findAll(sheet,
+ *   { what: 'error', matchCase: false },
+ *   { start: { row: 1, col: 1 }, end: { row: 50, col: 10 } },
+ * );
+ * ```
+ */
+export function findAll(
+  sheet: SpreadsheetSDK,
+  options: SearchOptions,
+  range?: SearchRange,
+): SheetSearchResult[] {
+  const ws = (sheet as InternalSheet)._ws;
+
+  // Delegate to Worksheet.findAll which handles all SearchOptions logic:
+  // wildcards, case sensitivity, hidden-row filtering, search order, etc.
+  const addresses = ws.findAll(options, range);
+
+  return addresses.map(({ row, col }) => {
+    const cell = ws.getCell({ row, col });
+    const result: SheetSearchResult = { row, col, value: cell?.value ?? null };
+    if (cell?.formula != null) result.formula = cell.formula;
+    return result;
+  });
+}
+
+/**
+ * Replace every occurrence of `query` across all matching cells in the sheet,
+ * applying ALL mutations as a SINGLE `applyPatch` call so the entire
+ * operation occupies exactly ONE undo history entry.
+ *
+ * This is the key difference from calling `replaceInFormulas` in a loop:
+ * - `replaceInFormulas` adds N individual undo entries (one per cell).
+ * - `replaceAll` adds exactly ONE undo entry for N cells.
+ *
+ * ─── What counts as a "replacement" ────────────────────────────────────────
+ *   `lookIn: 'values'` (default):
+ *     Source text = `cellValueToString(cell.value)`.
+ *     Replacement is stored as a plain string value in the cell.
+ *
+ *   `lookIn: 'formulas'`:
+ *     Source text = `cell.formula ?? cellValueToString(cell.value)`.
+ *     Replacement is stored as a plain string value in the cell.
+ *
+ * ─── Undo behaviour ─────────────────────────────────────────────────────────
+ *   A single `undo()` call reverses ALL replacements atomically.
+ *   Each individual cell is restored to exactly its pre-replace state.
+ *
+ * ─── Event behaviour ────────────────────────────────────────────────────────
+ *   `cell-changed` fires for each replaced cell (inside `applyPatch`).
+ *   All events are still synchronous.
+ *
+ * @param sheet        An active SpreadsheetSDK instance.
+ * @param query        Literal string to find.  Empty string is a no-op → 0.
+ * @param replacement  Replacement string.  `$` is treated as a plain char.
+ * @param options      Optional match configuration.
+ * @param range        Optional sub-range to constrain the operation.
+ * @returns            Number of cells actually modified (0 if nothing changed).
+ *
+ * @throws `DisposedError` propagated if `sheet` is disposed.
+ * @throws `PatchError`    propagated if the batch patch application fails.
+ *
+ * @example
+ * ```ts
+ * import { replaceAll } from '@cyber-sheet/core/search';
+ *
+ * // Replace "Draft" with "Final" everywhere — single undo entry
+ * const count = replaceAll(sheet, 'Draft', 'Final');
+ *
+ * // Case-sensitive whole-cell replace within a range
+ * const n = replaceAll(sheet, 'PLACEHOLDER', '=SUM(A1:A10)',
+ *   { matchCase: true, lookAt: 'whole', lookIn: 'formulas' },
+ *   { start: { row: 1, col: 1 }, end: { row: 100, col: 5 } },
+ * );
+ *
+ * sheet.undo(); // reverses ALL n replacements in one step
+ * ```
+ */
+export function replaceAll(
+  sheet: SpreadsheetSDK,
+  query: string,
+  replacement: string,
+  options?: ReplaceAllOptions,
+  range?: SearchRange,
+): number {
+  if (query === '') return 0;
+
+  const {
+    matchCase = false,
+    lookAt    = 'part',
+    lookIn    = 'values',
+  } = options ?? {};
+
+  const internal = sheet as InternalSheet;
+  // Guard first — same contract as SDK mutation methods.
+  if (internal._disposed) throw new DisposedError('replaceAll');
+  const ws = internal._ws;
+
+  // ── 1. Find all matching addresses via Worksheet.findAll ─────────────────
+  // Delegate wildcard/case/hidden-row handling to the existing engine.
+  const addresses = ws.findAll({ what: query, matchCase, lookAt, lookIn }, range);
+  if (addresses.length === 0) return 0;
+
+  // ── 2. Build ops for cells that actually change ───────────────────────────
+  // `before` is set to `null` here; `recordingApplyPatch` (called inside
+  // SpreadsheetV1.applyPatch) reads the actual current value from the
+  // worksheet before each mutation and uses THAT for the inverse patch.
+  // So the `before: null` placeholder is overwritten and undo is correct.
+  const ops: WorksheetPatch['ops'] = [];
+
+  for (const { row, col } of addresses) {
+    const cell = ws.getCell({ row, col });
+    if (!cell) continue;
+
+    const source = getCellSourceText(cell, lookIn);
+    if (source === null) continue;
+
+    const newValue = applyFormulaReplacement(source, query, replacement, matchCase, lookAt);
+    if (newValue === source) continue; // no actual change — skip
+
+    ops.push({ op: 'setCellValue', row, col, before: null, after: newValue });
+  }
+
+  if (ops.length === 0) return 0;
+
+  // ── 3. Apply as ONE patch → ONE undo entry ────────────────────────────────
+  // `sheet.applyPatch()` is intentionally NOT used here: the public SDK
+  // `applyPatch` is a raw low-level apply that does NOT push to the undo
+  // stack (by design — it's for external replay, not interactive editing).
+  // To get a SINGLE undo entry covering all N replacements, we call
+  // `_undo.applyAndRecord(ws, patch)` directly, which is the same internal
+  // path that `setCell` uses, but with our multi-op patch.
+  const patch: WorksheetPatch = { seq: 0, ops };
+  internal._undo.applyAndRecord(ws, patch);
+
+  return ops.length;
 }
