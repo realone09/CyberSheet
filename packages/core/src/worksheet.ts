@@ -648,6 +648,7 @@ export class Worksheet {
    * Does NOT affect cell data — cells in hidden rows are still accessible via getCell().
    */
   hideRow(row: number): void {
+    if (this.visibilityStore.isRowHidden(row)) return; // already hidden — no-op
     this.visibilityStore.hideRow(row);
     this.events.emit({ type: 'row-hidden', row });
     this.events.emit({ type: 'sheet-mutated' });
@@ -658,6 +659,7 @@ export class Worksheet {
    * find() and findIterator() will immediately include it again.
    */
   showRow(row: number): void {
+    if (!this.visibilityStore.isRowHidden(row)) return; // already visible — no-op
     this.visibilityStore.showRow(row);
     this.events.emit({ type: 'row-shown', row });
     this.events.emit({ type: 'sheet-mutated' });
@@ -667,6 +669,7 @@ export class Worksheet {
    * Hide a column. Idempotent. O(1).
    */
   hideCol(col: number): void {
+    if (this.visibilityStore.isColHidden(col)) return; // already hidden — no-op
     this.visibilityStore.hideCol(col);
     this.events.emit({ type: 'col-hidden', col });
     this.events.emit({ type: 'sheet-mutated' });
@@ -676,6 +679,7 @@ export class Worksheet {
    * Restore a hidden column to visible. Idempotent. O(1).
    */
   showCol(col: number): void {
+    if (!this.visibilityStore.isColHidden(col)) return; // already visible — no-op
     this.visibilityStore.showCol(col);
     this.events.emit({ type: 'col-shown', col });
     this.events.emit({ type: 'sheet-mutated' });
