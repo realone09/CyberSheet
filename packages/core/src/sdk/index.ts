@@ -8,7 +8,7 @@
 
 // Factory + interface
 export type { SpreadsheetSDK, SpreadsheetOptions, SdkEventType, SdkEvent, SdkEventListener } from './SpreadsheetSDK';
-export { createSpreadsheet, SdkError, DisposedError, BoundsError, SnapshotError } from './SpreadsheetSDK';
+export { createSpreadsheet, SdkError, DisposedError, BoundsError, SnapshotError, MergeError, PatchError } from './SpreadsheetSDK';
 
 // Patch serialization utility
 export { PatchSerializer, PatchDeserializeError } from './PatchSerializer';
