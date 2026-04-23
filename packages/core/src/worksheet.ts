@@ -24,6 +24,7 @@ import {
   type RecalcResult,
   type IterativeRecalcResult,
   type RecalcIterationPolicy,
+  unpackKey,
 } from './dag/DependencyGraph';
 import { FORMAT_VERSION, type WorksheetSnapshot } from './persistence/SnapshotCodec';
 export type { WorksheetSnapshot } from './persistence/SnapshotCodec';
@@ -184,6 +185,17 @@ export class Worksheet {
     // Return frozen copy to prevent direct mutation
     // This closes the "read → mutate via returned object" escape hatch
     return cell ? Object.freeze({ ...cell }) : undefined;
+  }
+
+  /**
+   * Get cell by packed NodeKey (used by GraphInvariantValidator).
+   * Convenience method for DAG validation.
+   * 
+   * @internal DEV/TEST only
+   */
+  getCellByKey(nodeKey: number): Readonly<Cell> | undefined {
+    const addr = unpackKey(nodeKey);
+    return this.getCell(addr);
   }
 
   /**
@@ -1201,28 +1213,39 @@ export class Worksheet {
    * After cancellation, all cells in the former merge region become independent
    * empty cells.
    */
+  /**
+   * Iterate over all non-empty cells in sparse order.
+   * 
+   * This is O(n) where n = number of non-empty cells (NOT total grid size).
+   * Critical for InsertColumn/DeleteColumn commands to avoid O(n²) scanning.
+   * 
+   * @param callback - Called for each non-empty cell with (row, col, cell)
+   */
+  forEachNonEmptyCell(callback: (row: number, col: number, cell: any) => void): void {
+    this.cells.forEach((row, col, cell) => {
+      callback(row, col, cell);
+    });
+  }
+
   deleteCell(addr: Address): void {
     // Resolve to anchor in case a non-anchor cell was passed.
     const resolved = this.resolveAnchor(addr);
 
-    // Clear all cell data (assign undefined, not delete — preserves mono-shape).
+    // INVARIANT 10: State Minimality - actually remove cell from storage
     const cell = this.cells.get(resolved.row, resolved.col);
-    if (cell) {
-      cell.value       = null;
-      cell.formula     = undefined;
-      cell.style       = undefined;
-      cell.comments    = undefined;
-      cell.icon        = undefined;
-      cell.spillSource = undefined;
-      cell.spilledFrom = undefined;
+    if (!cell) {
+      return; // Already deleted
     }
 
-    // If anchor of a merged region, cancel the merge.
+    // If anchor of a merged region, cancel the merge first.
     if (this.mergeStore.isAnchor(resolved.row, resolved.col)) {
       const region = this.mergeStore.getRegion(resolved.row, resolved.col)!;
       this.mergeStore.removeByAnchor(resolved.row, resolved.col);
       this.events.emit({ type: 'merge-removed', region });
     }
+
+    // Remove cell from storage (not just clear - actually delete)
+    this.cells.delete(resolved.row, resolved.col);
 
     this.events.emit({ type: 'cell-changed', address: resolved, cell: { value: null } });
   }

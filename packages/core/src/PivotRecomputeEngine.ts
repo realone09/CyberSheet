@@ -228,7 +228,15 @@ export class PivotRecomputeEngineImpl implements PivotRecomputeEngine {
       
       // Step 0: Precompute once (outside loop)
       const relevantCols = getRelevantColumns(config);
-      const valueSpecs = config.values;
+      
+      // Normalize value specs to new format (handle legacy configs)
+      const valueSpecs: (import('./PivotEngine').AggregateValueSpec | import('./PivotEngine').CalculatedValueSpec)[] = 
+        config.values.map(spec => {
+          // If already has 'type' property, it's new format
+          if ('type' in spec) return spec;
+          // Legacy format - add type discriminator
+          return { type: 'aggregate' as const, ...spec };
+        });
       
       // Step 1: Detect changed rows
       const changedRows: RowId[] = [];

@@ -13,6 +13,7 @@ import { groupStateStore } from './PivotGroupStateStore'; // Phase 36a
 import type { Range, Address } from './types';
 import type { PivotConfig } from './PivotEngine';
 import { PivotEngine } from './PivotEngine';
+import { toDisplayValue } from './utils/cell-value-normalizer'; // Storage→Display boundary
 import { transformToPivotSnapshot } from './PivotSnapshotTransformer';
 
 export class Workbook {
@@ -318,7 +319,9 @@ export class Workbook {
     // Skip header row (row 0)
     for (let row = range.start.row + 1; row <= range.end.row; row++) {
       const cell = worksheet.getCell({ row, col: fieldDef.column });
-      const value = cell?.value ?? null;
+      // Normalize storage value (ExtendedCellValue) to display primitive (SlicerValue)
+      // Boundary: EntityValue → display field, RichText → concatenated text
+      const value = toDisplayValue(cell?.value ?? null);
       distinctValues.add(value);
     }
 
@@ -367,7 +370,7 @@ export class Workbook {
 
     // Trigger rebuild if dirty (Phase 31a lazy evaluation)
     if (pivot.dirty) {
-      this.pivotRecomputeEngine.rebuild(pivotId, pivot.config, pivot.worksheetId);
+      this.pivotRecomputeEngine.ensureFresh(pivotId);
     }
 
     return this.pivotSnapshotStore.get(pivotId);
@@ -390,7 +393,7 @@ export class Workbook {
 
     // Clean up all subsystems
     this.pivotAnchorIndex.delete(pivotId);       // Phase 32: Remove anchor
-    this.pivotDependencyIndex.delete(pivotId);  // Phase 30b: Remove dependency tracking
+    this.pivotDependencyIndex.unregister(pivotId);  // Phase 30b: Remove dependency tracking
     this.pivotSnapshotStore.delete(pivotId);    // Phase 29a: Remove cached snapshot
     groupStateStore.delete(pivotId);            // Phase 36a: Remove group state
 
@@ -406,7 +409,7 @@ export class Workbook {
     // Phase 30b: Subscribe invalidation engine to this worksheet's events
     this.pivotInvalidationEngine.observeWorksheet(
       ws.name,
-      (listener) => ws.on(listener)
+      (listener) => { const d = ws.on(listener); return () => d.dispose(); }
     );
 
     return ws;

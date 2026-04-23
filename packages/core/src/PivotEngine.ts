@@ -18,6 +18,7 @@
 import type { Address, CellValue, ExtendedCellValue } from './types';
 import type { Worksheet } from './worksheet';
 import type { CalculatedField, CompiledCalculatedField, PivotEvalContext } from './PivotCalculatedFields';
+import { toDisplayValue } from './utils/cell-value-normalizer';
 import { PivotCalculatedFieldEngine } from './PivotCalculatedFields';
 import type { PivotId } from './PivotRegistry';
 import type { PivotGroupState, RowId } from './PivotGroupStateStore';
@@ -496,8 +497,8 @@ export class PivotEngine {
         // Empty selection = no filter (permit all)
         if (slicer.selectedValues.size === 0) continue;
         
-        // Check if value matches slicer
-        const isInSelection = slicer.selectedValues.has(cellValue);
+        // Check if value matches slicer (normalize to display value for comparison)
+        const isInSelection = slicer.selectedValues.has(toDisplayValue(cellValue));
         
         // Apply mode
         if (slicer.mode === 'include' && !isInSelection) {

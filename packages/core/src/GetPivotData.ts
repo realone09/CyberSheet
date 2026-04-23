@@ -44,7 +44,7 @@ export interface PivotDataFilter {
  * Result of GETPIVOTDATA query.
  * Returns value, null (valid empty), or error.
  */
-export type PivotDataResult = CellValue | PivotDataError;
+export type GetPivotDataResult = CellValue | PivotDataError;
 
 /**
  * GETPIVOTDATA Query Engine
@@ -101,7 +101,7 @@ export class GetPivotData {
     pivotId: PivotId,
     valueField: string,
     filters: PivotDataFilter[] = []
-  ): PivotDataResult {
+  ): GetPivotDataResult {
     // Step 1: Resolve pivot from registry
     const pivotMetadata = this.registry.get(pivotId);
     if (!pivotMetadata) {

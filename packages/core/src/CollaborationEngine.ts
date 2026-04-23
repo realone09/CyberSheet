@@ -191,7 +191,8 @@ export class CollaborationEngine {
         if (op.address && op.data) {
           const cell = this.worksheet.getCell(op.address);
           if (cell) {
-            cell.style = { ...cell.style, ...(op.data as object) };
+            // Use worksheet API instead of mutating readonly cell
+            this.worksheet.setCellStyle(op.address, { ...cell.style, ...(op.data as object) });
           }
         }
         break;

@@ -676,6 +676,38 @@ export class DependencyGraph {
     return [...sucSet].map(unpackKey);
   }
 
+  // ── Validator API (DEV/TEST only) ─────────────────────────────────────────
+
+  /**
+   * Get the forward adjacency map (predecessors).
+   * Returns read-only view for invariant validation.
+   * 
+   * @internal DEV/TEST only - used by GraphInvariantValidator
+   */
+  getForwardMap(): ReadonlyMap<NodeKey, EdgeList> {
+    return this.predecessors;
+  }
+
+  /**
+   * Get the reverse adjacency map (successors).
+   * Returns read-only view for invariant validation.
+   * 
+   * @internal DEV/TEST only - used by GraphInvariantValidator
+   */
+  getReverseMap(): ReadonlyMap<NodeKey, EdgeList> {
+    return this.successors;
+  }
+
+  /**
+   * Get the dirty set.
+   * Returns read-only view for invariant validation.
+   * 
+   * @internal DEV/TEST only - used by GraphInvariantValidator
+   */
+  getDirtySet(): ReadonlySet<NodeKey> {
+    return this.dirtySet;
+  }
+
   // ── Serialisation (Phase 7) ───────────────────────────────────────────────
 
   /**

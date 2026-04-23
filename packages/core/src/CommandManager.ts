@@ -14,6 +14,9 @@
 
 import type { Address, CellValue, ExtendedCellValue, CellStyle } from './types';
 import type { Worksheet } from './worksheet';
+import { GraphInvariantValidator } from './dag/GraphInvariantValidator';
+import { GraphTransformationValidator } from './dag/GraphTransformationValidator';
+import type { AddressTransform } from './dag/AddressTransform';
 
 /**
  * Command interface: Pure pointer operations
@@ -33,6 +36,88 @@ export interface Command {
    * Optional description for debugging
    */
   description?: string;
+}
+
+/**
+ * TransformCommand: Commands that perform coordinate space transformations
+ * 
+ * Used for Insert/Delete Row/Column operations.
+ * 
+ * =============================================================================
+ * TRANSFORMATION SEMANTICS (CRITICAL CONTRACT)
+ * =============================================================================
+ * 
+ * 1. getTransform() returns f: Address → Address ∪ {null}
+ *    - Mapping evaluated in CURRENT coordinate space
+ *    - NOT a snapshot of original state
+ * 
+ * 2. getUndoTransform() returns f⁻¹
+ *    - Inverse recomputed from stored metadata
+ *    - Also evaluated in CURRENT space at undo time
+ * 
+ * 3. Validator enforces: graph(f(S)) == f(graph(S))
+ *    - Runs after execute(), undo(), redo()
+ *    - Catches coordinate space desync immediately
+ * 
+ * =============================================================================
+ * COMPOSITION INVARIANT ENFORCEMENT
+ * =============================================================================
+ * 
+ * CommandManager guarantees:
+ *   - Each command evaluated in state produced by previous commands
+ *   - Validator runs after EVERY command (no batching)
+ *   - Coordinate indices always resolved in CURRENT space
+ * 
+ * Identity Property (enforced, not just tested):
+ *   deleteColumn(k) ∘ insertColumn(k) = identity
+ * 
+ * This is verified structurally by:
+ *   1. Transform evaluated in current state
+ *   2. Inverse transform recomputed from metadata
+ *   3. Validator checks structural equivalence
+ * 
+ * =============================================================================
+ * EXAMPLE
+ * =============================================================================
+ * 
+ * ```ts
+ * class InsertColumnCommand implements TransformCommand {
+ *   constructor(private columnIndex: number, private worksheet: Worksheet) {}
+ *   
+ *   getTransform(): AddressTransform {
+ *     // Evaluated at execute() time in CURRENT state
+ *     return new InsertColumnTransform(this.columnIndex);
+ *   }
+ *   
+ *   getUndoTransform(): AddressTransform {
+ *     // Evaluated at undo() time in CURRENT state (post-insert)
+ *     return new DeleteColumnTransform(this.columnIndex);
+ *   }
+ *   
+ *   execute(): void {
+ *     const transform = this.getTransform();
+ *     // Apply to cells, formulas, DAG, merges, selection
+ *     // Validator runs automatically after this
+ *   }
+ * }
+ * ```
+ */
+export interface TransformCommand extends Command {
+  /**
+   * Get the forward transformation (for execute)
+   * 
+   * CRITICAL: Evaluated in CURRENT coordinate space at execute() time,
+   * not in original snapshot space.
+   */
+  getTransform(): AddressTransform;
+  
+  /**
+   * Get the inverse transformation (for undo)
+   * 
+   * CRITICAL: Recomputed from stored metadata at undo() time,
+   * evaluated in CURRENT coordinate space (post-transform state).
+   */
+  getUndoTransform(): AddressTransform;
 }
 
 /**
@@ -201,21 +286,54 @@ export class SetRangeStyleCommand implements Command {
  * - No reconstruction overhead
  * - No GC pressure from cloning
  * - Strict === equality after undo
+ * 
+ * With optional DAG invariant validation (DEV/TEST only):
+ * - Guards against DAG corruption
+ * - Fails fast on invariant violations
+ * - Zero cost in production (process.env.NODE_ENV check)
  */
 export class CommandManager {
   private undoStack: Command[] = [];
   private redoStack: Command[] = [];
   private maxHistorySize: number;
   
-  constructor(maxHistorySize: number = 100) {
+  /** Optional worksheet reference for DAG validation (DEV/TEST only) */
+  private worksheet?: Worksheet;
+  
+  constructor(maxHistorySize: number = 100, worksheet?: Worksheet) {
     this.maxHistorySize = maxHistorySize;
+    this.worksheet = worksheet;
   }
   
   /**
    * Execute command and add to history
+   * 
+   * In DEV/TEST mode: Validates DAG invariants after execution
+   * For TransformCommands: Also validates transformation preservation
    */
   execute(command: Command): void {
     command.execute();
+    
+    // DEV/TEST only: Validate DAG invariants after command execution
+    if (process.env.NODE_ENV !== 'production' && this.worksheet) {
+      // Access private DAG through worksheet's internal structure
+      // This is safe because validators only read state
+      const dag = (this.worksheet as any).dag;
+      if (dag) {
+        // For transformation commands: Use GraphTransformationValidator
+        if (this.isTransformCommand(command)) {
+          const transform = command.getTransform();
+          GraphTransformationValidator.validateAfterTransform(
+            transform,
+            dag,
+            this.worksheet
+          );
+        } else {
+          // For regular commands: Use GraphInvariantValidator
+          GraphInvariantValidator.validateAll(dag, this.worksheet);
+        }
+      }
+    }
     
     this.undoStack.push(command);
     if (this.undoStack.length > this.maxHistorySize) {
@@ -230,6 +348,8 @@ export class CommandManager {
    * Undo last command
    * 
    * Returns true if undo was successful
+   * In DEV/TEST mode: Validates DAG invariants after undo
+   * For TransformCommands: Uses undo transformation for validation
    */
   undo(): boolean {
     const command = this.undoStack.pop();
@@ -238,6 +358,24 @@ export class CommandManager {
     command.undo();
     this.redoStack.push(command);
     
+    // DEV/TEST only: Validate DAG invariants after undo
+    if (process.env.NODE_ENV !== 'production' && this.worksheet) {
+      const dag = (this.worksheet as any).dag;
+      if (dag) {
+        // For transformation commands: Use undo transform for validation
+        if (this.isTransformCommand(command)) {
+          const undoTransform = command.getUndoTransform();
+          GraphTransformationValidator.validateAfterTransform(
+            undoTransform,
+            dag,
+            this.worksheet
+          );
+        } else {
+          GraphInvariantValidator.validateAll(dag, this.worksheet);
+        }
+      }
+    }
+    
     return true;
   }
   
@@ -245,6 +383,8 @@ export class CommandManager {
    * Redo last undone command
    * 
    * Returns true if redo was successful
+   * In DEV/TEST mode: Validates DAG invariants after redo
+   * For TransformCommands: Uses forward transformation for validation
    */
   redo(): boolean {
     const command = this.redoStack.pop();
@@ -252,6 +392,24 @@ export class CommandManager {
     
     command.execute();
     this.undoStack.push(command);
+    
+    // DEV/TEST only: Validate DAG invariants after redo
+    if (process.env.NODE_ENV !== 'production' && this.worksheet) {
+      const dag = (this.worksheet as any).dag;
+      if (dag) {
+        // For transformation commands: Use forward transform for validation
+        if (this.isTransformCommand(command)) {
+          const transform = command.getTransform();
+          GraphTransformationValidator.validateAfterTransform(
+            transform,
+            dag,
+            this.worksheet
+          );
+        } else {
+          GraphInvariantValidator.validateAll(dag, this.worksheet);
+        }
+      }
+    }
     
     return true;
   }
@@ -295,6 +453,13 @@ export class CommandManager {
     return this.undoStack
       .map(cmd => cmd.description || 'Unnamed command')
       .filter(Boolean);
+  }
+  
+  /**
+   * Type guard: Check if command is a TransformCommand
+   */
+  private isTransformCommand(command: Command): command is TransformCommand {
+    return 'getTransform' in command && 'getUndoTransform' in command;
   }
 }
 

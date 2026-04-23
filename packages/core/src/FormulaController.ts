@@ -89,8 +89,9 @@ export class FormulaController {
       currentCell: address,
     });
     
-    // Get or create cell
-    const cell = this.worksheet.getCell(address) ?? { value: null };
+    // Get or create cell (make mutable copy)
+    const existing = this.worksheet.getCell(address);
+    const cell: Cell = existing ? { ...existing } : { value: null };
     
     // Store formula and computed value
     cell.formula = normalized;
@@ -122,9 +123,11 @@ export class FormulaController {
    * Clear formula from a cell
    */
   clearFormula(address: Address): void {
-    const cell = this.worksheet.getCell(address);
-    if (!cell || !cell.formula) return;
+    const existing = this.worksheet.getCell(address);
+    if (!existing || !existing.formula) return;
     
+    // Create mutable copy and remove formula
+    const cell: Cell = { ...existing };
     delete cell.formula;
     this.updateCell(address, cell);
   }
@@ -133,13 +136,16 @@ export class FormulaController {
    * Recalculate a cell's formula
    */
   recalculate(address: Address): boolean {
-    const cell = this.worksheet.getCell(address);
-    if (!cell || !cell.formula) return false;
+    const existing = this.worksheet.getCell(address);
+    if (!existing || !existing.formula) return false;
     
-    const result = this.engine.evaluate(cell.formula, {
+    const result = this.engine.evaluate(existing.formula, {
       worksheet: this.worksheet,
       currentCell: address,
     });
+    
+    // Create mutable copy
+    const cell: Cell = { ...existing };
     
     if (result instanceof Error) {
       cell.value = result.message;
