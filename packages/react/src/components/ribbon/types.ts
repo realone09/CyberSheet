@@ -127,6 +127,9 @@ export interface SelectionState {
   // Border support (style + color)
   border?: StyleState<{ style: string; color: string }>;
   
+  // Number format support (semantic state)
+  numberFormat?: StyleState<{ type: string; formatString: string; label?: string }>;
+  
   // Alignment support (compound state)
   horizontalAlign?: StyleState<"left" | "center" | "right" | "justify">;
   verticalAlign?: StyleState<"top" | "middle" | "bottom">;

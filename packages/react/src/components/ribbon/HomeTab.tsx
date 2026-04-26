@@ -14,11 +14,13 @@ import { RibbonRow } from './RibbonRow';
 import { FontColorButton } from './FontColorButton';
 import { FillColorButton } from './FillColorButton';
 import { BorderButton } from './BorderButton';
+import { NumberFormatButton } from './NumberFormatButton';
 import { AlignmentGroup } from './AlignmentGroup';
 import type { SelectionState, CommandManager, StyleState, ColorValue } from './types';
 import type { Fill } from './fillTypes';
 import { solidFill } from './fillTypes';
 import type { BorderPayload } from './borderTypes';
+import type { NumberFormatValue } from './numberFormatTypes';
 import './ribbon.css';
 
 export interface HomeTabProps {
@@ -166,6 +168,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
     [commandManager, selection]
   );
 
+  // Number format command handler (semantic state, NOT visual)
+  const handleNumberFormatApply = useCallback(
+    (format: NumberFormatValue) => {
+      // TODO: Import SetNumberFormatCommand from @cyber-sheet/core
+      // commandManager.execute(new SetNumberFormatCommand(selection, format));
+      console.log('Number format apply:', format, 'for selection:', selection);
+    },
+    [commandManager, selection]
+  );
+
   // Alignment handlers (compound state: horizontal × vertical × wrap)
   const handleHorizontalAlignChange = useCallback(
     (align: "left" | "center" | "right" | "justify") => {
@@ -275,6 +287,12 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
             selectionBorder={selection.border}
             onApply={handleBorderApply}
           />
+          
+          {/* Number Format Dropdown */}
+          <NumberFormatButton
+            numberFormat={selection.numberFormat}
+            onApply={handleNumberFormatApply}
+          />
         </RibbonRow>
       </RibbonGroup>
 
@@ -294,7 +312,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
       {/* 
         Future Groups (Phase 1 completion):
         - Clipboard (Cut, Copy, Paste, Paste Special) - Week 4-5
-        - Number Format - Phase 2
         - Styles - Phase 3
         - Cells (Insert, Delete, Format) - Week 5
         - Editing (Sum, Fill, Clear, Sort & Filter) - Week 5

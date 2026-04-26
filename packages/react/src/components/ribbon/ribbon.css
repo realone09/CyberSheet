@@ -999,3 +999,137 @@
 .cs-dropdown-section-content {
   /* Content inherits natural layout */
 }
+
+/* ==================== Number Format Button ==================== */
+
+.cs-number-format-button-container {
+  position: relative;
+  display: inline-block;
+}
+
+.cs-number-format-button {
+  height: 32px;
+  min-width: 110px;
+  padding: 0 8px;
+  background: white;
+  border: 1px solid #8a8886;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cs-number-format-button:hover:not(.disabled) {
+  background: #f3f2f1;
+  border-color: #201f1e;
+}
+
+.cs-number-format-button.active {
+  background: #edebe9;
+  border-color: #201f1e;
+}
+
+.cs-number-format-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cs-number-format-button-label {
+  font-size: 11px;
+  color: #201f1e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.cs-number-format-button-icon {
+  flex-shrink: 0;
+  color: #605e5c;
+}
+
+/* ==================== Number Format Dropdown ==================== */
+
+.cs-number-format-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  background: white;
+  border: 1px solid #8a8886;
+  border-radius: 2px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+/* ==================== Dropdown List (Generic List Selector) ==================== */
+
+.cs-dropdown-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  outline: none;
+}
+
+.cs-dropdown-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  min-height: 32px;
+}
+
+.cs-dropdown-list-item:hover:not(.disabled) {
+  background: #f3f2f1;
+}
+
+.cs-dropdown-list-item.focused:not(.disabled) {
+  background: #e1dfdd;
+}
+
+.cs-dropdown-list-item.selected {
+  background: #edebe9;
+}
+
+.cs-dropdown-list-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cs-dropdown-list-item-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.cs-dropdown-list-item-label {
+  font-size: 11px;
+  color: #201f1e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cs-dropdown-list-item-description {
+  font-size: 10px;
+  color: #605e5c;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cs-dropdown-list-item-check {
+  margin-left: 8px;
+  color: #0078d4;
+  font-size: 12px;
+  flex-shrink: 0;
+}
