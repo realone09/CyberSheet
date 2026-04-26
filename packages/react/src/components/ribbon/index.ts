@@ -34,17 +34,23 @@ export { RibbonRow, type RibbonRowProps } from './RibbonRow';
 
 // Color picker components
 export { FontColorButton, type FontColorButtonProps } from './FontColorButton';
+export { FillColorButton, type FillColorButtonProps } from './FillColorButton';
 export { ColorGrid, type ColorGridProps } from './ColorGrid';
 export { ColorDropdown, type ColorDropdownProps } from './ColorDropdown';
+export { PatternGrid, type PatternGridProps } from './PatternGrid';
 
 // Hooks
 export { useRecentColors } from './hooks/useRecentColors';
+export { useRecentFills } from './hooks/useRecentFills';
 
 // Utilities
 export { resolveColor, isValidHexColor, normalizeColor, isMixedState, getDisplayColor } from './colorUtils';
+export { resolveFill, isMixedFill, getDisplayFill, fillEquals, serializeFill, deserializeFill, getPrimaryColor } from './fillUtils';
 
 // Constants
 export { THEME_COLORS, STANDARD_COLORS, AUTOMATIC_COLOR, NO_FILL_COLOR } from './colors';
+export { PATTERN_TYPES, GRADIENT_PRESETS, NO_FILL, solidFill, patternFill, gradientFill, isSolidFill, isPatternFill, isGradientFill } from './fillTypes';
+export type { Fill, PatternType, GradientStop, GradientDirection, PatternMetadata } from './fillTypes';
 
 // Types
 export type {

@@ -12,7 +12,10 @@ import { RibbonButton } from './RibbonButton';
 import { RibbonSelect } from './RibbonSelect';
 import { RibbonRow } from './RibbonRow';
 import { FontColorButton } from './FontColorButton';
+import { FillColorButton } from './FillColorButton';
 import type { SelectionState, CommandManager, StyleState, ColorValue } from './types';
+import type { Fill } from './fillTypes';
+import { solidFill } from './fillTypes';
 import './ribbon.css';
 
 export interface HomeTabProps {
@@ -32,6 +35,7 @@ export interface HomeTabProps {
  * ✅ Font Size dropdown
  * ✅ Bold/Italic/Underline buttons with active states
  * ✅ Font Color picker with theme colors, standard colors, recent colors
+ * ✅ Fill Color picker with patterns and gradients (Phase 1 extension)
  * 
  * Backend Integration:
  * - Uses existing UndoManager (100% complete)
@@ -137,6 +141,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
     [commandManager, selection]
   );
 
+  // Fill color command (range-aware, works with Fill objects)
+  const fillColorCommand = useMemo(
+    () => ({
+      execute: (fill: Fill, sel: any) => {
+        // TODO: Import SetStyleCommand from @cyber-sheet/core
+        // commandManager.execute(new SetStyleCommand(sel || selection, { fillColor: fill }));
+        console.log('Fill color change:', fill, 'for selection:', sel || selection);
+      },
+    }),
+    [commandManager, selection]
+  );
+
   return (
     <div className="ribbon-content">
       {/* ==================== Undo/Redo Group ==================== */}
@@ -202,6 +218,12 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
           <FontColorButton
             command={fontColorCommand}
             selectionColor={selection.fontColor}
+          />
+          
+          {/* Fill Color Picker */}
+          <FillColorButton
+            command={fillColorCommand}
+            selectionFill={selection.fillColor}
           />
         </RibbonRow>
       </RibbonGroup>

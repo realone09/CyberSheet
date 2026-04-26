@@ -465,6 +465,154 @@
   border-color: #605e5c;
 }
 
+/* ==================== Pattern Grid ==================== */
+
+.cs-pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 24px);
+  gap: 4px;
+}
+
+.cs-pattern-cell {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #d1d1d1;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.1s ease, transform 0.1s ease;
+  background: transparent;
+}
+
+.cs-pattern-cell:hover {
+  border-color: #605e5c;
+  transform: scale(1.05);
+  z-index: 1;
+}
+
+.cs-pattern-cell.selected {
+  border: 2px solid #0078d4;
+  border-radius: 2px;
+}
+
+.cs-pattern-cell.focused {
+  outline: 2px solid #0078d4;
+  outline-offset: 1px;
+}
+
+.cs-pattern-cell:focus-visible {
+  outline: 2px solid #0078d4;
+  outline-offset: 2px;
+}
+
+/* ==================== Fill Color Split Button ==================== */
+
+.cs-fill-color-split-button {
+  display: flex;
+  position: relative;
+  height: 32px;
+}
+
+.cs-fill-color-main-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 2px 0 0 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cs-fill-color-main-btn:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+}
+
+.cs-fill-color-dropdown-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0 2px 2px 0;
+  border-left: 1px solid #e1dfdd;
+  background: transparent;
+  color: #201f1e;
+  cursor: pointer;
+  font-size: 8px;
+  transition: background 0.1s ease;
+}
+
+.cs-fill-color-dropdown-btn:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+  border-left-color: #d2d0ce;
+}
+
+.cs-fill-preview {
+  width: 20px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid #d1d1d1;
+}
+
+.cs-fill-preview.mixed {
+  /* Diagonal stripe for mixed state */
+  border: none;
+}
+
+/* ==================== Fill Dropdown ==================== */
+
+.cs-fill-dropdown {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #d1d1d1;
+  border-radius: 2px;
+  padding: 8px;
+  box-shadow: 0 3.2px 7.2px rgba(0, 0, 0, 0.132), 0 0.6px 1.8px rgba(0, 0, 0, 0.108);
+  z-index: 1000;
+  min-width: 220px;
+}
+
+.cs-section-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e1dfdd;
+  padding-bottom: 4px;
+}
+
+.cs-section-tabs button {
+  flex: 1;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: #605e5c;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 2px 2px 0 0;
+  transition: background 0.1s ease;
+}
+
+.cs-section-tabs button:hover {
+  background: #f3f2f1;
+}
+
+.cs-section-tabs button.active {
+  background: #ffffff;
+  color: #201f1e;
+  font-weight: 600;
+  border-bottom: 2px solid #0078d4;
+}
+
 /* ==================== Dark Mode Support (Future) ==================== */
 
 @media (prefers-color-scheme: dark) {

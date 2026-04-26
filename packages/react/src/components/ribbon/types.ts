@@ -6,6 +6,12 @@
  */
 
 /**
+ * Fill type for cell backgrounds (solid/pattern/gradient)
+ * Imported from fillTypes to avoid circular dependencies
+ */
+import type { Fill } from './fillTypes';
+
+/**
  * Color value in hex format
  * @example "#FF0000", "#000000"
  */
@@ -60,15 +66,16 @@ export interface FontColorCommand {
 /**
  * Command interface for fill (background) color operations
  * 
- * Same contract as FontColorCommand but applies to cell background
+ * Works with Fill type (solid/pattern/gradient) instead of simple color string.
+ * This is the key difference from FontColorCommand - accepts structured Fill objects.
  */
 export interface FillColorCommand {
   /**
-   * Apply fill color to selection
-   * @param color - Hex color value, NO_FILL_COLOR, or pattern/gradient spec
+   * Apply fill to selection
+   * @param fill - Fill object (solid/pattern/gradient)
    * @param selection - Current selection range(s)
    */
-  execute(color: ColorValue, selection: SelectionState): void;
+  execute(fill: Fill, selection: SelectionState): void;
 }
 
 /**
@@ -84,9 +91,11 @@ export interface SelectionState {
   italic?: boolean;
   underline?: boolean;
   
-  // Color support (TODO: update HomeTab to use StyleState)
+  // Color support
   fontColor?: StyleState<ColorValue>;
-  fillColor?: StyleState<ColorValue>;
+  
+  // Fill support (solid/pattern/gradient)
+  fillColor?: StyleState<Fill>;
   
   /**
    * Get style state with mixed-value support
