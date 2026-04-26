@@ -84,9 +84,8 @@ export function NumberFormatDropdown({
 
         return {
           value: {
-            type: preset.type,
             formatString: preset.formatString,
-            label: preset.label,
+            type: preset.type,
           },
           label: preset.label,
           description: preset.description,
@@ -104,7 +103,7 @@ export function NumberFormatDropdown({
 
   // "More Formats" item (future: opens custom format dialog)
   const moreFormatsItem: DropdownListItem<NumberFormatValue> = {
-    value: { type: 'custom', formatString: '', label: 'More Formats...' },
+    value: { formatString: '', type: 'custom' },
     label: 'More Number Formats...',
     description: 'Custom format dialog',
     disabled: true, // TODO: Enable when dialog is implemented

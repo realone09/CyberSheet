@@ -61,7 +61,7 @@ export { useGridNavigation, useListNavigation, type UseGridNavigationOptions, ty
 export { resolveColor, isValidHexColor, normalizeColor, isMixedState, getDisplayColor } from './colorUtils';
 export { resolveFill, isMixedFill, getDisplayFill, fillEquals, serializeFill, deserializeFill, getPrimaryColor } from './fillUtils';
 export { resolveBorder, borderEquals, serializeBorder, deserializeBorder, isMixedBorder, getDisplayBorder, getBorderColor, withBorderColor, withBorderStyle, getBorderOperationDescription } from './borderUtils';
-export { resolveNumberFormat, isMixedNumberFormat, getDisplayNumberFormat, serializeNumberFormat, deserializeNumberFormat, validateNumberFormatValue, getNumberFormatDescription, isNumericFormat, isDateTimeFormat } from './numberFormatUtils';
+export { resolveNumberFormat, isMixedNumberFormat, getDisplayNumberFormat, serializeNumberFormat, deserializeNumberFormat, validateNumberFormatValue, getNumberFormatDescription, isNumericFormat, isDateTimeFormat, inferFormatType } from './numberFormatUtils';
 export { resolveStyleState, isMixedState as isMixedStyleState, getDisplayValue, hasDefinedValue, resolveAlignment, resolveBoolean, updateStyleState, mergeStyleStates } from './styleStateUtils';
 
 // Shared components
@@ -71,7 +71,7 @@ export { DropdownSection, type DropdownSectionProps } from './DropdownSection';
 export { THEME_COLORS, STANDARD_COLORS, AUTOMATIC_COLOR, NO_FILL_COLOR } from './colors';
 export { PATTERN_TYPES, GRADIENT_PRESETS, NO_FILL, solidFill, patternFill, gradientFill, isSolidFill, isPatternFill, isGradientFill } from './fillTypes';
 export { LINE_STYLES, BORDER_PRESETS, borderValue, getDefaultBorder, getPresetById, resolvePreset, getLineStyleMetadata } from './borderTypes';
-export { NUMBER_FORMAT_PRESETS, NUMBER_FORMAT_CATEGORIES, numberFormatValue, getDefaultNumberFormat, getPresetById as getNumberFormatPresetById, getPresetByFormatString, isStandardFormat, getDisplayLabel, validateFormatString, getCategoryForType, createCustomFormat, numberFormatEquals } from './numberFormatTypes';
+export { NUMBER_FORMAT_PRESETS, NUMBER_FORMAT_CATEGORIES, numberFormatValue, getDefaultNumberFormat, getPresetById as getNumberFormatPresetById, getPresetByFormatString, isStandardFormat, getDisplayLabel, validateFormatString, getCategoryForType, getCategoryForFormat, createCustomFormat, numberFormatEquals } from './numberFormatTypes';
 export type { Fill, PatternType, GradientStop, GradientDirection, PatternMetadata } from './fillTypes';
 export type { BorderStyle, BorderPosition, BorderPreset, BorderValue, BorderPayload, BorderPresetConfig } from './borderTypes';
 export type { NumberFormatType, NumberFormatValue, NumberFormatPreset } from './numberFormatTypes';

@@ -128,7 +128,8 @@ export interface SelectionState {
   border?: StyleState<{ style: string; color: string }>;
   
   // Number format support (semantic state)
-  numberFormat?: StyleState<{ type: string; formatString: string; label?: string }>;
+  // ⚠️ formatString is source of truth, type is optional hint
+  numberFormat?: StyleState<{ formatString: string; type?: string }>;
   
   // Alignment support (compound state)
   horizontalAlign?: StyleState<"left" | "center" | "right" | "justify">;

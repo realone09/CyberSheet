@@ -26,6 +26,16 @@ export type NumberFormatType =
 /**
  * Structured number format value
  * 
+ * CRITICAL DESIGN DECISIONS:
+ * 1. formatString is the SOURCE OF TRUTH (not type)
+ * 2. type is OPTIONAL (hint for UI categorization, can be derived)
+ * 3. label is NEVER STORED (always derived from formatString + locale)
+ * 
+ * This prevents:
+ * - Label/format drift (locale changes, custom formats)
+ * - Type redundancy (format string implies type)
+ * - Presentation storage (violates separation of concerns)
+ * 
  * Prevents raw string drift and enables:
  * - Type safety
  * - Locale support (future)
@@ -34,22 +44,26 @@ export type NumberFormatType =
  */
 export interface NumberFormatValue {
   /**
-   * Format category (determines UI grouping + validation rules)
-   */
-  type: NumberFormatType;
-
-  /**
    * Excel-compatible format string (e.g., "$#,##0.00", "0%", "dd/mm/yyyy")
    * 
    * This is the DSL that controls display, NOT the cell value
+   * 
+   * ⚠️ SOURCE OF TRUTH - type is derived from this, not vice versa
    */
   formatString: string;
 
   /**
-   * Optional display label for UI (if different from formatString)
-   * Example: "Currency" instead of showing "$#,##0.00"
+   * Format category (optional hint for UI grouping)
+   * 
+   * ⚠️ NOT source of truth - can be derived from formatString
+   * ⚠️ May be undefined for custom/imported formats
+   * 
+   * Used for:
+   * - UI categorization (which section to show in dropdown)
+   * - Validation hints
+   * - Performance optimization (avoid re-parsing)
    */
-  label?: string;
+  type?: NumberFormatType;
 }
 
 /**
@@ -174,14 +188,15 @@ export const NUMBER_FORMAT_CATEGORIES = {
 } as const;
 
 /**
- * Factory: Create NumberFormatValue from preset ID
+ * Factory: Create NumberFormatValue from format string
+ * 
+ * Type is optional - if not provided, will be inferred when needed
  */
 export function numberFormatValue(
-  type: NumberFormatType,
   formatString: string,
-  label?: string
+  type?: NumberFormatType
 ): NumberFormatValue {
-  return { type, formatString, label };
+  return { formatString, type };
 }
 
 /**
@@ -189,9 +204,8 @@ export function numberFormatValue(
  */
 export function getDefaultNumberFormat(): NumberFormatValue {
   return {
-    type: 'general',
     formatString: 'General',
-    label: 'General',
+    type: 'general',
   };
 }
 
@@ -221,20 +235,26 @@ export function isStandardFormat(format: NumberFormatValue): boolean {
 }
 
 /**
- * Get display label for format (for UI)
+ * Get display label for format (DERIVED, never stored)
+ * 
+ * Priority:
+ * 1. Known preset → preset label
+ * 2. Custom format → format string itself
+ * 
+ * Future: Locale-aware labels ("Currency" in EN, "Moneda" in ES)
  */
-export function getDisplayLabel(format: NumberFormatValue): string {
-  if (format.label) {
-    return format.label;
-  }
-
+export function getDisplayLabel(
+  format: NumberFormatValue,
+  locale?: string
+): string {
   // Try to find matching preset
   const preset = getPresetByFormatString(format.formatString);
   if (preset) {
+    // TODO: Locale-aware label lookup
     return preset.label;
   }
 
-  // Fallback: show format string (custom format)
+  // Custom format: show format string
   return format.formatString;
 }
 
@@ -256,6 +276,24 @@ export function validateFormatString(formatString: string): boolean {
   // Basic check: format strings should not contain certain invalid chars
   const invalidChars = ['<', '>'];
   return !invalidChars.some((char) => formatString.includes(char));
+}
+
+/**
+ * Get category for format (type-based, no inference)
+ * 
+ * Returns 'other' if type is missing or custom
+ * Caller can use inferFormatType() first if needed
+ */
+export function getCategoryForFormat(
+  format: NumberFormatValue
+): keyof typeof NUMBER_FORMAT_CATEGORIES {
+  // Use explicit type if provided
+  if (format.type) {
+    return getCategoryForType(format.type);
+  }
+
+  // No type provided - return 'other' (caller should infer if needed)
+  return 'other';
 }
 
 /**
@@ -281,17 +319,21 @@ export function getCategoryForType(
 
 /**
  * Create custom format value
+ * 
+ * Type will be inferred if needed, or remain 'custom'
  */
 export function createCustomFormat(formatString: string): NumberFormatValue {
   return {
-    type: 'custom',
     formatString,
-    label: formatString, // Show format string for custom formats
+    type: 'custom',
   };
 }
 
 /**
  * Equality check for NumberFormatValue
+ * 
+ * Only compares formatString (source of truth)
+ * Type is ignored (it's optional metadata)
  */
 export function numberFormatEquals(
   a: NumberFormatValue | undefined,
@@ -300,6 +342,6 @@ export function numberFormatEquals(
   if (a === b) return true;
   if (!a || !b) return false;
 
-  // Format strings are the source of truth
+  // Format strings are the ONLY source of truth
   return a.formatString === b.formatString;
 }

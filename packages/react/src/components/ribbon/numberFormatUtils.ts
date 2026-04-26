@@ -58,19 +58,24 @@ export function getDisplayNumberFormat(
 
 /**
  * Serialize NumberFormatValue for storage/undo/redo
+ * 
+ * Only stores formatString (source of truth)
+ * Type is optional metadata (can be re-inferred)
  */
 export function serializeNumberFormat(
   format: NumberFormatValue
 ): string {
   return JSON.stringify({
-    type: format.type,
     formatString: format.formatString,
-    label: format.label,
+    type: format.type, // Optional, for performance
   });
 }
 
 /**
  * Deserialize NumberFormatValue from storage
+ * 
+ * Validates formatString (required)
+ * Type is optional (will be inferred if missing)
  */
 export function deserializeNumberFormat(
   data: string
@@ -80,7 +85,6 @@ export function deserializeNumberFormat(
     if (
       typeof parsed === 'object' &&
       parsed !== null &&
-      'type' in parsed &&
       'formatString' in parsed
     ) {
       // Validate format string
@@ -89,9 +93,8 @@ export function deserializeNumberFormat(
       }
 
       return {
-        type: parsed.type as NumberFormatType,
         formatString: parsed.formatString,
-        label: parsed.label,
+        type: parsed.type as NumberFormatType | undefined,
       };
     }
     return null;
@@ -102,6 +105,8 @@ export function deserializeNumberFormat(
 
 /**
  * Create NumberFormatValue from preset selection
+ * 
+ * Type is stored (known preset), but label is never stored
  */
 export function createNumberFormatFromPreset(
   presetId: string
@@ -114,9 +119,8 @@ export function createNumberFormatFromPreset(
   }
 
   return {
-    type: preset.type,
     formatString: preset.formatString,
-    label: preset.label,
+    type: preset.type,
   };
 }
 
@@ -132,7 +136,14 @@ export function isSameFormat(
 }
 
 /**
- * Get format type from format string (best guess)
+ * Infer format type from format string (heuristic)
+ * 
+ * Used when:
+ * - Importing formats from Excel (no type metadata)
+ * - User enters custom format
+ * - Clipboard paste
+ * 
+ * ⚠️ This is a HINT, not source of truth
  */
 export function inferFormatType(
   formatString: string
@@ -159,6 +170,9 @@ export function inferFormatType(
 
 /**
  * Validate NumberFormatValue structure
+ * 
+ * Only formatString is required
+ * Type is optional metadata
  */
 export function validateNumberFormatValue(
   value: unknown
@@ -169,15 +183,12 @@ export function validateNumberFormatValue(
 
   const format = value as Partial<NumberFormatValue>;
 
-  // Required fields
-  if (typeof format.type !== 'string') return false;
+  // Required: formatString
   if (typeof format.formatString !== 'string') return false;
-
-  // Validate format string
   if (!validateFormatString(format.formatString)) return false;
 
-  // Optional label
-  if (format.label !== undefined && typeof format.label !== 'string') {
+  // Optional: type
+  if (format.type !== undefined && typeof format.type !== 'string') {
     return false;
   }
 
@@ -202,24 +213,30 @@ export function getNumberFormatDescription(
 
 /**
  * Check if format is suitable for numeric values
+ * 
+ * Uses type if available, otherwise infers from formatString
  */
 export function isNumericFormat(format: NumberFormatValue): boolean {
+  const type = format.type || inferFormatType(format.formatString);
   return (
-    format.type === 'general' ||
-    format.type === 'number' ||
-    format.type === 'currency' ||
-    format.type === 'accounting' ||
-    format.type === 'percentage' ||
-    format.type === 'fraction' ||
-    format.type === 'scientific'
+    type === 'general' ||
+    type === 'number' ||
+    type === 'currency' ||
+    type === 'accounting' ||
+    type === 'percentage' ||
+    type === 'fraction' ||
+    type === 'scientific'
   );
 }
 
 /**
  * Check if format is suitable for date/time values
+ * 
+ * Uses type if available, otherwise infers from formatString
  */
 export function isDateTimeFormat(format: NumberFormatValue): boolean {
-  return format.type === 'date' || format.type === 'time';
+  const type = format.type || inferFormatType(format.formatString);
+  return type === 'date' || type === 'time';
 }
 
 /**
