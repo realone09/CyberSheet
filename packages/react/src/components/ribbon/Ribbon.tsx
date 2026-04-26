@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { HomeTab } from './HomeTab';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import './ribbon.css';
 
 export interface RibbonProps {
@@ -19,6 +20,9 @@ export interface RibbonProps {
  * - Review
  * - View
  * 
+ * ⚠️ CRITICAL: This component sets up the global keyboard shortcut system
+ * Only ONE instance should exist per application
+ * 
  * @example
  * <Ribbon 
  *   commandManager={workbook.commandManager} 
@@ -27,6 +31,14 @@ export interface RibbonProps {
  */
 export const Ribbon: React.FC<RibbonProps> = ({ commandManager, selection }) => {
   const [activeTab, setActiveTab] = useState<'home' | 'insert' | 'formulas'>('home');
+
+  // Set up global keyboard shortcuts (single entry point)
+  useKeyboardShortcuts({
+    commandManager,
+    selection,
+    registerStandardShortcuts: true,
+    enabled: true,
+  });
 
   return (
     <div className="ribbon">
