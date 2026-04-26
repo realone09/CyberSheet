@@ -79,6 +79,33 @@ export interface FillColorCommand {
 }
 
 /**
+ * Command interface for border operations
+ * 
+ * Handles border style, color, and position. Unlike Font/Fill Color,
+ * borders can affect multiple edges of cells simultaneously (top, bottom, left, right, all, outer, etc.)
+ * 
+ * CRITICAL: Border operations must be range-aware:
+ * - Single cell: Apply to specified edges
+ * - Multi-cell: Apply outer/inner borders correctly (e.g., "outer" only affects perimeter)
+ * - Merged cells: Respect merge boundaries
+ */
+export interface BorderCommand {
+  /**
+   * Apply border to selection
+   * @param payloads - Array of border operations (style + color + position)
+   * @param selection - Current selection range(s)
+   * 
+   * Example: "All Borders" = multiple payloads (top, bottom, left, right)
+   * Example: "Thick Box Border" = outer edges with thick style
+   */
+  execute(payloads: Array<{
+    style: string;
+    color: string;
+    position: string;
+  }>, selection: SelectionState): void;
+}
+
+/**
  * Selection state from @cyber-sheet/core
  * 
  * This interface must be implemented by the real backend.
@@ -96,6 +123,9 @@ export interface SelectionState {
   
   // Fill support (solid/pattern/gradient)
   fillColor?: StyleState<Fill>;
+  
+  // Border support (style + color)
+  border?: StyleState<{ style: string; color: string }>;
   
   /**
    * Get style state with mixed-value support

@@ -13,9 +13,11 @@ import { RibbonSelect } from './RibbonSelect';
 import { RibbonRow } from './RibbonRow';
 import { FontColorButton } from './FontColorButton';
 import { FillColorButton } from './FillColorButton';
+import { BorderButton } from './BorderButton';
 import type { SelectionState, CommandManager, StyleState, ColorValue } from './types';
 import type { Fill } from './fillTypes';
 import { solidFill } from './fillTypes';
+import type { BorderPayload } from './borderTypes';
 import './ribbon.css';
 
 export interface HomeTabProps {
@@ -153,6 +155,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
     [commandManager, selection]
   );
 
+  // Border command handler (range-aware, works with BorderPayload arrays)
+  const handleBorderApply = useCallback(
+    (payloads: BorderPayload[]) => {
+      // TODO: Import SetBorderCommand from @cyber-sheet/core
+      // commandManager.execute(new SetBorderCommand(selection, payloads));
+      console.log('Border apply:', payloads, 'for selection:', selection);
+    },
+    [commandManager, selection]
+  );
+
   return (
     <div className="ribbon-content">
       {/* ==================== Undo/Redo Group ==================== */}
@@ -224,6 +236,12 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
           <FillColorButton
             command={fillColorCommand}
             selectionFill={selection.fillColor}
+          />
+          
+          {/* Border Picker */}
+          <BorderButton
+            selectionBorder={selection.border}
+            onApply={handleBorderApply}
           />
         </RibbonRow>
       </RibbonGroup>

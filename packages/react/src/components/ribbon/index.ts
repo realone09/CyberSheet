@@ -35,9 +35,13 @@ export { RibbonRow, type RibbonRowProps } from './RibbonRow';
 // Color picker components
 export { FontColorButton, type FontColorButtonProps } from './FontColorButton';
 export { FillColorButton, type FillColorButtonProps } from './FillColorButton';
+export { BorderButton, type BorderButtonProps } from './BorderButton';
 export { ColorGrid, type ColorGridProps } from './ColorGrid';
 export { ColorDropdown, type ColorDropdownProps } from './ColorDropdown';
 export { PatternGrid, type PatternGridProps } from './PatternGrid';
+export { LineStyleGrid, type LineStyleGridProps } from './LineStyleGrid';
+export { BorderPresetGrid, type BorderPresetGridProps } from './BorderPresetGrid';
+export { BorderDropdown, type BorderDropdownProps } from './BorderDropdown';
 
 // Hooks
 export { useRecentColors } from './hooks/useRecentColors';
@@ -46,11 +50,14 @@ export { useRecentFills } from './hooks/useRecentFills';
 // Utilities
 export { resolveColor, isValidHexColor, normalizeColor, isMixedState, getDisplayColor } from './colorUtils';
 export { resolveFill, isMixedFill, getDisplayFill, fillEquals, serializeFill, deserializeFill, getPrimaryColor } from './fillUtils';
+export { resolveBorder, borderEquals, serializeBorder, deserializeBorder, isMixedBorder, getDisplayBorder, getBorderColor, withBorderColor, withBorderStyle, getBorderOperationDescription } from './borderUtils';
 
 // Constants
 export { THEME_COLORS, STANDARD_COLORS, AUTOMATIC_COLOR, NO_FILL_COLOR } from './colors';
 export { PATTERN_TYPES, GRADIENT_PRESETS, NO_FILL, solidFill, patternFill, gradientFill, isSolidFill, isPatternFill, isGradientFill } from './fillTypes';
+export { LINE_STYLES, BORDER_PRESETS, borderValue, getDefaultBorder, getPresetById, resolvePreset, getLineStyleMetadata } from './borderTypes';
 export type { Fill, PatternType, GradientStop, GradientDirection, PatternMetadata } from './fillTypes';
+export type { BorderStyle, BorderPosition, BorderPreset, BorderValue, BorderPayload, BorderPresetConfig } from './borderTypes';
 
 // Types
 export type {
@@ -58,6 +65,7 @@ export type {
   StyleState,
   FontColorCommand,
   FillColorCommand,
+  BorderCommand,
   SelectionState,
   CommandManager,
 } from './types';

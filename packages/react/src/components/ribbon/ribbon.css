@@ -670,3 +670,220 @@
     color: #f3f2f1;
   }
 }
+
+/* ==================== Border Split Button ==================== */
+
+.cs-border-split-button {
+  display: flex;
+  position: relative;
+  height: 32px;
+}
+
+.cs-border-main-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 2px 0 0 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cs-border-main-button:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+}
+
+.cs-border-dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0 2px 2px 0;
+  border-left: 1px solid #e1dfdd;
+  background: transparent;
+  color: #201f1e;
+  cursor: pointer;
+  font-size: 8px;
+  transition: background 0.1s ease;
+}
+
+.cs-border-dropdown-button:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+  border-left-color: #d2d0ce;
+}
+
+.cs-border-preview-icon {
+  font-size: 16px;
+  color: #201f1e;
+}
+
+.cs-border-split-button.mixed .cs-border-preview-icon {
+  opacity: 0.5;
+}
+
+/* ==================== Border Dropdown ==================== */
+
+.cs-border-dropdown {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #d1d1d1;
+  border-radius: 2px;
+  padding: 8px;
+  box-shadow: 0 3.2px 7.2px rgba(0, 0, 0, 0.132), 0 0.6px 1.8px rgba(0, 0, 0, 0.108);
+  z-index: 1000;
+  max-width: 420px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.cs-border-section {
+  margin-bottom: 12px;
+}
+
+.cs-border-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.cs-border-section-label {
+  font-size: 11px;
+  color: #605e5c;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.cs-section-subtitle {
+  font-size: 10px;
+  color: #605e5c;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.cs-border-separator {
+  height: 1px;
+  background: #e1dfdd;
+  margin: 8px 0;
+}
+
+/* ==================== Border Preset Grid ==================== */
+
+.cs-border-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+}
+
+.cs-border-preset-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  text-align: left;
+}
+
+.cs-border-preset-cell:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+}
+
+.cs-border-preset-cell.focused {
+  outline: 2px solid #0078d4;
+  outline-offset: 1px;
+}
+
+.cs-preset-icon {
+  font-size: 16px;
+  color: #201f1e;
+  flex-shrink: 0;
+}
+
+.cs-preset-label {
+  font-size: 11px;
+  color: #201f1e;
+  white-space: nowrap;
+}
+
+/* ==================== Line Style Grid ==================== */
+
+.cs-line-style-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cs-line-style-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cs-line-style-cell:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+}
+
+.cs-line-style-cell.selected {
+  border: 1px solid #0078d4;
+  background: #f3f9fd;
+}
+
+.cs-line-style-cell.focused {
+  outline: 2px solid #0078d4;
+  outline-offset: 1px;
+}
+
+.cs-line-preview {
+  flex-shrink: 0;
+}
+
+.cs-line-style-label {
+  font-size: 11px;
+  color: #201f1e;
+}
+
+/* ==================== Standard Colors (Reused for Borders) ==================== */
+
+.cs-standard-colors {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.cs-color-swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #d1d1d1;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.1s ease, transform 0.1s ease;
+}
+
+.cs-color-swatch:hover {
+  border-color: #605e5c;
+  transform: scale(1.1);
+}
+
+.cs-color-swatch.selected {
+  border: 2px solid #0078d4;
+}
