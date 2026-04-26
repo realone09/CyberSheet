@@ -127,6 +127,11 @@ export interface SelectionState {
   // Border support (style + color)
   border?: StyleState<{ style: string; color: string }>;
   
+  // Alignment support (compound state)
+  horizontalAlign?: StyleState<"left" | "center" | "right" | "justify">;
+  verticalAlign?: StyleState<"top" | "middle" | "bottom">;
+  wrapText?: StyleState<boolean>;
+  
   /**
    * Get style state with mixed-value support
    * 

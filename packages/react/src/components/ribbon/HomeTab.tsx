@@ -14,6 +14,7 @@ import { RibbonRow } from './RibbonRow';
 import { FontColorButton } from './FontColorButton';
 import { FillColorButton } from './FillColorButton';
 import { BorderButton } from './BorderButton';
+import { AlignmentGroup } from './AlignmentGroup';
 import type { SelectionState, CommandManager, StyleState, ColorValue } from './types';
 import type { Fill } from './fillTypes';
 import { solidFill } from './fillTypes';
@@ -165,6 +166,37 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
     [commandManager, selection]
   );
 
+  // Alignment handlers (compound state: horizontal × vertical × wrap)
+  const handleHorizontalAlignChange = useCallback(
+    (align: "left" | "center" | "right" | "justify") => {
+      // TODO: Import SetAlignmentCommand from @cyber-sheet/core
+      // commandManager.execute(new SetAlignmentCommand(selection, { horizontal: align }));
+      console.log('Horizontal align change:', align);
+    },
+    [commandManager, selection]
+  );
+
+  const handleVerticalAlignChange = useCallback(
+    (align: "top" | "middle" | "bottom") => {
+      // TODO: Import SetAlignmentCommand from @cyber-sheet/core
+      // commandManager.execute(new SetAlignmentCommand(selection, { vertical: align }));
+      console.log('Vertical align change:', align);
+    },
+    [commandManager, selection]
+  );
+
+  const handleWrapTextToggle = useCallback(() => {
+    // TODO: Import ToggleWrapCommand from @cyber-sheet/core
+    // commandManager.execute(new ToggleWrapCommand(selection));
+    console.log('Wrap text toggle');
+  }, [commandManager, selection]);
+
+  const handleMergeClick = useCallback(() => {
+    // TODO: Import MergeCellsCommand from @cyber-sheet/core
+    // commandManager.execute(new MergeCellsCommand(selection, 'center'));
+    console.log('Merge cells');
+  }, [commandManager, selection]);
+
   return (
     <div className="ribbon-content">
       {/* ==================== Undo/Redo Group ==================== */}
@@ -246,10 +278,22 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
         </RibbonRow>
       </RibbonGroup>
 
+      {/* ==================== Alignment Group ==================== */}
+      <RibbonGroup title="Alignment">
+        <AlignmentGroup
+          horizontalAlign={selection.horizontalAlign}
+          verticalAlign={selection.verticalAlign}
+          wrapText={selection.wrapText}
+          onHorizontalAlignChange={handleHorizontalAlignChange}
+          onVerticalAlignChange={handleVerticalAlignChange}
+          onWrapTextToggle={handleWrapTextToggle}
+          onMergeClick={handleMergeClick}
+        />
+      </RibbonGroup>
+
       {/* 
         Future Groups (Phase 1 completion):
         - Clipboard (Cut, Copy, Paste, Paste Special) - Week 4-5
-        - Alignment (Left, Center, Right, Justify) - Phase 2
         - Number Format - Phase 2
         - Styles - Phase 3
         - Cells (Insert, Delete, Format) - Week 5

@@ -31,6 +31,10 @@ export { RibbonButton, type RibbonButtonProps } from './RibbonButton';
 export { RibbonGroup, type RibbonGroupProps } from './RibbonGroup';
 export { RibbonSelect, type RibbonSelectProps } from './RibbonSelect';
 export { RibbonRow, type RibbonRowProps } from './RibbonRow';
+export { RibbonToggleGroup, type RibbonToggleGroupProps, HorizontalAlignGroup, VerticalAlignGroup } from './RibbonToggleGroup';
+
+// Feature groups
+export { AlignmentGroup, type AlignmentGroupProps } from './AlignmentGroup';
 
 // Color picker components
 export { FontColorButton, type FontColorButtonProps } from './FontColorButton';
@@ -46,11 +50,16 @@ export { BorderDropdown, type BorderDropdownProps } from './BorderDropdown';
 // Hooks
 export { useRecentColors } from './hooks/useRecentColors';
 export { useRecentFills } from './hooks/useRecentFills';
+export { useGridNavigation, useListNavigation, type UseGridNavigationOptions, type UseGridNavigationResult } from './hooks/useGridNavigation';
 
 // Utilities
 export { resolveColor, isValidHexColor, normalizeColor, isMixedState, getDisplayColor } from './colorUtils';
 export { resolveFill, isMixedFill, getDisplayFill, fillEquals, serializeFill, deserializeFill, getPrimaryColor } from './fillUtils';
 export { resolveBorder, borderEquals, serializeBorder, deserializeBorder, isMixedBorder, getDisplayBorder, getBorderColor, withBorderColor, withBorderStyle, getBorderOperationDescription } from './borderUtils';
+export { resolveStyleState, isMixedState as isMixedStyleState, getDisplayValue, hasDefinedValue, resolveAlignment, resolveBoolean, updateStyleState, mergeStyleStates } from './styleStateUtils';
+
+// Shared components
+export { DropdownSection, type DropdownSectionProps } from './DropdownSection';
 
 // Constants
 export { THEME_COLORS, STANDARD_COLORS, AUTOMATIC_COLOR, NO_FILL_COLOR } from './colors';
@@ -69,6 +78,19 @@ export type {
   SelectionState,
   CommandManager,
 } from './types';
+
+// Command contracts (strict typing)
+export type {
+  Command,
+  FontColorPayload,
+  FillPayload,
+  BorderOperation,
+  BorderPayload,
+  AlignmentPayload,
+  AlignmentCommand,
+  CommandExecutionContext,
+} from './commandContract';
+export { isCommand, validatePayload } from './commandContract';
 
     }
   }

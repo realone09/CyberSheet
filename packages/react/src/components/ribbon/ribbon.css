@@ -887,3 +887,115 @@
 .cs-color-swatch.selected {
   border: 2px solid #0078d4;
 }
+
+/* ==================== Ribbon Toggle Group (NEW) ==================== */
+
+.cs-ribbon-toggle-group {
+  display: flex;
+  gap: 0;
+  border-radius: 2px;
+}
+
+.cs-ribbon-toggle-group .ribbon-btn {
+  border-radius: 0;
+  border-right: none;
+}
+
+.cs-ribbon-toggle-group .ribbon-btn:first-child {
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+
+.cs-ribbon-toggle-group .ribbon-btn:last-child {
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+  border-right: 1px solid transparent;
+}
+
+.cs-ribbon-toggle-group .ribbon-btn.active {
+  background: #e1dfdd;
+  border-color: #d2d0ce;
+  z-index: 1;
+}
+
+.cs-ribbon-toggle-group .ribbon-btn:hover:not(:disabled) {
+  z-index: 2;
+}
+
+/* ==================== Merge Split Button (NEW) ==================== */
+
+.cs-merge-split-button {
+  display: flex;
+  position: relative;
+  height: 32px;
+}
+
+.cs-merge-main-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 2px 0 0 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cs-merge-main-button:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+}
+
+.cs-merge-dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0 2px 2px 0;
+  border-left: 1px solid #e1dfdd;
+  background: transparent;
+  color: #201f1e;
+  cursor: pointer;
+  font-size: 8px;
+  transition: background 0.1s ease;
+}
+
+.cs-merge-dropdown-button:hover {
+  background: #edebe9;
+  border-color: #edebe9;
+  border-left-color: #d2d0ce;
+}
+
+/* ==================== GenericDropdown Section Styles (NEW) ==================== */
+
+.cs-dropdown-section {
+  margin-bottom: 12px;
+}
+
+.cs-dropdown-section:last-child {
+  margin-bottom: 0;
+}
+
+.cs-dropdown-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #605e5c;
+  margin-bottom: 6px;
+}
+
+.cs-dropdown-section-subtitle {
+  font-size: 10px;
+  color: #605e5c;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.cs-dropdown-section-content {
+  /* Content inherits natural layout */
+}
