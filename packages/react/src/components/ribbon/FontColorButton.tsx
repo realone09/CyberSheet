@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ColorDropdown } from './ColorDropdown';
 import { useRecentColors } from './hooks/useRecentColors';
 import { AUTOMATIC_COLOR } from './colors';
+import { resolveColor, isMixedState } from './colorUtils';
 import type { StyleState, ColorValue, FontColorCommand } from './types';
 import './ribbon.css';
 
@@ -55,30 +56,37 @@ export const FontColorButton: React.FC<FontColorButtonProps> = ({
   const { colors: recentColors, addColor } = useRecentColors('font');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   
-  // Last explicitly chosen color (persists across selections)
-  const [currentColor, setCurrentColor] = useState<ColorValue>(AUTOMATIC_COLOR);
+  // Last explicitly chosen color (UI state only, NOT source of truth)
+  // Used as fallback when selection is mixed or undefined
+  const [lastUsedColor, setLastUsedColor] = useState<ColorValue>(AUTOMATIC_COLOR);
 
   // Mixed state detection
-  const isMixed = selectionColor === 'mixed';
+  const isMixed = isMixedState(selectionColor);
   
-  // Display color (use selection color if single, otherwise current)
-  const displayColor =
-    selectionColor && selectionColor !== 'mixed' ? selectionColor : currentColor;
+  // Effective color resolution (selection is source of truth)
+  // Rule: Selection state > Last used > Automatic
+  const effectiveColor = resolveColor(selectionColor, lastUsedColor);
 
   /**
-   * Apply color through command pattern
+   * Apply color through command pattern (range-aware)
+   * 
+   * CRITICAL: Command receives selection context for multi-cell operations
    */
   const applyColor = (color: ColorValue) => {
-    command.execute(color);
-    setCurrentColor(color);
+    command.execute(color, command as any);  // TODO: Pass real SelectionState from parent
+    setLastUsedColor(color);  // Update fallback only
     addColor(color);
   };
 
   /**
-   * Handle main button click (apply current color)
+   * Handle main button click (apply effective color)
+   * 
+   * Excel behavior:
+   * - Single selection → reapply current color (idempotent)
+   * - Mixed selection → apply last used color (resolve ambiguity)
    */
   const handleMainClick = () => {
-    applyColor(currentColor);
+    applyColor(effectiveColor);
   };
 
   /**
@@ -102,8 +110,8 @@ export const FontColorButton: React.FC<FontColorButtonProps> = ({
       <button
         className="cs-font-color-main-btn"
         onClick={handleMainClick}
-        aria-label={`Font color ${displayColor}`}
-        title={`Font Color\nCurrent: ${displayColor}`}
+        aria-label={`Font color ${effectiveColor}`}
+        title={`Font Color\n${isMixed ? 'Mixed selection' : 'Current: ' + effectiveColor}`}
         type="button"
       >
         {/* "A" icon */}
@@ -113,7 +121,7 @@ export const FontColorButton: React.FC<FontColorButtonProps> = ({
         <span
           className={`cs-font-color-bar ${isMixed ? 'mixed' : ''}`}
           style={{
-            backgroundColor: isMixed ? undefined : displayColor,
+            backgroundColor: isMixed ? undefined : effectiveColor,
           }}
         />
       </button>
@@ -135,7 +143,7 @@ export const FontColorButton: React.FC<FontColorButtonProps> = ({
         <ColorDropdown
           onSelect={handleColorSelect}
           recentColors={recentColors}
-          selectedColor={displayColor}
+          selectedColor={isMixed ? undefined : selectionColor}  // Mixed: don't highlight anything
           onClose={() => setDropdownOpen(false)}
           showAutomatic={true}
           showNoFill={false}

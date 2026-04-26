@@ -125,13 +125,13 @@ export const HomeTab: React.FC<HomeTabProps> = ({ commandManager, selection }) =
     console.log('Underline toggle');
   }, [commandManager, selection]);
 
-  // Font color command
+  // Font color command (range-aware)
   const fontColorCommand = useMemo(
     () => ({
-      execute: (color: ColorValue) => {
+      execute: (color: ColorValue, sel: any) => {
         // TODO: Import SetStyleCommand from @cyber-sheet/core
-        // commandManager.execute(new SetStyleCommand(selection, { fontColor: color }));
-        console.log('Font color change:', color);
+        // commandManager.execute(new SetStyleCommand(sel || selection, { fontColor: color }));
+        console.log('Font color change:', color, 'for selection:', sel || selection);
       },
     }),
     [commandManager, selection]

@@ -37,12 +37,24 @@ export type StyleState<T> = T | "mixed" | undefined;
  * Command interface for font color operations
  * 
  * Implementations must:
- * 1. Apply color to all cells in current selection
+ * 1. Apply color to entire selection range (respecting merged cells, protected cells)
  * 2. Support undo/redo through CommandManager
  * 3. Emit events for UI updates
+ * 
+ * CRITICAL: Must be range-aware. Selection may be:
+ * - Single cell (A1)
+ * - Range (A1:B10)
+ * - Non-contiguous (A1,C3,E5)
+ * - Merged cells (respect merge boundaries)
+ * - Protected cells (skip or fail based on policy)
  */
 export interface FontColorCommand {
-  execute(color: ColorValue): void;
+  /**
+   * Apply color to selection
+   * @param color - Hex color value or AUTOMATIC_COLOR
+   * @param selection - Current selection range(s)
+   */
+  execute(color: ColorValue, selection: SelectionState): void;
 }
 
 /**
@@ -51,7 +63,12 @@ export interface FontColorCommand {
  * Same contract as FontColorCommand but applies to cell background
  */
 export interface FillColorCommand {
-  execute(color: ColorValue): void;
+  /**
+   * Apply fill color to selection
+   * @param color - Hex color value, NO_FILL_COLOR, or pattern/gradient spec
+   * @param selection - Current selection range(s)
+   */
+  execute(color: ColorValue, selection: SelectionState): void;
 }
 
 /**

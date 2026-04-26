@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import './ribbon.css';
 
 export interface ColorGridProps {
@@ -46,19 +46,74 @@ export const ColorGrid: React.FC<ColorGridProps> = ({
   onSelect,
   selectedColor,
 }) => {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [focusedCell, setFocusedCell] = useState<{ col: number; row: number } | null>(null);
+
+  // Keyboard navigation (arrow keys)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!focusedCell) return;
+
+      const { col, row } = focusedCell;
+      let newCol = col;
+      let newRow = row;
+
+      switch (e.key) {
+        case 'ArrowRight':
+          newCol = Math.min(col + 1, colors.length - 1);
+          e.preventDefault();
+          break;
+        case 'ArrowLeft':
+          newCol = Math.max(col - 1, 0);
+          e.preventDefault();
+          break;
+        case 'ArrowDown':
+          newRow = Math.min(row + 1, colors[col].length - 1);
+          e.preventDefault();
+          break;
+        case 'ArrowUp':
+          newRow = Math.max(row - 1, 0);
+          e.preventDefault();
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          onSelect(colors[col][row]);
+          return;
+        default:
+          return;
+      }
+
+      setFocusedCell({ col: newCol, row: newRow });
+
+      // Focus the new cell
+      const button = gridRef.current?.querySelector(
+        `[data-col="${newCol}"][data-row="${newRow}"]`
+      ) as HTMLButtonElement;
+      button?.focus();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [focusedCell, colors, onSelect]);
+
   return (
-    <div className="cs-color-grid" role="grid" aria-label="Color grid">
+    <div ref={gridRef} className="cs-color-grid" role="grid" aria-label="Color grid">
       {colors.map((column, colIdx) => (
         <div key={colIdx} className="cs-color-column" role="row">
           {column.map((color, rowIdx) => {
             const isSelected = color === selectedColor;
+            const isFocused = focusedCell?.col === colIdx && focusedCell?.row === rowIdx;
             
             return (
               <button
                 key={`${colIdx}-${rowIdx}`}
-                className={`cs-color-cell ${isSelected ? 'selected' : ''}`}
+                data-col={colIdx}
+                data-row={rowIdx}
+                className={`cs-color-cell ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}`}
                 style={{ backgroundColor: color }}
                 onClick={() => onSelect(color)}
+                onFocus={() => setFocusedCell({ col: colIdx, row: rowIdx })}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -69,6 +124,7 @@ export const ColorGrid: React.FC<ColorGridProps> = ({
                 title={color}
                 type="button"
                 role="gridcell"
+                tabIndex={isFocused ? 0 : -1}
               />
             );
           })}

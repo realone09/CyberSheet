@@ -40,6 +40,9 @@ export { ColorDropdown, type ColorDropdownProps } from './ColorDropdown';
 // Hooks
 export { useRecentColors } from './hooks/useRecentColors';
 
+// Utilities
+export { resolveColor, isValidHexColor, normalizeColor, isMixedState, getDisplayColor } from './colorUtils';
+
 // Constants
 export { THEME_COLORS, STANDARD_COLORS, AUTOMATIC_COLOR, NO_FILL_COLOR } from './colors';
 
