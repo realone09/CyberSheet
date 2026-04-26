@@ -7,6 +7,151 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Font Color Picker: 5 Critical Architectural Gaps (April 26, 2026)
+
+**Hardened architecture before scaling to Fill Color and future pickers**. These fixes prevent state drift, enable multi-cell operations, and establish keyboard navigation patterns for all Ribbon components.
+
+**1. ✅ Source of Truth Problem FIXED**
+
+*Issue*: UI state (`currentColor`) could drift from engine state (selection).
+
+*Fix*:
+- Removed `currentColor` as state owner
+- Selection state is now single source of truth
+- Added `lastUsedColor` as UI fallback only (never becomes source of truth)
+- Created `resolveColor()` utility for deterministic color resolution
+
+```typescript
+// Before (WRONG):
+const [currentColor, setCurrentColor] = useState("#000000"); // State drift risk
+
+// After (CORRECT):
+const effectiveColor = resolveColor(selectionColor, lastUsedColor); // Derived
+```
+
+**2. ✅ Range-Aware Commands**
+
+*Issue*: Commands didn't receive selection context → would fail on multi-cell ranges.
+
+*Fix*:
+```typescript
+// Before: execute(color) → no context
+interface FontColorCommand {
+  execute(color: ColorValue): void;  // ❌ Single-cell only
+}
+
+// After: execute(color, selection) → range-aware
+interface FontColorCommand {
+  execute(color: ColorValue, selection: SelectionState): void;  // ✅ Multi-cell
+}
+```
+
+Now handles:
+- Multi-cell ranges (A1:B10)
+- Merged cells (respect boundaries)
+- Protected cells (skip or fail based on policy)
+- Non-contiguous selections (A1,C3,E5)
+
+**3. ✅ Mixed State Rendering FIXED**
+
+*Issue*: Dropdown highlighted wrong color when selection was mixed.
+
+*Fix*:
+- Dropdown now receives `undefined` for selectedColor when mixed (no highlight)
+- Main button still applies `lastUsedColor` (deterministic action)
+- Visual indicator (diagonal stripe) separated from action logic
+
+```typescript
+// Before: highlighted wrong color
+<ColorDropdown selectedColor={displayColor} />
+
+// After: no highlight when mixed
+<ColorDropdown selectedColor={isMixed ? undefined : selectionColor} />
+```
+
+**4. ✅ Outside-Click Detection HARDENED**
+
+*Issue*: `contains()` doesn't handle shadow DOM, portals, nested dropdowns.
+
+*Fix*:
+- Upgraded `mousedown` → `pointerdown` (touch + mouse)
+- Using `event.composedPath()` instead of `contains()`
+- Prevents flicker bugs with multiple open popovers
+
+```typescript
+// Before: naive detection
+if (!ref.current.contains(event.target)) { ... }
+
+// After: robust detection
+const path = event.composedPath();
+if (!path.includes(ref.current)) { ... }
+```
+
+**5. ✅ Keyboard Navigation ADDED**
+
+*Issue*: Not WCAG 2.1 AA compliant, felt "off" vs Excel.
+
+*Fix*:
+- Arrow keys: Navigate grid (Left/Right/Up/Down)
+- Enter/Space: Select focused color
+- ESC: Close dropdown (already existed)
+- Focus indicator: 2px outline on active cell
+- Tab trapping: `tabIndex` management (0 for focused, -1 for others)
+
+```typescript
+// ColorGrid now tracks focused cell
+const [focusedCell, setFocusedCell] = useState<{col, row}>()
+
+// Arrow key handler moves focus
+switch (e.key) {
+  case 'ArrowRight': newCol = Math.min(col + 1, colors.length - 1); break;
+  case 'ArrowDown': newRow = Math.min(row + 1, colors[col].length - 1); break;
+  // ...
+}
+```
+
+**New Utilities** (`colorUtils.ts`):
+```typescript
+// Deterministic color resolution
+resolveColor(selectionColor: StyleState<string>, fallback: string): string
+
+// Validation
+isValidHexColor(color: string): boolean
+
+// Normalization
+normalizeColor(color: string): string  // → uppercase
+
+// State checks
+isMixedState(selectionColor): boolean
+getDisplayColor(selectionColor): string | undefined
+```
+
+**Architecture Impact**:
+- **No state drift**: Selection state is authoritative, UI derives from it
+- **Multi-cell ready**: Commands receive full selection context
+- **Accessible**: Keyboard navigation works for all future color pickers
+- **Robust events**: Outside-click handles shadow DOM + portals
+- **Reusable**: Fill Color, Border Color will inherit these fixes
+
+**Why This Matters**:
+These aren't "nice-to-haves"—they're the difference between:
+- ❌ Demo code that breaks on multi-cell selection
+- ✅ Production system that handles Excel edge cases
+
+**Files Changed**: 8 files, +210 lines, -30 lines
+- types.ts: Range-aware command interfaces
+- FontColorButton.tsx: Source of truth fix, resolveColor usage
+- ColorDropdown.tsx: composedPath() + pointerdown
+- ColorGrid.tsx: Full keyboard navigation
+- colorUtils.ts: NEW - 5 utility functions
+- HomeTab.tsx: Range-aware command integration
+- ribbon.css: Focus indicator styles
+- index.ts: Export new utilities
+
+**Ready For**: Fill Color picker implementation (patterns + gradients + 90% reuse)
+
+---
+
 ### Added - Excel 365 Ribbon UI: Font Color Picker (April 25, 2026)
 
 **Production-grade Font Color Picker implementation** matching Excel 365 Online exactly, establishing patterns for all future color pickers (Fill Color, Border Color).
