@@ -27,16 +27,17 @@ export * from './StyleCache';
 export * from './CommandManager';
 export * from './CellLayout';
 export * from './ConditionalFormattingEngine';
+export * from './ConditionalFormattingBatchEngine';
 export * from './models/ChartObject';
 export * from './models/AdvancedChartOptions';
 
 // Provider infrastructure (PR #3, PR #4)
-export { BatchResolver } from './providers/BatchResolver';
-export { ThrottlePolicy, WindowThrottle } from './providers/ThrottlePolicy';
-export { QuotaManager } from './providers/QuotaManager';
-export { HttpObservability } from './providers/HttpObservability';
-export { AlphaVantageDriver } from './providers/AlphaVantageDriver';
-export { MetricsCollector, MetricsReport, formatMetricsReport } from './providers/MetricsCollector';
+export * from './providers/BatchResolver';
+export * from './providers/ThrottlePolicy';
+export * from './providers/QuotaManager';
+export * from './providers/HttpObservability';
+export * from './providers/AlphaVantageDriver';
+export * from './providers/MetricsCollector';
 
 // General Search API (Phase 1: Core Search)
-export { SearchOptions, SearchRange, SearchResult, SearchLookIn, SearchLookAt, SearchOrder, SearchDirection } from './types/search-types';
+export * from './types/search-types';

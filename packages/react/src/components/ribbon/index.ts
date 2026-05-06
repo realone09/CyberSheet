@@ -64,6 +64,11 @@ export { ContextResolver, contextResolver } from './keyboard/ContextResolver';
 export { registerStandardShortcuts, STANDARD_SHORTCUTS, BOLD_SHORTCUT, ITALIC_SHORTCUT, UNDERLINE_SHORTCUT, UNDO_SHORTCUT, REDO_SHORTCUT } from './keyboard/shortcuts';
 export type { InteractionContext, ShortcutContext, ShortcutDefinition, ParsedShortcut, IShortcutRegistry, IContextResolver } from './keyboard/types';
 
+// Behavioral Validation (Test Harness)
+export { shortcutEventRecorder, ShortcutEventRecorder, type RecordedShortcutEvent, type EventSequence, type ReplayResult, type ReplayOptions, type SequenceAnalysis, type FailureType, type FailureSeverity, type ClassifiedFailure } from './keyboard/ShortcutEventRecorder';
+export { KeyboardContextOverlay, KeyboardContextBadge, type KeyboardContextOverlayProps } from './keyboard/KeyboardContextOverlay';
+export { diagnostics, printReplayResult, printSequenceAnalysis, exportDiagnosticReport } from './keyboard/DiagnosticReporter';
+
 // Utilities
 export { resolveColor, isValidHexColor, normalizeColor, isMixedState, getDisplayColor } from './colorUtils';
 export { resolveFill, isMixedFill, getDisplayFill, fillEquals, serializeFill, deserializeFill, getPrimaryColor } from './fillUtils';

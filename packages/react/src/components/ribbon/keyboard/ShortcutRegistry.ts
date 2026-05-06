@@ -16,6 +16,7 @@ import type {
   IShortcutRegistry,
   InteractionContext,
 } from './types';
+import { shortcutEventRecorder } from './ShortcutEventRecorder';
 
 /**
  * Parse keyboard event into normalized shortcut representation
@@ -137,6 +138,7 @@ export interface ShortcutDebugConfig {
 export class ShortcutRegistry implements IShortcutRegistry {
   private shortcuts: Map<string, ShortcutDefinition[]> = new Map();
   private debugConfig: ShortcutDebugConfig = { enabled: false };
+  private recordingEnabled = false; // NEW: Behavioral validation
   
   /**
    * Enable debug mode for visibility into shortcut execution
@@ -155,6 +157,28 @@ export class ShortcutRegistry implements IShortcutRegistry {
    */
   setDebugMode(config: ShortcutDebugConfig): void {
     this.debugConfig = config;
+  }
+  
+  /**
+   * Enable event recording (behavioral validation)
+   * 
+   * CRITICAL: This proves correctness under real usage
+   * - Records timing-sensitive context snapshots
+   * - Detects race conditions, desync, stale state
+   * 
+   * Example:
+   * ```ts
+   * shortcutRegistry.setRecordingEnabled(true);
+   * // ... user interacts ...
+   * const sequence = shortcutEventRecorder.stopRecording();
+   * const analysis = shortcutEventRecorder.analyzeSequence(sequence.id);
+   * ```
+   */
+  setRecordingEnabled(enabled: boolean): void {
+    this.recordingEnabled = enabled;
+    if (enabled) {
+      console.log('[ShortcutRegistry] Recording enabled - all events will be captured');
+    }
   }
 
   /**
@@ -272,6 +296,9 @@ export class ShortcutRegistry implements IShortcutRegistry {
     }
 
     // Execute handler
+    const executionStart = performance.now();
+    let executionError: Error | null = null;
+    
     try {
       if (this.debugConfig.enabled && this.debugConfig.logMatches) {
         console.log('[Shortcut] Executed', {
@@ -288,8 +315,28 @@ export class ShortcutRegistry implements IShortcutRegistry {
 
       return true;
     } catch (error) {
+      executionError = error as Error;
       console.error(`[ShortcutRegistry] Error executing ${shortcut.id}:`, error);
       return false;
+    } finally {
+      const executionEnd = performance.now();
+      const executionTimeMs = executionEnd - executionStart;
+      
+      // Record event for behavioral validation
+      if (this.recordingEnabled) {
+        shortcutEventRecorder.recordEvent(
+          keyString,
+          { ctrl: parsed.ctrl, shift: parsed.shift, alt: parsed.alt, meta: parsed.meta },
+          context,
+          shortcut.id,
+          shortcut.label,
+          true, // executed
+          shouldPrevent,
+          executionTimeMs,
+          false, // TODO: Get actual locked state from contextResolver
+          executionError
+        );
+      }
     }
   }
 

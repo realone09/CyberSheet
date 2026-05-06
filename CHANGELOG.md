@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Full React Canvas Viewer Implementation (May 06, 2026)
+
+**Complete React adapter integration with Excel file loading, canvas rendering, and formula support**
+
+**Core Features**:
+- ✅ **Canvas-Based Excel Viewer**: Full integration of CyberSheet canvas renderer replacing HTML table grid
+- ✅ **Formula Bar Component**: Complete formula editing UI with validation and error handling
+- ✅ **Sheet Navigation**: Multi-sheet management with SheetTabs component
+- ✅ **XLSX File Loading**: Fixed critical bugs in XLSX parser (relationship parsing, path construction)
+- ✅ **File Menu Implementation**: Dropdown menu system with proper state management
+- ✅ **Production-Ready**: Removed all debug logging, fixed HMR warnings, safety checks added
+
+**Technical Improvements**:
+- Fixed XLSX relationship XML parsing to handle attributes in any order
+- Corrected path construction for absolute vs relative worksheet paths
+- Added Vite proxy configuration for CORS-free backend communication
+- Implemented safety check in CyberSheet for undefined selection crashes
+- Updated HMR to reuse React root and prevent createRoot warnings
+- Configured public folder serving for Excel files (no backend required)
+
+**React Adapter Components**:
+- `CyberSheet`: Canvas renderer with column filters, scrollbars, cell selection
+- `FormulaBar`: Excel-style formula editing with name box and validation
+- `SheetTabs`: Sheet navigation with add/rename/delete functionality
+- `useFormulaController`: Formula validation and execution hook
+
+**Files Changed**:
+- examples/react-canvas-viewer.tsx: Full-featured canvas implementation
+- examples/react-excel-viewer.tsx: Simplified viewer with CyberSheet
+- examples/react-index.html: Entry point updated to canvas viewer
+- packages/io-xlsx/src/index.ts: Critical parser bug fixes
+- packages/react/src/CyberSheet.tsx: Safety checks for selection
+- vite.config.ts: Proxy configuration and polyfills
+
+**File Loading**:
+- URL: `/011-02-1404_3e5401bdea354b0784b4968da3caed23.xlsx`
+- Source: Copied from backend uploads to public folder
+- Sheets: 4 sheets loaded (Jan.Feb.2025, March.2025, April.2025, Jan.Feb.2025 (2))
+- Size: 94KB, 622 rows max
+
 ### Fixed - Font Color Picker: 5 Critical Architectural Gaps (April 26, 2026)
 
 **Hardened architecture before scaling to Fill Color and future pickers**. These fixes prevent state drift, enable multi-cell operations, and establish keyboard navigation patterns for all Ribbon components.

@@ -225,6 +225,7 @@ export const CyberSheet = ({ workbook, sheetName, rendererOptions, style, physic
         // Start auto-fill drag
         const idx = (hit as any).rangeIndex;
         const sel = selections[idx];
+        if (!sel) return; // Safety check for undefined selection
         const r1 = Math.min(sel.start.row, sel.end.row);
         const r2 = Math.max(sel.start.row, sel.end.row);
         const c1 = Math.min(sel.start.col, sel.end.col);

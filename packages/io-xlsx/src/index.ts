@@ -32,13 +32,22 @@ export function loadXlsxFromArrayBuffer(data: Uint8Array): Workbook {
   // Parse workbook rels to find sheets
   const wbXml = getText('xl/workbook.xml');
   if (!wbXml) throw new Error('Invalid XLSX: missing workbook.xml');
+  
   const sheetEntries = Array.from(wbXml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"[^>]*r:id="([^"]+)"/g)).map((m) => {
     const mm = m as unknown as RegExpMatchArray; return { name: mm[1], id: mm[2], rid: mm[3] };
   });
   const relsXml = getText('xl/_rels/workbook.xml.rels') || '';
-  const rels = new Map(Array.from(relsXml.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g)).map((m) => {
-    const mm = m as unknown as RegExpMatchArray; return [mm[1], mm[2]] as const;
-  }));
+  
+  // Fix: Parse Id and Target separately since they can appear in any order
+  const rels = new Map(Array.from(relsXml.matchAll(/<Relationship[^>]*?\/>/g)).map((m) => {
+    const rel = m[0];
+    const idMatch = rel.match(/Id="([^"]+)"/);
+    const targetMatch = rel.match(/Target="([^"]+)"/);
+    if (idMatch && targetMatch) {
+      return [idMatch[1], targetMatch[1]] as const;
+    }
+    return null;
+  }).filter(Boolean) as Array<readonly [string, string]>);
 
   // Shared strings
   const sstXml = getText('xl/sharedStrings.xml') || '';
@@ -53,7 +62,8 @@ export function loadXlsxFromArrayBuffer(data: Uint8Array): Workbook {
   for (const s of sheetEntries) {
     const target = rels.get(s.rid);
     if (!target) continue;
-    const path = 'xl/' + target.replace(/^\//, '');
+    // Fix: handle both absolute (/xl/worksheets/sheet1.xml) and relative (worksheets/sheet1.xml) paths
+    const path = target.startsWith('/') ? target.slice(1) : 'xl/' + target;
     const sheetXml = getText(path);
     if (!sheetXml) continue;
     
@@ -122,6 +132,7 @@ export function loadXlsxFromArrayBuffer(data: Uint8Array): Workbook {
       }
     }
   }
+  
   return wb;
 }
 

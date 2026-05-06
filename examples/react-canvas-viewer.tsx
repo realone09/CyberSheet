@@ -7,7 +7,8 @@ import { SheetTabs } from '../packages/react/src/SheetTabs';
 import { useFormulaController } from '../packages/react/src/useFormulaController';
 import type { Address } from '../packages/core/src/types';
 
-const DEFAULT_URL = '/api/uploads/APRIL%202025%20END%20EDIT%2011-02-1404_3e5401bdea354b0784b4968da3caed23.xlsx';
+// Serve from public folder (no backend needed)
+const DEFAULT_URL = '/011-02-1404_3e5401bdea354b0784b4968da3caed23.xlsx';
 
 export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
   const [workbook, setWorkbook] = useState<any>(null);
@@ -21,6 +22,7 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
   const [filterMenu, setFilterMenu] = useState<{ col: number; x: number; y: number; values: Array<{ value: string; count: number }>; apply: (sel: string[]) => void; clear: () => void } | null>(null);
   const [filterSel, setFilterSel] = useState<Set<string>>(new Set());
   const [filterSearch, setFilterSearch] = useState('');
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const rendererRef = useRef<any>(null);
   const [scroll, setScroll] = useState({ x: 0, y: 0, maxX: 0, maxY: 0 });
   const [headerIcons, setHeaderIcons] = useState<Array<{ col: number; x: number; w: number }>>([]);
@@ -42,7 +44,6 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
 
   // Reset scroll when sheet changes to prevent duplicate scrollbars
   useEffect(() => {
-    console.log('🔄 Sheet changed to:', sheetName);
     if (rendererRef.current) {
       // Reset scroll position and state when switching sheets
       rendererRef.current.setScroll?.(0, 0);
@@ -164,6 +165,19 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
     return () => document.removeEventListener('click', onDocClick);
   }, [filterMenu]);
 
+  // Close menu dropdown when clicking outside
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!openMenu) return;
+      const target = e.target as HTMLElement;
+      if (!target.closest('.menu-item')) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [openMenu]);
+
   if (loadError) {
     return (
       <div style={{ padding: 24, maxWidth: 800, margin: '40px auto', fontFamily: 'system-ui' }}>
@@ -261,18 +275,6 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
         if (rendererRef.current) {
           rendererRef.current.redraw();
         }
-        const updatedValue = activeSheet.getCellValue(selectedCell);
-        console.log('Formula submitted:', formula);
-        console.log('Selected cell:', selectedCell);
-        console.log('Calculated value:', updatedValue);
-        
-        // Also log the values from the referenced cells for debugging
-        const cellsInFormula = formula.match(/[A-Z]+\d+/g) || [];
-        cellsInFormula.forEach(cellRef => {
-          const addr = parseCellRef(cellRef);
-          const val = activeSheet.getCellValue(addr);
-          console.log(`Cell ${cellRef} (${addr.row},${addr.col}):`, val);
-        });
       } else {
         setValidationError(result.error);
       }
@@ -356,7 +358,27 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
         </div>
       </div>
       <div className="menu-bar">
-        <div className="menu-item">File</div>
+        <div 
+          className={`menu-item ${openMenu === 'file' ? 'active' : ''}`}
+          onClick={() => {
+            const newValue = openMenu === 'file' ? null : 'file';
+            setOpenMenu(newValue);
+          }}
+        >
+          File
+          {openMenu === 'file' && (
+            <div className="menu-dropdown visible" onClick={(e) => e.stopPropagation()}>
+                <div className="menu-dropdown-item">📄 New</div>
+                <div className="menu-dropdown-item">📂 Open...</div>
+                <div className="menu-dropdown-item">💾 Save</div>
+                <div className="menu-dropdown-item">💾 Save As...</div>
+                <div className="menu-dropdown-divider" />
+                <div className="menu-dropdown-item">🖨️ Print</div>
+                <div className="menu-dropdown-divider" />
+                <div className="menu-dropdown-item">❌ Close</div>
+              </div>
+            )}
+        </div>
         <div className="menu-item">Home</div>
         <div className="menu-item">Insert</div>
         <div className="menu-item">Data</div>
@@ -386,11 +408,9 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
           fontSize={fontSize}
           onRendererReady={(r) => {
             rendererRef.current = r;
-            console.log('✅ Renderer ready');
             
             // Subscribe to scroll events from core renderer (event-driven, not polling)
             const scrollDisposable = r.onScrollChange?.((scroll) => {
-              console.log('🔄 Scroll event from core:', scroll);
               setScroll(scroll);
               recomputeHeaderIcons();
             });
@@ -696,8 +716,12 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
   );
 };
 
+// Simple mount helper - reuse root on HMR to avoid warnings
 const mountNode = document.getElementById('root');
-if (mountNode) {
+if (mountNode && !(window as any).__cyberRoot) {
   const root = createRoot(mountNode);
+  (window as any).__cyberRoot = root;
   root.render(<ReactCanvasViewer />);
+} else if ((window as any).__cyberRoot) {
+  (window as any).__cyberRoot.render(<ReactCanvasViewer />);
 }

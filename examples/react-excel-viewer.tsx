@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { loadXlsxFromUrl } from '../packages/io-xlsx/src';
 import { SheetTabs } from '../packages/react/src/SheetTabs';
+import { CommandManager, SetStyleCommand } from '../packages/core/src/CommandManager';
+import { CyberSheet } from '../packages/react/src';
 
 type CellAddress = { row: number; col: number };
 type Range = { start: CellAddress; end: CellAddress };
@@ -11,7 +13,8 @@ type CommentData = { text: string; author: string; date: string };
 type WorkbookLike = any;
 type WorksheetLike = any;
 
-const DEFAULT_URL = '/api/uploads/APRIL%202025%20END%20EDIT%2011-02-1404_3e5401bdea354b0784b4968da3caed23.xlsx';
+// Use Vite proxy path to avoid CORS issues
+const DEFAULT_URL = '/uploads/011-02-1404_3e5401bdea354b0784b4968da3caed23.xlsx';
 
 function colToLetter(col: number): string {
   let letter = '';
@@ -48,10 +51,15 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
   const [filterState, setFilterState] = useState(new Map() as FilterState);
   const [activeFilters, setActiveFilters] = useState(new Set() as Set<number>);
   const [isFilterMode, setIsFilterMode] = useState(false as boolean);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  
+  const commandManagerRef = useRef<CommandManager | null>(null);
   const [comments, setComments] = useState(new Map() as Map<string, CommentData>);
   const [commentTooltip, setCommentTooltip] = useState(null as any);
   const [contextMenu, setContextMenu] = useState(null as any);
   const [filterDropdown, setFilterDropdown] = useState(null as any);
+  const [openMenu, setOpenMenu] = useState(null as string | null);
   const [colWidths, setColWidths] = useState<number[]>([]);
 
   const gridContainerRef = useRef(null as any);
@@ -62,16 +70,27 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
     (async () => {
       try {
         setStatus('Loading Excel file...');
-        const wb = await loadXlsxFromUrl(url);
+        // Custom fetch with Gateway header
+        const customFetch = (input: RequestInfo | URL, init?: RequestInit) => {
+          return fetch(input, {
+            ...init,
+            headers: {
+              ...init?.headers,
+              'service': 'Gateway'
+            }
+          });
+        };
+        const wb = await loadXlsxFromUrl(url, customFetch);
         if (cancelled) return;
         setWorkbook(wb);
         const names = wb.getSheetNames ? wb.getSheetNames() : [];
         const first = names[0] ?? null;
+        const firstSheet = first ? wb.getSheet(first) : wb.activeSheet;
         setActiveSheetName(first);
-        setSheet(first ? wb.getSheet(first) : wb.activeSheet);
+        setSheet(firstSheet);
         setStatus('Ready');
       } catch (err) {
-        console.error('Error loading Excel file', err);
+        console.error('❌ Error loading Excel file:', err);
         if (!cancelled) setStatus('Error loading file');
       }
     })();
@@ -82,14 +101,23 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
 
   useEffect(() => {
     if (!workbook) return;
-    const next = activeSheetName ? workbook.getSheet(activeSheetName) : workbook.activeSheet;
+    const next = activeSheetName && workbook.getSheet ? workbook.getSheet(activeSheetName) : undefined;
     setSheet(next);
     setSelectedCell(null);
     setSelectedRange(null);
     setFilterState(new Map());
     setActiveFilters(new Set());
     setComments(new Map());
+    
+    // Initialize CommandManager for new sheet
+    if (next && !commandManagerRef.current) {
+      commandManagerRef.current = new CommandManager();
+      setCanUndo(false);
+      setCanRedo(false);
+    }
   }, [workbook, activeSheetName]);
+
+
 
   const rowCount = sheet?.rowCount ?? 50;
   const colCount = sheet?.colCount ?? 26;
@@ -217,15 +245,20 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
   };
 
   const applyFormatting = (property: 'bold' | 'italic' | 'underline', value: boolean) => {
-    if (!sheet) return;
+    if (!sheet || !commandManagerRef.current) return;
     if (!selectedCell && !selectedRange) return;
     const targets = selectedRange ? getRangeCells(selectedRange.start, selectedRange.end) : [selectedCell!];
+    
+    // Use CommandManager for undo/redo support
     targets.forEach(addr => {
-      const cell = sheet.getCell(addr) || {};
-      cell.style = cell.style || {};
-      (cell.style as any)[property] = value;
-      sheet.setCell(addr, cell);
+      const currentStyle = sheet.getCellStyle(addr) || {};
+      const newStyle = { ...currentStyle, [property]: value };
+      const cmd = new SetStyleCommand(sheet, addr, newStyle);
+      commandManagerRef.current!.execute(cmd);
     });
+    
+    setCanUndo(commandManagerRef.current.canUndo());
+    setCanRedo(commandManagerRef.current.canRedo());
     setStatus('Formatting applied');
   };
 
@@ -408,6 +441,24 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
       if (!sheet) return;
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
+          case 'z':
+            e.preventDefault();
+            if (commandManagerRef.current && commandManagerRef.current.canUndo()) {
+              commandManagerRef.current.undo();
+              setCanUndo(commandManagerRef.current.canUndo());
+              setCanRedo(commandManagerRef.current.canRedo());
+              setStatus('Undo');
+            }
+            break;
+          case 'y':
+            e.preventDefault();
+            if (commandManagerRef.current && commandManagerRef.current.canRedo()) {
+              commandManagerRef.current.redo();
+              setCanUndo(commandManagerRef.current.canUndo());
+              setCanRedo(commandManagerRef.current.canRedo());
+              setStatus('Redo');
+            }
+            break;
           case 'c':
             e.preventDefault();
             copyCells();
@@ -546,7 +597,12 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
   const handleCellMouseOver = (row: number, col: number, ev: React.MouseEvent) => {
     const key = keyFromCell(row, col);
     if (!comments.has(key)) return;
-    setCommentTooltip({ visible: true, row: ev.clientY, col: ev.clientX });
+    
+    setCommentTooltip({
+      visible: true,
+      row: ev.clientY,
+      col: ev.clientX,
+    });
   };
 
   const handleCellMouseOut = () => {
@@ -554,15 +610,25 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
   };
 
   if (!sheet) {
-    return <div style={{ padding: 16 }}>Loading workbook... ({status})</div>;
+    return (
+      <div style={{ padding: 16 }}>
+        <h3>Loading workbook... ({status})</h3>
+        <p>Sheet: {sheet ? 'loaded' : 'null'}</p>
+        <p>Workbook: {workbook ? 'loaded' : 'null'}</p>
+        <p>Active Sheet Name: {activeSheetName || 'null'}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="container" ref={gridContainerRef}
+    <div className="container"
       onClick={e => {
         const target = e.target as HTMLElement;
         if (!target.closest('.context-menu')) setContextMenu(null);
         if (!target.closest('.filter-dropdown') && !target.closest('.filter-icon')) setFilterDropdown(null);
+        if (!target.closest('.menu-item') && !target.closest('.menu-dropdown')) {
+          setOpenMenu(null);
+        }
       }}
     >
       <div className="title-bar">
@@ -575,8 +641,33 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
       </div>
 
       <div className="menu-bar">
-        <div className="menu-item">File</div>
-        <div className="menu-item">Home</div>
+        <div 
+          className={`menu-item ${openMenu === 'file' ? 'active' : ''}`}
+          onClick={() => {
+            const newValue = openMenu === 'file' ? null : 'file';
+            setOpenMenu(newValue);
+          }}
+        >
+          File
+          {openMenu === 'file' && (
+            <div className="menu-dropdown visible" onClick={(e) => e.stopPropagation()}>
+                <div className="menu-dropdown-item">📄 New</div>
+                <div className="menu-dropdown-item">📂 Open...</div>
+                <div className="menu-dropdown-item">💾 Save</div>
+                <div className="menu-dropdown-item">💾 Save As...</div>
+                <div className="menu-dropdown-divider" />
+                <div className="menu-dropdown-item">🖨️ Print</div>
+                <div className="menu-dropdown-divider" />
+                <div className="menu-dropdown-item">❌ Close</div>
+              </div>
+            )}
+        </div>
+        <div 
+          className={`menu-item ${openMenu === 'home' ? 'active' : ''}`}
+          onClick={() => setOpenMenu(openMenu === 'home' ? null : 'home')}
+        >
+          Home
+        </div>
         <div className="menu-item">Insert</div>
         <div className="menu-item">Page Layout</div>
         <div className="menu-item">Formulas</div>
@@ -592,6 +683,27 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
           <button className="ribbon-tab">Data</button>
         </div>
         <div className="ribbon-content">
+          <div className="ribbon-group">
+            <div className="ribbon-buttons">
+              <button className="ribbon-btn" onClick={() => {
+                if (commandManagerRef.current && commandManagerRef.current.canUndo()) {
+                  commandManagerRef.current.undo();
+                  setCanUndo(commandManagerRef.current.canUndo());
+                  setCanRedo(commandManagerRef.current.canRedo());
+                  setStatus('Undo');
+                }
+              }} disabled={!canUndo} title="Undo (Ctrl+Z)">↶</button>
+              <button className="ribbon-btn" onClick={() => {
+                if (commandManagerRef.current && commandManagerRef.current.canRedo()) {
+                  commandManagerRef.current.redo();
+                  setCanUndo(commandManagerRef.current.canUndo());
+                  setCanRedo(commandManagerRef.current.canRedo());
+                  setStatus('Redo');
+                }
+              }} disabled={!canRedo} title="Redo (Ctrl+Y)">↷</button>
+            </div>
+            <div className="ribbon-group-label">History</div>
+          </div>
           <div className="ribbon-group">
             <div className="ribbon-buttons">
               <button className="ribbon-btn large" onClick={pasteCells}>
@@ -636,90 +748,14 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
       </div>
 
       <div className="spreadsheet-container">
-        <div className="grid-wrapper">
-          <div className="grid-container">
-            <div className="row-numbers">
-              {filteredRows.map(row => (
-                <div key={row} className="row-number">{row + 1}</div>
-              ))}
-            </div>
-            <div className="grid-header">
-              {Array.from({ length: colCount }).map((_, col) => (
-                <div
-                  key={col}
-                  className="grid-header-cell"
-                  data-col={col}
-                  style={{ position: 'relative', width: (colWidths[col] ?? 64) + 'px' }}
-                  ref={el => {
-                    // no-op, used only for filter positioning via event target
-                  }}
-                >
-                  {colToLetter(col)}
-                  {isFilterMode && (
-                    <span
-                      className="filter-icon"
-                      onClick={e => {
-                        e.stopPropagation();
-                        showFilterForColumn(col, e.currentTarget.parentElement as HTMLDivElement);
-                      }}
-                    >
-                      ▼
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <table className="grid-table" style={{ tableLayout: 'fixed' }} onContextMenu={handleGridContextMenu}>
-              <colgroup>
-                {Array.from({ length: colCount }).map((_, col) => (
-                  <col key={col} style={{ width: (colWidths[col] ?? 64) + 'px' }} />
-                ))}
-              </colgroup>
-              <tbody>
-                {filteredRows.map(row => (
-                  <tr key={row}>
-                    {Array.from({ length: colCount }).map((_, col) => {
-                      const cell = sheet.getCell({ row, col });
-                      const key = keyFromCell(row, col);
-                      const isSelected = selectedCell && selectedCell.row === row && selectedCell.col === col;
-                      let inRange = false;
-                      if (selectedRange) {
-                        const { start, end } = selectedRange;
-                        const minRow = Math.min(start.row, end.row);
-                        const maxRow = Math.max(start.row, end.row);
-                        const minCol = Math.min(start.col, end.col);
-                        const maxCol = Math.max(start.col, end.col);
-                        inRange = row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
-                      }
-                      const hasComment = comments.has(key) || cell?.comment;
-                      const style: React.CSSProperties = {};
-                      if (cell?.style?.bold) style.fontWeight = 'bold';
-                      if (cell?.style?.italic) style.fontStyle = 'italic';
-                      if (cell?.style?.underline) style.textDecoration = 'underline';
-                      if (cell?.style?.color) style.color = cell.style.color;
-                      if (cell?.style?.backgroundColor) style.backgroundColor = cell.style.backgroundColor;
-                      return (
-                        <td
-                          key={col}
-                          className={`grid-cell${isSelected ? ' selected' : ''}${inRange ? ' in-range' : ''}`}
-                          data-row={row}
-                          data-col={col}
-                          style={style}
-                          onClick={e => handleSelectCell(row, col, e.shiftKey)}
-                          onMouseOver={e => handleCellMouseOver(row, col, e)}
-                          onMouseOut={handleCellMouseOut}
-                        >
-                          {cell?.value ?? ''}
-                          {hasComment && <div className="comment-indicator" />}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <CyberSheet
+          workbook={workbook}
+          sheetName={activeSheetName}
+          zoom={1}
+          fontFamily="Segoe UI, Arial, sans-serif"
+          fontSize={11}
+          style={{ width: '100%', height: 'calc(100vh - 240px)', overflow: 'hidden' }}
+        />
       </div>
 
       {/* Excel-style sheet tabs */}
@@ -734,11 +770,9 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
         }}
         onRenameSheet={(oldName, newName) => {
           // TODO: Implement rename in core
-          console.log('Rename', oldName, 'to', newName);
         }}
         onDeleteSheet={(sheetName) => {
           // TODO: Implement delete in core
-          console.log('Delete', sheetName);
         }}
       />
 
@@ -760,8 +794,12 @@ export const ExcelReactViewer = ({ url = DEFAULT_URL }: ExcelReactViewerProps) =
 };
 
 // Simple mount helper so you can run this directly via Vite in /examples
+// Use global to avoid createRoot warning on HMR reloads
 const mountNode = document.getElementById('root');
-if (mountNode) {
+if (mountNode && !(window as any).__cyberRoot) {
   const root = createRoot(mountNode);
+  (window as any).__cyberRoot = root;
   root.render(<ExcelReactViewer />);
+} else if ((window as any).__cyberRoot) {
+  (window as any).__cyberRoot.render(<ExcelReactViewer />);
 }
