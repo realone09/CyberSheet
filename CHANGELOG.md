@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 6: File Backstage Menu - ExportPanel (May 07, 2026)
+
+**Third backstage panel implementation with format selection and export functionality**
+
+**ExportPanel Features**:
+- ✅ **6 Format Cards**: XLSX (recommended), PDF, CSV, ODS, TXT, HTML - grid layout with icons and descriptions
+- ✅ **Format-Specific Options**: CSV delimiter/headers toggle, PDF orientation/fit-to-page settings
+- ✅ **Progress Indication**: Smooth progress bar with 100ms transitions, turns green on completion
+- ✅ **Auto-Download**: Creates Blob URL and triggers browser download with proper filename
+- ✅ **Export Simulation**: 1.5s export with progress tracking (50ms interval updates)
+- ✅ **Reset Functionality**: "Export Another Format" button to reset state
+
+**Microinteractions**:
+- Panel entry: Fade + slide up 8px (250ms)
+- Card hover: Border darkens, shadow appears (150ms)
+- Card select: Blue highlight ring with checkmark pop-in
+- Options panel: Slide down animation (200ms) for CSV/PDF settings
+- Spinner: 600ms rotation during export operation
+- Completion: Green bar + "✓ Downloaded" button state
+
+**Technical Implementation**:
+- React hooks for state management (8 state variables)
+- Interval-based progress simulation with cleanup
+- Blob URL creation and automatic revocation
+- TypeScript event type annotations for all handlers
+- Inline styles with hover state management
+
+**Files Changed**:
+- packages/react/src/components/backstage/panels/ExportPanel.tsx (280 lines): Complete export panel
+- packages/react/src/components/backstage/BackstageContainer.tsx: Added export case with format logging
+
+**Phase 6 Progress**:
+- ✅ RenamePanel (100 lines) - Inline file rename with validation
+- ✅ CreateCopyPanel (150 lines) - Duplicate workbook with location picker
+- ✅ **ExportPanel (280 lines)** - Format selection and export with options
+- Status: **3/10 panels complete** (530 lines / ~3,250 total)
+
 ### Added - Full React Canvas Viewer Implementation (May 06, 2026)
 
 **Complete React adapter integration with Excel file loading, canvas rendering, and formula support**
