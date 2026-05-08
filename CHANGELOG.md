@@ -7,6 +7,689 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 6: File Backstage Menu - OptionsPanel (May 08, 2026)
+
+**Tenth and final backstage panel with comprehensive application settings across 10 tabs**
+
+**OptionsPanel Features**:
+- ✅ **10-Tab Sidebar Navigation**: General, Formulas, Data, Proofing, Save, Language, Advanced, Customize Ribbon, Quick Access Toolbar, Trust Center
+- ✅ **4 Fully Implemented Tabs**: General, Formulas, Save, Advanced with complete settings controls
+- ✅ **6 Placeholder Tabs**: Data, Proofing, Language, Customize Ribbon, QAT, Trust Center (coming soon UIs)
+- ✅ **Reusable Sub-Components**: Section, CheckboxSetting, SelectSetting, SpinnerSetting for consistent UI
+- ✅ **Live State Management**: Real-time updates via FileOperations settings API
+- ✅ **Reset to Defaults**: Restores all settings to factory defaults with confirmation
+- ✅ **Save Confirmation**: Green "✓ Settings saved" or "✓ Settings reset to defaults" message (2s duration)
+- ✅ **Sticky Footer**: Fixed bottom bar with action buttons visible while scrolling
+
+**Navigation Sidebar (200px)**:
+- **Background**: Light gray (#FAFAFA) with 1px right border (#E0E0E0)
+- **Tab buttons**: Full-width, 40px height, 12px font, left-aligned text (16px padding)
+- **Active state**: Blue text (#0078D4), white background, 3px blue left border
+- **Hover state**: Light gray background (#F5F5F5) when not active
+- **Icons**: Emoji icons for each tab (⚙️, 📐, 📊, 📝, 💾, 🌍, 🔧, 🎨, ⚡, 🔒)
+- **Smooth transitions**: 150ms background/border/color changes
+- **Fixed positioning**: Spans full viewport height minus header
+
+**Content Area Styling**:
+- **Background**: White with 32px padding on all sides
+- **Scrollable**: overflow-y auto, flex-1 to fill available space
+- **Tab titles**: 18px bold, 16px bottom margin
+- **Section spacing**: 20px between each section
+
+**General Tab Settings**:
+- **User Interface Options**:
+  - ScreenTip style (dropdown: Show feature descriptions, Don't show, Don't show feature descriptions)
+  - Show Mini Toolbar on selection (checkbox)
+  - Enable Live Preview (checkbox)
+  - Update document content while dragging (checkbox)
+- **When creating new workbooks**:
+  - Use this as the default font (dropdown: Calibri, Arial, Times New Roman, Courier New, Verdana)
+  - Font size spinner (8-72, default 11)
+  - Include this many sheets spinner (1-255, default 1)
+- **Personalize your copy of Microsoft Office**:
+  - User name text input (displayed in comments/tracked changes)
+  - Office Theme dropdown (Colorful, Dark Gray, Black, White)
+
+**Formulas Tab Settings**:
+- **Calculation options**:
+  - Workbook Calculation (dropdown: Automatic, Automatic except for data tables, Manual)
+  - Enable iterative calculation (checkbox)
+  - Maximum Iterations spinner (1-32767, default 100, disabled if not iterative)
+  - Maximum Change number input (0.001 default, disabled if not iterative)
+- **Working with formulas**:
+  - R1C1 reference style (checkbox)
+  - Formula AutoComplete (checkbox)
+  - Use table names in formulas (checkbox)
+  - Use GetPivotData functions for PivotTable references (checkbox)
+- **Error Checking**:
+  - Enable background error checking (checkbox)
+  - Reset Ignored Errors button (gray, 160px width)
+- **Error checking rules** (6 checkboxes):
+  - Cells containing formulas that result in an error
+  - Inconsistent calculated column formula in tables
+  - Cells containing years represented as 2 digits
+  - Numbers formatted as text or preceded by an apostrophe
+  - Formulas inconsistent with other formulas in region
+  - Formulas which omit cells in a region
+
+**Save Tab Settings**:
+- **Save workbooks**:
+  - Save files in this format (dropdown: Excel Workbook (.xlsx), Excel 97-2003 (.xls), OpenDocument Spreadsheet (.ods), CSV (.csv))
+  - Save AutoRecover information every [n] minutes (spinner: 1-120, default 10)
+  - AutoSave OneDrive and SharePoint Online files by default (checkbox)
+
+**Advanced Tab Settings**:
+- **Editing options**:
+  - After pressing Enter, move selection (dropdown: Down, Up, Right, Left, None)
+  - Automatically insert a decimal point (checkbox with Places spinner 2, disabled when unchecked)
+  - Enable fill handle and cell drag-and-drop (checkbox)
+  - Enable AutoComplete for cell values (checkbox)
+  - Zoom on roll with IntelliMouse (checkbox)
+  - Alert before overwriting cells (checkbox)
+- **Display**:
+  - Show gridlines (checkbox)
+  - Show row and column headers (checkbox)
+  - Show formula bar (checkbox)
+  - Show sheet tabs (checkbox)
+
+**Placeholder Tabs (6)**:
+- **Data**: "⚙️ Data validation, external connections, and data tools settings will be available in a future update."
+- **Proofing**: "⚙️ Spell check, AutoCorrect, and proofing tools settings will be available in a future update."
+- **Language**: "⚙️ Display language, editing language, and proofing language settings will be available in a future update."
+- **Customize Ribbon**: "🎨 Ribbon customization interface with drag-and-drop tab/group management will be available in a future update."
+- **Quick Access Toolbar**: "⚡ Quick Access Toolbar customization with command picker will be available in a future update."
+- **Trust Center**: "🔒 Security, privacy, and trusted documents/locations settings will be available in a future update."
+- **Styling**: White card, 1px border (#E0E0E0), 16px padding, 6px radius, centered gray text (#666666)
+
+**Sticky Footer (64px)**:
+- **Position**: Fixed at bottom, full width, white background, top border (#E0E0E0)
+- **Padding**: 16px horizontal, 12px vertical
+- **Layout**: Flexbox with space-between alignment
+- **Reset to Default button**: Light gray (#F5F5F5), hover → darker (#E0E0E0)
+- **OK button**: Blue (#0078D4), hover → darker (#106EBE), 88px width
+- **Button styling**: 10px vertical × 16px horizontal padding, 4px radius, 600 font weight
+- **Save message**: Green checkmark (✓) + text in #107C10, 14px font, flex-1 center alignment
+- **Animation**: 300ms fadeIn, auto-removed after 2000ms
+
+**Reusable Sub-Components**:
+
+**Section Component**:
+- **Props**: title (string), children (React.ReactNode)
+- **Title**: 14px font, 600 weight, 8px bottom margin
+- **Container**: 16px bottom margin, groups related settings
+
+**CheckboxSetting Component**:
+- **Props**: label (string), checked (boolean), onChange (handler), indentLevel (0-2, default 0)
+- **Layout**: Horizontal flexbox, 8px gap, 10px vertical padding
+- **Indent**: 0px/20px/40px left margin based on level (creates hierarchy)
+- **Checkbox**: 16px square with blue accent (#0078D4)
+- **Label**: 13px font, clickable (htmlFor binding)
+- **Cursor**: Pointer on hover
+
+**SelectSetting Component**:
+- **Props**: label (string), value (string), options ({value, label}[]), onChange (handler)
+- **Layout**: Vertical stack, 10px bottom margin
+- **Label**: 13px font, 600 weight, 6px bottom margin
+- **Dropdown**: 100% width (max 400px), 8px padding, 1px border (#CCCCCC), 4px radius
+- **Hover**: Border darkens to #AAAAAA
+- **Focus**: Blue outline (#0078D4)
+
+**SpinnerSetting Component**:
+- **Props**: label (string), value (number), min (number), max (number), onChange (handler), disabled (boolean, default false)
+- **Layout**: Horizontal flexbox, 10px vertical padding, 8px gap
+- **Label**: 13px font, min-width 180px
+- **Input**: 80px width, right-aligned text, 6px padding, 1px border (#CCCCCC), 4px radius
+- **Disabled state**: Gray background (#F5F5F5), gray text (#999999), not-allowed cursor
+- **Number validation**: min/max constraints enforced
+
+**Settings State Management**:
+- **Initial load**: `fileOperations.getSettings()` returns current ApplicationSettings
+- **Direct state access**: `setSettings({ ...settings, [section]: { ...settings[section], ...updates } })`
+- **No updater functions**: TypeScript strict mode constraint - uses direct state read pattern
+- **Update callback**: `updateSettings<K>(section: K, updates: Partial<ApplicationSettings[K]>)`
+- **Save flow**: Update state → clear existing message → dispatch to FileOperations → show success for 2s
+- **Reset flow**: Call `fileOperations.resetSettingsToDefault()` → reload state → show "reset" message
+
+**ApplicationSettings Type Structure** (from @cyber-sheet/core):
+```typescript
+interface ApplicationSettings {
+  general: GeneralSettings;           // UI options, default font/sheets, user name, theme
+  formulas: FormulaSettings;          // Calculation mode, iterative calc, R1C1, error checking
+  data: DataSettings;                 // Placeholder (not implemented)
+  proofing: ProofingSettings;         // Placeholder (not implemented)
+  save: SaveSettings;                 // Default format, AutoRecover, AutoSave toggle
+  language: LanguageSettings;         // Placeholder (not implemented)
+  advanced: AdvancedSettings;         // Editing options, display toggles
+  customizeRibbon: RibbonCustomization;      // Placeholder (not implemented)
+  quickAccessToolbar: QATCustomization;      // Placeholder (not implemented)
+  trustCenter: TrustCenterSettings;   // Placeholder (not implemented)
+}
+```
+
+**FileOperations Integration**:
+- **getSettings()**: Returns current ApplicationSettings snapshot
+- **updateSettings(settings)**: Persists settings object to storage/backend
+- **resetSettingsToDefault()**: Restores factory defaults and returns new state
+- **No async operations**: All settings operations are synchronous for immediate UI feedback
+
+**Keyboard Accessibility**:
+- **Tab**: Navigate through all interactive controls (tabs, checkboxes, dropdowns, spinners, buttons)
+- **Enter/Space**: Activate focused tab button or toggle checkbox
+- **Arrow keys**: Navigate dropdown options when open
+- **Escape**: Close open dropdowns
+- **ARIA attributes**: Proper roles and labels for screen readers
+
+**Microinteractions**:
+- **Tab switch**: Instant content swap, no animation (standard Office behavior)
+- **Active tab**: 150ms transition for background/border/color changes
+- **Checkbox toggle**: Instant state change with browser default animation
+- **Dropdown open**: Browser default animation
+- **Spinner buttons**: Immediate increment/decrement with held click repeat
+- **Footer button hover**: 150ms background color transition
+- **Save message fadeIn**: 300ms opacity 0 → 1 animation
+- **Save message fadeOut**: Auto-removed after 2000ms (no animation, instant removal)
+
+**Phase 6 Completion**:
+- **OptionsPanel**: 620 lines (final panel, 10/10 complete)
+- **Phase 6 Total**: 5,776 lines across 10 backstage panels (177% of 3,250-line estimate)
+- **Panel breakdown**: RenamePanel (220), CreateCopyPanel (401), ExportPanel (573), OpenPanel (519), NewPanel (699), SharePanel (710), MoveFilePanel (512), InfoPanel (682), VersionHistoryPanel (840), OptionsPanel (620)
+- **Integration**: All 10 panels fully integrated into BackstageContainer routing
+- **Documentation**: Complete CHANGELOG entries for all panels
+- **Status**: ✅ Phase 6 Excel 365 File Backstage Menu — COMPLETE
+
+---
+
+### Added - Phase 6: File Backstage Menu - VersionHistoryPanel (May 08, 2026)
+
+**Ninth backstage panel with timeline browser, version preview, and restore functionality**
+
+**VersionHistoryPanel Features**:
+- ✅ **Split Panel Layout**: 320px left timeline + flexible right preview (full viewport height)
+- ✅ **Timeline Groups**: Auto-grouped by Today/Yesterday/This Week/Last Month/Older
+- ✅ **Version Dots**: Solid blue = current, gray = past, ringed = auto-save indicator
+- ✅ **Author Avatars**: Emoji avatars (👩‍💼, 👨‍💻) with name display
+- ✅ **Commit Messages**: Optional messages displayed below author (italicized)
+- ✅ **Current Badge**: Blue pill "Current" badge on latest version
+- ✅ **Mini Spreadsheet Preview**: 4-column grid showing version state snapshot
+- ✅ **Change Highlighting**: Changed values highlighted in red background in preview grid
+- ✅ **Changes List**: Detailed diff with color-coded change types
+- ✅ **Value Diff Display**: Old value (red strikethrough) → New value (green)
+- ✅ **Restore Dialog**: Modal confirmation with warning and auto-backup explanation
+- ✅ **Restore Flow**: 1.2s loading → green success → auto-close after 1.5s
+
+**Timeline Panel**:
+- **Header**: "Version History" title + "{n} versions" subtitle
+- **Group labels**: Uppercase, gray (#888888), 11px, ±±0.5px letter-spacing
+- **Version rows**: 10px vertical padding, 24px horizontal, 10px gap
+- **Selected state**: Blue background (#E8F4FD) + 3px blue left border (#0078D4)
+- **Hover state**: Light gray background (#F5F5F5) when not selected
+- **Time display**: 13px bold (e.g., "3:45 PM"), 12px gray author below
+- **Auto-save badge**: Gray italic "Auto-saved" text (10px)
+- **Scrollable list**: Flex-1 with overflowY auto for long histories
+
+**Version Dot Indicators**:
+- **Current**: 10px blue circle (#0078D4), solid
+- **Past**: 10px gray circle (#CCCCCC), solid
+- **Auto-save**: 2px light gray ring (#E0E0E0) around dot
+- **Position**: margin-top 4px to align with first line of text
+- **Transition**: None (instant state change)
+
+**Preview Panel**:
+- **Header**: Version title + metadata (author, time, auto-save status)
+- **Restore button**: Right-aligned, blue (#0078D4), hover → darker (#106EBE)
+- **Disabled state**: Light blue (#A0C4E8) when restoring, no hover effect
+- **Success state**: Green "✓ Version Restored" (no button after restore)
+- **Content area**: Light gray background (#FAFAFA), 24px padding, scrollable
+
+**Mini Spreadsheet Preview**:
+- **Grid**: CSS Grid with 4 columns, 1px gap, gray background (#E8E8E8)
+- **Header cells**: Light gray (#F5F5F5), uppercase, 10px font, bold
+- **Data cells**: White background, 11px font, 6px vertical × 8px horizontal padding
+- **Row labels**: Bold, gray (#888888) in first column
+- **Changed cells**: Red text (#D13438) + light red background (#FDECEA)
+- **Legend**: "⬤ Changed values highlighted" (11px red text below grid)
+- **Card styling**: White, 1px border (#E0E0E0), 6px radius, subtle shadow
+
+**Changes List**:
+- **Section title**: "📝 Changes in this version" + count badge
+- **Change item**: White card, 1px border (#F0F0F0), 6px radius, 8px vertical × 12px horizontal padding
+- **Color dots**: 8px circles indicating change type, 4px top margin
+- **Change type colors**:
+  - Cell change: Blue (#0078D4) with ✏️ icon
+  - Format change: Purple (#8764B8) with 🎨 icon
+  - Formula change: Red (#D13438) with 📐 icon
+  - Sheet added: Green (#107C10) with ➕ icon
+  - Sheet deleted: Red (#D13438) with ➖ icon
+  - Sheet renamed: Orange (#FF8C00) with 🏷️ icon
+  - Range insert: Green (#107C10) with 📥 icon
+  - Merge change: Purple (#8764B8) with 🔗 icon
+- **Address badges**: Monospace font, gray (#888888), light gray background (#F5F5F5), 1px padding, 3px radius
+- **Value diff**: Old in red strikethrough → New in green (11px, below description)
+
+**Restore Confirmation Dialog**:
+- **Overlay**: rgba(0,0,0,0.35) at z-index 10002, click to dismiss
+- **Card**: 400px width, white, 8px radius, 24px padding, large shadow (0 8px 32px rgba(0,0,0,0.2))
+- **Icon**: ⚠️ emoji at 28px font size, centered
+- **Title**: "Restore this version?" (16px, bold, centered)
+- **Message**: Explains restore will create backup of current state, mentions date being restored
+- **Buttons**: "Cancel" (gray border) + "Restore" (blue solid)
+- **Animation**: 150ms fadeIn overlay + 200ms scaleIn card (0.95 → 1.0)
+
+**Restore Workflow**:
+1. **Select past version**: Click row in timeline → highlights in blue, shows preview + changes
+2. **Click "Restore This Version"**: Blue button appears in preview header
+3. **Confirmation dialog**: Modal appears with warning and backup explanation
+4. **Click "Restore"**: Dialog closes, button shows 14px spinner + "Restoring..." text
+5. **Wait 1.2s**: Simulated restore operation with disabled button (light blue)
+6. **Success**: Button becomes green "✓ Version Restored" badge
+7. **Auto-close**: After 1.5s, backstage closes and onVersionRestored callback fires
+8. **Backup created**: Message explains new version saved with current state before restore
+
+**Demo Data Structure**:
+- **DEMO_VERSIONS**: 8 versions spanning 10 days (v1-v8)
+- **v8** (15 min ago): "You", 3 changes (cell/format/formula)
+- **v7** (90 min ago): "Alice Johnson", "Updated Q2 revenue figures", 12 changes
+- **v6** (5 hours ago): "Bob Smith", "Added new Summary sheet", 7 changes
+- **v5-v2**: Auto-saves and manual saves from past 7 days
+- **v1** (10 days ago): "Initial version", 0 changes
+- **DEMO_CHANGES**: Record mapping version IDs to VersionChange arrays
+
+**Keyboard Accessibility**:
+- **Tab**: Navigate through version rows and buttons
+- **Enter/Space**: Select focused version row
+- **Escape**: Close restore confirmation dialog
+- **Click-outside**: Dismiss dialog by clicking overlay
+- **ARIA attributes**: `role="button"`, `tabIndex={0}`, `aria-current` for selected version
+
+**Microinteractions**:
+- **Timeline row hover**: 100ms background transition to #F5F5F5
+- **Selected row**: Instant blue background + left border
+- **Restore button hover**: 200ms transition to darker blue (#106EBE)
+- **Spinner**: 600ms linear infinite rotation (14px, white on colored background)
+- **Success badge**: 200ms fadeIn animation
+- **Dialog**: 150ms fadeIn + 200ms scaleIn simultaneous animations
+- **Auto-close**: Smooth dispatch of 'backstage-close' event after restore completes
+
+**Technical Implementation**:
+- **VersionSummary type**: id, timestamp, author, authorAvatar?, message?, isAutoSave, changeCount
+- **VersionChange type**: type, description, address?, oldValue?, newValue?, sheetName?
+- **State management**: selectedVersionId, isRestoring, restoreComplete, showConfirmRestore
+- **Grouping logic**: Calculate day difference, assign to Today/Yesterday/This Week/Last Month/Older
+- **Time formatting**: toLocaleTimeString with 12-hour format (e.g., "3:45 PM")
+- **Date formatting**: toLocaleDateString with month/day/year (e.g., "May 8, 2026")
+- **Restore simulation**: 1200ms setTimeout, then 1500ms auto-close after success
+- **FileOperations integration**: Ready for `getVersions()`, `getVersionChanges(versionId)`, `restoreVersion(versionId)` APIs
+
+**Progress**: Phase 6 Backstage Menu — 9/10 panels complete (4,774 lines, 147% of initial estimate)
+
+---
+
+### Added - Phase 6: File Backstage Menu - InfoPanel (May 08, 2026)
+
+**Eighth backstage panel with workbook metadata dashboard, protection controls, and inspection tools**
+
+**InfoPanel Features**:
+- ✅ **Protect Workbook Section**: 🔒 icon with two security actions
+- ✅ **Encrypt with Password**: Set/remove password protection with validation dialog
+- ✅ **Mark as Final**: Make workbook read-only with warning to readers
+- ✅ **Inspect Workbook Section**: 🔍 icon with three inspection tools
+- ✅ **Document Inspector**: Scan for hidden properties and personal information (1.5s simulation)
+- ✅ **Accessibility Checker**: Verify content is readable for people with disabilities (1.2s simulation)
+- ✅ **Compatibility Checker**: Test for features unsupported in earlier Excel versions (1s simulation)
+- ✅ **Properties Section**: 📋 icon with comprehensive metadata display
+- ✅ **Tag Management**: Inline add/remove tags with chip-style UI
+
+**Password Protection Dialog**:
+- **Modal overlay**: Dark semi-transparent backdrop (rgba(0,0,0,0.3)) at z-index 10001
+- **Password fields**: Two input fields for password + confirmation
+- **Validation rules**: 
+  - Non-empty password required
+  - Minimum 6 characters
+  - Password and confirmation must match
+- **Error display**: Red error message below fields (e.g., "Passwords do not match.")
+- **Keyboard support**: Enter to submit, Escape to cancel
+- **Click-outside**: Click overlay to dismiss dialog
+- **Actions**: "Cancel" (gray button) or "Set Password" (blue button, hover darkens to #106EBE)
+
+**Protection Workflow**:
+1. **Unprotected state**: "Set Password..." button (primary blue border)
+2. Click → Password dialog appears with scaleIn animation (200ms)
+3. Enter password (min 6 chars), confirm password, click "Set Password"
+4. Loading state: 1s simulation with 14px spinner (600ms rotation)
+5. Success state: Green "✓ Password set" badge for 3s
+6. **Protected state**: "Remove Password" button (danger red border)
+7. Click "Remove Password" → 800ms simulation → "✓ Password removed" for 3s
+
+**Mark as Final Workflow**:
+1. **Not final**: "Mark as Final" button (secondary gray border)
+2. Click → 600ms simulation with spinner
+3. Success: "✓ Marked as final" badge (green) for 3s
+4. **Final state**: No button shown, description changes to "This workbook has been marked as final."
+
+**Inspection Tools Workflow**:
+- Each tool follows same pattern: Idle → Loading (spinner) → Success (green checkmark)
+- **Document Inspector**: 1500ms scan → "✓ No issues found" (4s display)
+- **Accessibility Checker**: 1200ms scan → "✓ No issues found" (4s display)
+- **Compatibility Checker**: 1000ms scan → "✓ No issues found" (4s display)
+- All use 14px spinner with 2px border (gray with blue top color)
+
+**Properties Dashboard**:
+- **Grid layout**: 140px label column + 1fr value column, 8px row gap
+- **Core properties**: Size (formatted: B/KB/MB), Sheets (count), Created (long date), Last Modified (long date + time), Last Modified By, Author, Location (path)
+- **Show All toggle**: Expands to reveal ID (monospace font), Protected (Yes/No), Marked Final (Yes/No)
+- **Format date**: "weekday, month day, year, hour:minute" (e.g., "Thursday, May 8, 2026, 2:30 PM")
+- **Format size**: < 1KB shows bytes, < 1MB shows KB, else shows MB with 1 decimal
+
+**Tag Management**:
+- **Chip display**: Blue pills with tag text + × remove button (rounded to 12px)
+- **Inline input**: Dashed border (1px #D1D1D1), 80px width, rounded to 12px
+- **Add tag**: Type and press Enter, or blur → auto-adds if non-empty
+- **Remove tag**: Click × button on chip, or Backspace when input empty removes last tag
+- **Duplicate prevention**: Won't add tag already in list (case-insensitive)
+- **Normalization**: Tags converted to lowercase on add
+- **Empty state**: Input shows "Add a tag..." placeholder when no tags exist
+
+**Section Card Design**:
+- **White background** (#FFFFFF) with 1px gray border (#E8E8E8)
+- **8px border radius**, 20px padding, 16px bottom margin
+- **Section icons**: 28×28px rounded squares (6px radius) with emoji icons
+- **Action rows**: Horizontal layout with label/description left, button/status right
+- **Separator borders**: 1px #F0F0F0 between actions (except last row)
+
+**Button Variants**:
+- **Primary**: Blue text (#0078D4), light blue border (#C7E0F4), hover → light blue bg (#E8F4FD)
+- **Secondary**: Gray text (#555555), gray border (#D1D1D1), hover → light gray bg (#F0F0F0)
+- **Danger**: Red text (#D13438), rose border (#E4A9AA), hover → light rose bg (#FDECEA)
+- All buttons: 6px vertical padding, 16px horizontal, 12px font size, 500 weight, 4px border radius
+
+**Microinteractions**:
+- **Section cards**: 150ms box-shadow transition on hover (not implemented)
+- **Action buttons**: 150ms transition on background color change
+- **Success badges**: 200ms fadeIn animation, green color (#107C10)
+- **Spinner**: 600ms linear infinite rotation
+- **Dialog appear**: 150ms fadeIn + 200ms scaleIn (from 0.95 to 1.0 scale)
+- **Tag remove hover**: 100ms transition to semi-transparent black background
+- **Show All link**: Blue (#0078D4) hover darkens to #106EBE
+
+**Accessibility**:
+- **ARIA labels**: All tag remove buttons have `aria-label="Remove tag {tagName}"`
+- **Semantic HTML**: Proper label elements for form inputs
+- **Keyboard navigation**: Tab through all interactive elements
+- **Focus indicators**: Browser-default focus rings (outline: none removed only on inputs with visible borders)
+- **Screen reader support**: Action descriptions provide context ("Check for hidden properties...")
+
+**Technical Implementation**:
+- **ActionStatus type**: Union of 'idle' | 'loading' | 'success' | 'error'
+- **State management**: Separate status state for each action (protectStatus, finalStatus, inspectStatus, accessibilityStatus, compatibilityStatus)
+- **FileOperations integration**: `updateMetadata({ isProtected, isMarkedFinal, tags })` for persistence
+- **Password validation**: Client-side checks before calling backend simulation
+- **Async operations**: All actions use `setTimeout` for demo, ready for real API calls
+- **Success timeouts**: Auto-reset status to 'idle' after 3-4s delay
+
+**Progress**: Phase 6 Backstage Menu — 8/10 panels complete (4,154 lines, significantly exceeding initial 3,250-line estimate)
+
+---
+
+### Added - Phase 6: File Backstage Menu - MoveFilePanel (May 08, 2026)
+
+**Seventh backstage panel with folder tree browser for moving files to new locations**
+
+**MoveFilePanel Features**:
+- ✅ **Hierarchical Tree View**: Recursive folder structure with OneDrive, This PC, and subfolders
+- ✅ **Expand/Collapse**: Animated chevron (▶/▼) rotates 90° on folder expand/collapse
+- ✅ **Current Location**: Breadcrumb at top shows current file path (e.g., "onedrive › documents › spreadsheets")
+- ✅ **Visual Indicators**: Current location highlighted in blue with "(current)" label in tree
+- ✅ **Folder Selection**: Click to select destination, shows blue background + 3px left border
+- ✅ **Auto-expand on Select**: Selecting a folder with children automatically expands it
+- ✅ **File Count Badges**: Gray badge shows number of files in folder (e.g., "(12)" for Spreadsheets)
+- ✅ **New Folder Creation**: Inline input appears at selected depth with Enter/Escape keyboard support
+- ✅ **Move Action**: 800ms simulated move with spinner animation + "✓ Moved!" success state
+- ✅ **Keyboard Navigation**: Arrow keys expand/collapse folders, Enter/Space to select
+
+**Folder Tree Features**:
+- **Depth indentation**: Each level indented 20px (calculated as `12 + depth * 20`)
+- **Empty folders**: No chevron shown if folder has no children
+- **Icon states**: 📁 (closed) and 📂 (open) folder icons
+- **Multi-level nesting**: Supports unlimited depth (e.g., OneDrive › Documents › Projects › 2026)
+- **Alphabetical sorting**: New folders inserted in alphabetical order
+
+**New Folder Workflow**:
+1. Click "+ New Folder" link (blue, hover darkens to #106EBE)
+2. Input field appears at current depth level with focus
+3. Enter folder name, press Enter to create or Escape to cancel
+4. Folder added to tree at parent location, sorted alphabetically
+5. Input field closes after creation
+
+**Move File Workflow**:
+1. Current location shown in breadcrumb banner (gray background, 📍 icon)
+2. User navigates tree, clicks destination folder (highlights in blue)
+3. "Move Here" button enabled only if destination ≠ current location
+4. Click "Move Here" → Shows spinner: "Moving..." (800ms)
+5. Success state: Button turns green "✓ Moved!" + "File moved successfully" message
+6. Auto-closes backstage after 1.5s delay
+
+**Microinteractions**:
+- Chevron rotation: 150ms ease transition from 0° to 90°
+- Folder row hover: Light gray background (#F5F5F5) when not selected
+- Selected folder: Blue background (#E8F4FD) + 3px blue left border
+- Move button states: Blue (#0078D4) → Hover #106EBE → Disabled light blue (#A0C4E8) → Success green (#107C10)
+- Spinner animation: 16px circle, 600ms linear infinite rotation
+- New folder input: Blue border with 2px shadow on focus
+
+**Keyboard Accessibility**:
+- **Tab**: Focus navigation through tree items
+- **Enter/Space**: Select focused folder and toggle expansion
+- **ArrowRight**: Expand focused folder (if collapsed and has children)
+- **ArrowLeft**: Collapse focused folder (if expanded)
+- **Escape**: Cancel new folder creation
+
+**Technical Implementation**:
+- **FolderNode type**: Recursive structure with `name`, `path`, `children[]`, `isExpanded`, `filesCount?`
+- **Default tree**: `buildDefaultTree()` creates demo structure with OneDrive + This PC hierarchies
+- **Recursive rendering**: `renderFolderTree()` handles nested display at any depth
+- **State updates**: Toggle and add operations use functional recursion to update nested nodes
+- **ARIA attributes**: `role="treeitem"`, `aria-expanded`, `aria-selected`, `tabIndex={0}` for accessibility
+- **FileOperations integration**: Ready for `moveFile(currentPath, destinationPath)` production API
+
+**Progress**: Phase 6 Backstage Menu — 7/10 panels complete (3,472 lines, exceeding initial estimates)
+
+---
+
+### Added - Phase 6: File Backstage Menu - SharePanel (May 08, 2026)
+
+**Sixth backstage panel with collaboration features, permission management, and shareable links**
+
+**SharePanel Features**:
+- ✅ **Email Chip Input**: Tag-style email entry with removable chips (blue pills), similar to modern email clients
+- ✅ **Contact Suggestions**: 4 suggested contacts with avatar emoji, name, and email (Alice, Bob, Carol, David)
+- ✅ **Pending Invites**: Batch multiple invites before sending, each with individual role selection
+- ✅ **Role Selection**: "Can edit" or "Can view" dropdown for each invite (inline with email input)
+- ✅ **Optional Message**: "Include a message" toggle reveals textarea for invitation note
+- ✅ **Share Links**: Generate shareable links with configurable permissions (anyone can edit/view)
+- ✅ **Copy Link**: One-click copy to clipboard with "✓ Copied!" confirmation (2.5s duration)
+- ✅ **Permission List**: Display current users with role, avatar, edit/remove controls
+- ✅ **Owner Protection**: Owner role is non-editable, shown as label instead of dropdown
+
+**Chip-Based Email Input**:
+- **Enter key**: Add current email to pending invites
+- **Backspace key** (when input empty): Remove last chip
+- **Remove button**: × icon on each chip with hover state
+- **Validation**: Real-time email regex validation with error message
+- **Duplicate detection**: Prevents adding same email twice
+- **Auto-clear**: Email input clears after adding, maintaining focus
+
+**Share Link Workflow**:
+1. **Before creation**: Shows permission dropdown + "Create Link" button
+2. **After creation**: Shows link in gray box with "Copy" button
+3. **Link info**: "Anyone with this link can edit/view" + "Remove link" action
+4. **Clipboard fallback**: Uses `execCommand('copy')` for older browsers
+
+**Microinteractions**:
+- Success toast: Green banner "✓ Invitations sent successfully!" (3s duration, slide-down animation)
+- Sending state: Button shows spinner + "Sending..." text, disabled while processing
+- Copy confirmation: Button text changes to "✓ Copied!" in green (2.5s)
+- Chip hover: Blue background tint on remove button
+- Permission row hover: Gray background (#F9F9F9) on entire row
+- Suggestion chip hover: Dark gray background (#E8E8E8)
+
+**Technical Implementation**:
+- **Email validation**: Regex pattern `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`
+- **Pending invites**: Local state array until "Send" clicked
+- **FileOperations integration**: `getPermissions()`, `addPermission()`, `removePermission()`, `createShareLink()`, `removeShareLink()`, `getShareLink()`
+- **Keyboard navigation**: Enter to add, Backspace to remove last chip
+- **Async send**: 1s simulated delay with spinner, then batch-adds all permissions
+- **Clipboard API**: Primary method with fallback for compatibility
+
+**Permission Management**:
+- Owner: Non-editable, displayed as "Owner" label
+- Editor/Viewer: Dropdown to change role, × button to remove
+- Link access: Shows "Link access" subtitle under username
+- Avatar fallback: First letter of username if no avatar image
+
+**Files Changed**:
+- packages/react/src/components/backstage/panels/SharePanel.tsx (710 lines): Complete collaboration panel
+- packages/react/src/components/backstage/BackstageContainer.tsx: Import SharePanel, replace 'share' case
+
+**Phase 6 Progress**:
+- ✅ RenamePanel (220 lines) - Inline file rename with validation
+- ✅ CreateCopyPanel (401 lines) - Duplicate workbook with location picker
+- ✅ ExportPanel (573 lines) - Format selection and export with options
+- ✅ OpenPanel (519 lines) - File listing with search, sort, pin functionality
+- ✅ NewPanel (699 lines) - Template gallery with search and category filters
+- ✅ **SharePanel (710 lines)** - Permission management and shareable links
+- Status: **6/10 panels complete** (3,122 lines / ~3,250 total, **96% complete**)
+
+**Pattern Reuse**:
+- **Chip UI**: Email chips (reusable for tags, filters, multi-select inputs)
+- **Suggestion Chips**: Contact suggestions (same pattern as NewPanel search suggestions)
+- **Success Toast**: Green banner with slide-down animation (reusable for all success messages)
+- **Spinner**: Inline spinner during async operations (ExportPanel, NewPanel, SharePanel)
+
+---
+
+### Added - Phase 6: File Backstage Menu - NewPanel (May 08, 2026)
+
+**Fifth backstage panel with template gallery, search, and category filters**
+
+**NewPanel Features**:
+- ✅ **Template Gallery**: 12 built-in templates (Blank, Budget, Calendar, Invoice, Planner, Timeline, Grade Book, Inventory, Meal Planner, Shift Scheduler, Expense Report, Checklist)
+- ✅ **Category Tabs**: 6 filter tabs (All, Featured, Business, Personal, Planners, Education) with active state
+- ✅ **Search with Suggestions**: Real-time search (250ms debounce) with suggested search terms (Business, Personal, Education, Lists, Budgets, Calendars)
+- ✅ **Blank Workbook Card**: Special treatment with blue background, bold styling, and prominent placement
+- ✅ **Template Cards**: Grid layout with thumbnail emoji, name, description, and "Popular" badge for featured items
+- ✅ **Creating State**: Overlay with spinner during template creation (400ms delay for UX feedback)
+- ✅ **Empty State**: Friendly no-results message when search/filter yields no matches
+
+**Card Microinteractions**:
+- Hover: Elevation increase (translateY -2px), shadow enhancement (4px blur)
+- Blank card: Blue tint (#F5F9FF) with stronger blue border (#C7E0F4)
+- Selected: Blue border + background, creating overlay with spinner
+- Keyboard: Enter/Space to create from template
+
+**Search Behavior**:
+- Icon changes: ✨ (default) → 🔍 (when typing)
+- Focus: Blue ring (4px rgba shadow), background changes to white
+- Blur: Returns to default state (#F9F9F9 background)
+- Suggestions: Fade in/out (opacity transition), "Suggested:" label prefix
+- Debounce: 250ms to prevent excessive filtering
+
+**Template Filtering Logic**:
+1. **Featured mode**: Shows first 6 templates + Blank at top
+2. **Category mode**: Filters by category, Blank shown only in "All"
+3. **Search mode**: Full-text search across name, description, category; Blank hidden unless matches
+4. **Priority**: Blank always first when visible (except search results)
+
+**Technical Implementation**:
+- **useMemo optimization**: filteredTemplates computed once per dependency change
+- **Template data**: Inline FEATURED_TEMPLATES array (production would fetch from API)
+- **Search debouncing**: 250ms timeout with cleanup on unmount
+- **Suggestion interaction**: 200ms blur delay allows click before hide
+- **Creating state**: 400ms timeout simulates async template creation
+
+**Reusable Patterns**:
+1. **Suggestion Chips**: Clickable keyword chips (reuse in SharePanel for email suggestions)
+2. **Card Grid**: Responsive grid with auto-fill (reuse in VersionHistoryPanel for snapshots)
+3. **Hover Elevation**: Card lift effect (established pattern across panels)
+4. **Creating Overlay**: Spinner + text overlay while async operation runs
+
+**Files Changed**:
+- packages/react/src/components/backstage/panels/NewPanel.tsx (699 lines): Complete template gallery panel
+- packages/react/src/components/backstage/BackstageContainer.tsx: Import NewPanel, replace 'new' case with full panel
+
+**Phase 6 Progress**:
+- ✅ RenamePanel (220 lines) - Inline file rename with validation
+- ✅ CreateCopyPanel (401 lines) - Duplicate workbook with location picker
+- ✅ ExportPanel (573 lines) - Format selection and export with options
+- ✅ OpenPanel (519 lines) - File listing with search, sort, pin functionality
+- ✅ **NewPanel (699 lines)** - Template gallery with search and category filters
+- Status: **5/10 panels complete** (2,412 lines / ~3,250 total, **74% complete**)
+
+**Pattern Reuse Summary**:
+- **Card Grid**: Used in ExportPanel (format cards), NewPanel (template cards)
+- **Tab Bar**: Used in OpenPanel (source tabs), NewPanel (category tabs)
+- **Search + Debounce**: Used in OpenPanel (file search), NewPanel (template search)
+- **Empty State**: Used in OpenPanel, NewPanel (consistent no-results UI)
+- **Creating Overlay**: Used in ExportPanel (progress), NewPanel (creating) - will reuse in VersionHistoryPanel
+
+---
+
+### Added - Phase 6: File Backstage Menu - OpenPanel (May 08, 2026)
+
+**Fourth backstage panel with file listing, search, sorting, and pin functionality**
+
+**OpenPanel Features**:
+- ✅ **File Listing**: Displays recent files with merge of recent, pinned, and shared files (deduplicated)
+- ✅ **Source Tabs**: 5 filter tabs (All, OneDrive, This PC, SharePoint, Shared with Me) with active state highlighting
+- ✅ **Search Bar**: Real-time search with 200ms debounce, searches by file name and path
+- ✅ **Sortable Columns**: Click headers to sort by Name, Date Modified, or Location (toggle asc/desc)
+- ✅ **Pin/Unpin**: Hover-reveal pin button with rotation animation (0°→-45° unpin, -45°→0° pin)
+- ✅ **Section Grouping**: Pinned files shown first in separate section, followed by recent files
+- ✅ **Empty State**: Friendly empty state with emoji when no files match filters/search
+
+**File Row Pattern** (Reusable for NewPanel & VersionHistoryPanel):
+- Grid layout: Name (1fr) | Date (160px) | Location (100px) | Pin (40px)
+- File metadata: Location icons (☁️ OneDrive, 💻 Local, 🏢 SharePoint)
+- Smart date formatting: "1 hour ago", "Yesterday", "3 days ago", or full date
+- Hover state: Gray background (#F5F5F5) with smooth transition
+- Keyboard accessible: Enter/Space to open file
+
+**Microinteractions**:
+- Panel entry: Fade-in (200ms) on mount
+- Tab hover: Color darkens (#666→#333) on non-active tabs
+- Search focus: Blue ring with shadow (3px rgba(0,120,212,0.15))
+- Sort header: Active column shows blue text + arrow (↑/↓)
+- Pin button reveal: Opacity 0→1 on row hover (visible when pinned)
+- Pin animation: Scale 1.0→1.3 + rotate 45° during toggle (250ms ease)
+- Row keyboard focus: Full interactive navigation with Enter/Space
+
+**Technical Architecture**:
+- **FileOperations Integration**: Uses `getRecentFiles()`, `getPinnedFiles()`, `getSharedFiles()`, `pinFile()`, `unpinFile()`
+- **Deduplication Logic**: Merges three file sources into single Map to eliminate duplicates
+- **Filtering Chain**: Source filter → Search filter → Sort → Pin prioritization
+- **useMemo optimization**: filteredFiles, pinnedFiles, recentFiles computed once per dependency change
+- **Debounced Search**: 200ms timeout prevents excessive filtering during typing
+- **Cleanup Pattern**: useEffect cleanup for debounce timers
+- **Sub-component Extraction**: FileRow component ready for reuse in other panels
+
+**Files Changed**:
+- packages/react/src/components/backstage/panels/OpenPanel.tsx (519 lines): Complete file listing panel
+- packages/react/src/components/backstage/BackstageContainer.tsx: Import OpenPanel, replace 'open' case placeholder
+
+**Phase 6 Progress**:
+- ✅ RenamePanel (220 lines) - Inline file rename with validation
+- ✅ CreateCopyPanel (401 lines) - Duplicate workbook with location picker
+- ✅ ExportPanel (573 lines) - Format selection and export with options
+- ✅ **OpenPanel (519 lines)** - File listing with search, sort, pin functionality
+- Status: **4/10 panels complete** (1,713 lines / ~3,250 total, **53% complete**)
+
+**Reusable Patterns Established**:
+1. **Tab Bar Pattern**: Source filtering with active state (reuse in NewPanel for template categories)
+2. **File Row Grid**: 4-column layout with metadata (reuse in VersionHistoryPanel for snapshot listing)
+3. **Search + Sort**: Combined search/sort pattern (reuse across all listing panels)
+4. **Pin Animation**: Rotation + scale microinteraction (reuse for favorite/star actions)
+
+---
+
 ### Added - Phase 6: File Backstage Menu - ExportPanel (May 07, 2026)
 
 **Third backstage panel implementation with format selection and export functionality**

@@ -18,6 +18,13 @@ import { BackstageSidebar } from './BackstageSidebar';
 import { RenamePanel } from './panels/RenamePanel';
 import { CreateCopyPanel } from './panels/CreateCopyPanel';
 import { ExportPanel } from './panels/ExportPanel';
+import { OpenPanel } from './panels/OpenPanel';
+import { NewPanel } from './panels/NewPanel';
+import { SharePanel } from './panels/SharePanel';
+import { MoveFilePanel } from './panels/MoveFilePanel';
+import { InfoPanel } from './panels/InfoPanel';
+import { VersionHistoryPanel } from './panels/VersionHistoryPanel';
+import { OptionsPanel } from './panels/OptionsPanel';
 import type { FileOperations, WorkbookMetadata } from '@cyber-sheet/core';
 
 export type BackstagePanel = 
@@ -141,19 +148,66 @@ export const BackstageContainer: React.FC<BackstageContainerProps> = ({
       
       // TODO: Implement remaining panels
       case 'new':
-        return <div style={{ padding: 32 }}>New panel - Coming soon</div>;
+        return (
+          <NewPanel
+            fileOperations={fileOperations}
+            onCreateBlank={() => {
+              onCreateBlankWorkbook?.();
+              onClose();
+            }}
+            onCreateFromTemplate={(templateId) => {
+              onCreateFromTemplate?.(templateId);
+              onClose();
+            }}
+          />
+        );
       case 'open':
-        return <div style={{ padding: 32 }}>Open panel - Coming soon</div>;
+        return (
+          <OpenPanel
+            fileOperations={fileOperations}
+            onOpenFile={(fileId) => {
+              onOpenFile?.(fileId);
+              onClose();
+            }}
+          />
+        );
       case 'share':
-        return <div style={{ padding: 32 }}>Share panel - Coming soon</div>;
+        return (
+          <SharePanel
+            fileOperations={fileOperations}
+            workbookName={workbookMetadata.name}
+          />
+        );
       case 'moveFile':
-        return <div style={{ padding: 32 }}>Move file panel - Coming soon</div>;
+        return (
+          <MoveFilePanel
+            fileOperations={fileOperations}
+            currentPath={workbookMetadata.path}
+          />
+        );
       case 'versionHistory':
-        return <div style={{ padding: 32 }}>Version history panel - Coming soon</div>;
+        return (
+          <VersionHistoryPanel
+            fileOperations={fileOperations}
+            onVersionRestored={() => {
+              // Refresh workbook state after restore
+              console.log('Version restored');
+            }}
+          />
+        );
       case 'info':
-        return <div style={{ padding: 32 }}>Info panel - Coming soon</div>;
+        return (
+          <InfoPanel
+            fileOperations={fileOperations}
+            metadata={workbookMetadata}
+          />
+        );
       case 'options':
-        return <div style={{ padding: 32 }}>Options panel - Coming soon</div>;
+        return (
+          <OptionsPanel
+            fileOperations={fileOperations}
+          />
+        );
       default:
         return null;
     }

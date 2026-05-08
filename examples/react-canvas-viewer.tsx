@@ -5,6 +5,12 @@ import { CyberSheet } from '../packages/react/src';
 import { FormulaBar } from '../packages/react/src/FormulaBar';
 import { SheetTabs } from '../packages/react/src/SheetTabs';
 import { useFormulaController } from '../packages/react/src/useFormulaController';
+import { BackstageContainer } from '../packages/react/src/components/backstage/BackstageContainer';
+import type { BackstagePanel } from '../packages/react/src/components/backstage/BackstageContainer';
+import { FileOperations } from '../packages/core/src/FileOperations';
+import { ExcelRibbon } from '../packages/react/src/components/ribbon/ExcelRibbon';
+import type { CommandManager as RibbonCommandManager } from '../packages/react/src/components/ribbon/ExcelRibbon';
+import { CommandManager as CoreCommandManager } from '../packages/core/src/CommandManager';
 import type { Address } from '../packages/core/src/types';
 
 // Serve from public folder (no backend needed)
@@ -23,7 +29,44 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
   const [filterSel, setFilterSel] = useState<Set<string>>(new Set());
   const [filterSearch, setFilterSearch] = useState('');
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [backstageOpen, setBackstageOpen] = useState(false);
+  const [backstagePanel, setBackstagePanel] = useState<BackstagePanel>('new');
   const rendererRef = useRef<any>(null);
+
+  // FileOperations instance for backstage panels
+  const fileOperations = useMemo(() => new FileOperations({
+    id: 'workbook-1',
+    name: 'Book1',
+    path: '/Documents/Book1.xlsx',
+    location: 'local',
+    size: 0,
+    created: new Date(),
+    lastModified: new Date(),
+    lastModifiedBy: 'User',
+    author: 'User',
+    sheets: 1,
+    tags: [],
+    isProtected: false,
+    isMarkedFinal: false,
+  }), []);
+
+  const workbookMetadata = useMemo(() => fileOperations.getMetadata(), [fileOperations]);
+
+  // Shared CommandManager for undo/redo across ribbon + data model
+  const coreCommandManager = useMemo(() => new CoreCommandManager(100), []);
+  const commandManager = useMemo<RibbonCommandManager>(() => ({
+    execute: (cmd) => { coreCommandManager.execute(cmd); forceUpdate({}); },
+    undo:    () => { coreCommandManager.undo();    forceUpdate({}); rendererRef.current?.render?.(); },
+    redo:    () => { coreCommandManager.redo();    forceUpdate({}); rendererRef.current?.render?.(); },
+    canUndo: () => (coreCommandManager as any).undoStack?.length > 0,
+    canRedo: () => (coreCommandManager as any).redoStack?.length > 0,
+  }), [coreCommandManager]);
+
+  const openBackstage = (panel: BackstagePanel) => {
+    setBackstagePanel(panel);
+    setBackstageOpen(true);
+    setOpenMenu(null);
+  };
   const [scroll, setScroll] = useState({ x: 0, y: 0, maxX: 0, maxY: 0 });
   const [headerIcons, setHeaderIcons] = useState<Array<{ col: number; x: number; w: number }>>([]);
   
@@ -41,6 +84,22 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
     worksheet: activeSheet,
     selectedCell: selectedCell || { row: 1, col: 1 },
   });
+
+  // Keyboard shortcuts: Ctrl+Z = undo, Ctrl+Y / Ctrl+Shift+Z = redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        commandManager.undo();
+      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        commandManager.redo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [commandManager]);
 
   // Reset scroll when sheet changes to prevent duplicate scrollbars
   useEffect(() => {
@@ -349,6 +408,18 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
 
   return (
     <div className="container">
+      {backstageOpen && (
+        <BackstageContainer
+          isOpen={backstageOpen}
+          onClose={() => setBackstageOpen(false)}
+          initialPanel={backstagePanel}
+          fileOperations={fileOperations}
+          workbookMetadata={workbookMetadata}
+          onCreateBlankWorkbook={() => setBackstageOpen(false)}
+          onOpenFile={() => setBackstageOpen(false)}
+          onVersionRestored={() => setBackstageOpen(false)}
+        />
+      )}
       <div className="title-bar">
         <span>{sheetName || 'Workbook'} - Excel</span>
         <div className="title-bar-buttons">
@@ -357,34 +428,21 @@ export const ReactCanvasViewer = ({ url = DEFAULT_URL }: { url?: string }) => {
           <button className="title-btn">✕</button>
         </div>
       </div>
-      <div className="menu-bar">
-        <div 
-          className={`menu-item ${openMenu === 'file' ? 'active' : ''}`}
-          onClick={() => {
-            const newValue = openMenu === 'file' ? null : 'file';
-            setOpenMenu(newValue);
-          }}
-        >
-          File
-          {openMenu === 'file' && (
-            <div className="menu-dropdown visible" onClick={(e) => e.stopPropagation()}>
-                <div className="menu-dropdown-item">📄 New</div>
-                <div className="menu-dropdown-item">📂 Open...</div>
-                <div className="menu-dropdown-item">💾 Save</div>
-                <div className="menu-dropdown-item">💾 Save As...</div>
-                <div className="menu-dropdown-divider" />
-                <div className="menu-dropdown-item">🖨️ Print</div>
-                <div className="menu-dropdown-divider" />
-                <div className="menu-dropdown-item">❌ Close</div>
-              </div>
-            )}
-        </div>
-        <div className="menu-item">Home</div>
-        <div className="menu-item">Insert</div>
-        <div className="menu-item">Data</div>
-        <div className="menu-item">Review</div>
-        <div className="menu-item">View</div>
-      </div>
+      <ExcelRibbon
+        worksheet={activeSheet}
+        workbook={workbook}
+        selectedCell={selectedCell || { row: 1, col: 1 }}
+        commandManager={commandManager}
+        onFileClick={() => openBackstage('new')}
+        onStyleChange={() => {
+          rendererRef.current?.render?.();
+          forceUpdate({});
+        }}
+        onStructureChange={() => {
+          rendererRef.current?.render?.();
+          forceUpdate({});
+        }}
+      />
       
       {/* Formula Bar Component */}
       {activeSheet && (
