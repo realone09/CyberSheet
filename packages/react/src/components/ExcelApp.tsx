@@ -5,10 +5,10 @@
  * spreadsheet area, sheet tabs, and status bar.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 import type { CanvasRenderer } from '@cyber-sheet/renderer-canvas';
-import { CommandManager } from '@cyber-sheet/core';
+import { CommandManager, DrawingLayer } from '@cyber-sheet/core';
 import { TitleBar } from './TitleBar';
 import { RibbonTabs } from './RibbonTabs';
 import { Ribbon } from '../components/ribbon/Ribbon';
@@ -16,6 +16,7 @@ import { FormulaBar } from '../FormulaBar';
 import { CyberSheet } from '../CyberSheet';
 import { SheetTabs } from '../SheetTabs';
 import { StatusBar } from './StatusBar';
+import { DrawingCanvas } from './DrawingCanvas';
 import './excel-app.css';
 
 export interface ExcelAppProps {
@@ -55,12 +56,19 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
   const [isEditingFormula, setIsEditingFormula] = useState<boolean>(false);
   const [selection, setSelection] = useState<any>(null);
   const [renderer, setRenderer] = useState<CanvasRenderer | null>(null);
+  const [scrollLeft, setScrollLeft] = useState<number>(0);
+  const [scrollTop, setScrollTop] = useState<number>(0);
+  const [viewportWidth, setViewportWidth] = useState<number>(1000);
+  const [viewportHeight, setViewportHeight] = useState<number>(600);
 
   // Create a command manager for this workbook
   const commandManager = useMemo(() => {
     const sheet = workbook.activeSheet;
     return new CommandManager(100, sheet);
   }, [workbook]);
+
+  // Create drawing layer instance
+  const drawingLayer = useMemo(() => new DrawingLayer(), []);
 
   // Get all sheet names
   const sheets = workbook.getSheetNames();
@@ -120,7 +128,30 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
   // Handle renderer ready
   const handleRendererReady = useCallback((r: CanvasRenderer) => {
     setRenderer(r);
+    
+    // Initialize viewport size
+    const vp = r.getViewportSize();
+    setViewportWidth(vp.width);
+    setViewportHeight(vp.height);
+    
+    // Initialize scroll position
+    const scroll = r.getScroll();
+    setScrollLeft(scroll.x);
+    setScrollTop(scroll.y);
   }, []);
+
+  // Subscribe to renderer scroll events
+  useEffect(() => {
+    if (!renderer) return;
+    
+    const onScroll = (event: { x: number; y: number }) => {
+      setScrollLeft(event.x);
+      setScrollTop(event.y);
+    };
+    
+    const unsubscribe = renderer.onScroll(onScroll);
+    return unsubscribe;
+  }, [renderer]);
 
   return (
     <div className="excel-app" style={style}>
@@ -143,6 +174,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
         commandManager={commandManager}
         selection={selection}
         activeTab={activeTab}
+        drawingLayer={drawingLayer}
       />
 
       {/* Formula Bar */}
@@ -156,7 +188,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       />
 
       {/* Spreadsheet Area */}
-      <div className="spreadsheet-area">
+      <div className="spreadsheet-area" style={{ position: 'relative' }}>
         <CyberSheet
           workbook={workbook}
           sheetName={activeSheet}
@@ -164,6 +196,15 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
           onRendererReady={handleRendererReady}
           onSelectionChange={handleSelectionChange}
           style={{ width: '100%', height: '100%' }}
+        />
+        <DrawingCanvas
+          drawingLayer={drawingLayer}
+          canvasWidth={viewportWidth}
+          canvasHeight={viewportHeight}
+          scrollLeft={scrollLeft}
+          scrollTop={scrollTop}
+          zoom={zoom / 100}
+          onObjectChange={() => {}}
         />
       </div>
 

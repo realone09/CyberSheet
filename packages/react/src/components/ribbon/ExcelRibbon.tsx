@@ -12,6 +12,10 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   FormattingController,
   ClipboardService,
+  DrawingLayer,
+  PageLayoutController,
+  NameManager,
+  CalculationController,
 } from '@cyber-sheet/core';
 import type {
   Address,
@@ -26,6 +30,9 @@ import { NumberFormatGroup } from './NumberFormatGroup';
 import { StylesGroup } from './StylesGroup';
 import { CellsGroup } from './CellsGroup';
 import { EditingGroup } from './EditingGroup';
+import { InsertTab } from './insert/InsertTab';
+import { PageLayoutTab } from './pagelayout/PageLayoutTab';
+import { FormulasTab } from './formulas/FormulasTab';
 import './ribbon.css';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -102,6 +109,21 @@ export const ExcelRibbon: React.FC<ExcelRibbonProps> = ({
   onStyleChange,
 }) => {
   const [activeTab, setActiveTab] = useState<RibbonTab>('home');
+
+  // Drawing layer for Insert tab
+  const drawingLayer = useMemo(() => new DrawingLayer(), []);
+
+  // Page layout controller for Page Layout tab
+  const pageLayoutController = useMemo(() => new PageLayoutController(), []);
+
+  // Name manager for Formulas tab
+  const nameManager = useMemo(() => new NameManager(), []);
+
+  // Calculation controller for Formulas tab
+  const calculationController = useMemo(() => new CalculationController(), []);
+
+  // Show formulas state
+  const [showFormulas, setShowFormulas] = useState(false);
 
   // Derive selected cells list
   const cells = useMemo(
@@ -349,6 +371,142 @@ export const ExcelRibbon: React.FC<ExcelRibbonProps> = ({
             />
           ) : null}
         </div>
+      ) : activeTab === 'insert' ? (
+        <InsertTab
+          worksheet={worksheet}
+          drawingLayer={drawingLayer}
+          onInsertTable={() => console.log('Insert Table')}
+          onInsertPivotTable={() => console.log('Insert PivotTable')}
+          onInsertPicture={() => console.log('Insert Picture')}
+          onInsertShape={(type) => console.log('Insert Shape:', type)}
+          onInsertIcon={() => console.log('Insert Icon')}
+          onInsertControl={(type) => console.log('Insert Control:', type)}
+          onInsertTextBox={() => console.log('Insert Text Box')}
+          onInsertHeaderFooter={() => console.log('Insert Header/Footer')}
+          onInsertWordArt={() => console.log('Insert WordArt')}
+          onInsertChart={(type) => console.log('Insert Chart:', type)}
+          onInsertSparkline={(type) => console.log('Insert Sparkline:', type)}
+          onInsertHyperlink={() => console.log('Insert Hyperlink')}
+          onInsertEquation={() => console.log('Insert Equation')}
+          onInsertSymbol={() => console.log('Insert Symbol')}
+          onDrawingChange={handleStyleChange}
+        />
+      ) : activeTab === 'pageLayout' ? (
+        <PageLayoutTab
+          onThemeChange={(theme) => {
+            pageLayoutController.setTheme(theme);
+            console.log('Theme changed:', theme);
+          }}
+          onColorsChange={(colors) => {
+            pageLayoutController.setColorTheme(colors);
+            console.log('Colors changed:', colors);
+          }}
+          onFontsChange={() => console.log('Fonts clicked')}
+          onEffectsChange={() => console.log('Effects clicked')}
+          onMarginsChange={(margins) => {
+            if (margins === 'Normal' || margins === 'Wide' || margins === 'Narrow') {
+              pageLayoutController.setMarginPreset(margins);
+            }
+            console.log('Margins changed:', margins);
+          }}
+          onOrientationChange={(orientation) => {
+            pageLayoutController.setOrientation(orientation);
+            console.log('Orientation changed:', orientation);
+          }}
+          onSizeChange={(size) => {
+            pageLayoutController.setPaperSize(size);
+            console.log('Size changed:', size);
+          }}
+          onPrintAreaSet={() => console.log('Print Area set')}
+          onBreaksInsert={(breakType) => {
+            if (breakType === 'page') {
+              pageLayoutController.insertPageBreak();
+            } else {
+              pageLayoutController.removeAllPageBreaks();
+            }
+            console.log('Break:', breakType);
+          }}
+          onBackgroundSet={() => console.log('Background set')}
+          onPrintTitlesSet={() => console.log('Print Titles set')}
+          onWidthChange={(width) => {
+            pageLayoutController.setFitToWidth(width);
+            console.log('Width changed:', width);
+          }}
+          onHeightChange={(height) => {
+            pageLayoutController.setFitToHeight(height);
+            console.log('Height changed:', height);
+          }}
+          onScaleChange={(scale) => {
+            pageLayoutController.setScale(scale);
+            console.log('Scale changed:', scale);
+          }}
+          onGridlinesViewChange={(visible) => {
+            const current = pageLayoutController.getPageSetup();
+            pageLayoutController.setGridlines(visible, current.gridlines.print);
+            console.log('Gridlines view:', visible);
+          }}
+          onGridlinesPrintChange={(print) => {
+            const current = pageLayoutController.getPageSetup();
+            pageLayoutController.setGridlines(current.gridlines.view, print);
+            console.log('Gridlines print:', print);
+          }}
+          onHeadingsViewChange={(visible) => {
+            const current = pageLayoutController.getPageSetup();
+            pageLayoutController.setHeadings(visible, current.headings.print);
+            console.log('Headings view:', visible);
+          }}
+          onHeadingsPrintChange={(print) => {
+            const current = pageLayoutController.getPageSetup();
+            pageLayoutController.setHeadings(current.headings.view, print);
+            console.log('Headings print:', print);
+          }}
+        />
+      ) : activeTab === 'formulas' ? (
+        <FormulasTab
+          // Function Library
+          onInsertFunction={() => console.log('Insert Function dialog')}
+          onAutoSum={(type) => console.log('AutoSum:', type)}
+          onSelectFunction={(category, func) => {
+            console.log('Select function:', category, func);
+          }}
+          // Defined Names
+          onNameManager={() => console.log('Name Manager dialog')}
+          onDefineName={() => console.log('Define Name dialog')}
+          onApplyNames={() => console.log('Apply Names dialog')}
+          onUseInFormula={(name) => {
+            console.log('Use in formula:', name);
+          }}
+          onCreateFromSelection={() => console.log('Create from Selection dialog')}
+          definedNames={nameManager.getAllNames().map((n: any) => n.name)}
+          // Formula Auditing
+          onTracePrecedents={() => console.log('Trace Precedents')}
+          onTraceDependents={() => console.log('Trace Dependents')}
+          onRemoveArrows={(type) => console.log('Remove Arrows:', type)}
+          onShowFormulas={(show) => {
+            setShowFormulas(show);
+            console.log('Show Formulas:', show);
+          }}
+          onErrorChecking={() => console.log('Error Checking dialog')}
+          onTraceError={() => console.log('Trace Error')}
+          onCircularReferences={() => console.log('Circular References')}
+          onEvaluateFormula={() => console.log('Evaluate Formula dialog')}
+          onWatchWindow={() => console.log('Watch Window')}
+          showFormulas={showFormulas}
+          // Calculation
+          onCalculationModeChange={(mode) => {
+            calculationController.setMode(mode);
+            console.log('Calculation mode:', mode);
+          }}
+          onCalculateNow={() => {
+            calculationController.calculateNow();
+            console.log('Calculate Now (F9)');
+          }}
+          onCalculateSheet={() => {
+            calculationController.calculateSheet();
+            console.log('Calculate Sheet (Shift+F9)');
+          }}
+          calculationMode={calculationController.getMode()}
+        />
       ) : (
         <div style={placeholderStyle}>
           {RIBBON_TABS.find(t => t.id === activeTab)?.label} tab — coming soon
