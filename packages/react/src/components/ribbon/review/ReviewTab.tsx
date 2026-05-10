@@ -2,7 +2,7 @@
  * ReviewTab.tsx
  *
  * Review Tab - Main shell integrating all review groups
- * Groups: Proofing | Accessibility | Comments | Protect | Ink
+ * Groups: Proofing | Accessibility | Comments | Changes | Protect | Ink
  */
 
 import React from 'react';
@@ -10,6 +10,7 @@ import type { Workbook, Address } from '@cyber-sheet/core';
 import { ProofingGroup } from './ProofingGroup';
 import { AccessibilityGroup } from './AccessibilityGroup';
 import { CommentsGroup } from './CommentsGroup';
+import { ChangesGroup } from './ChangesGroup';
 import { ProtectGroup } from './ProtectGroup';
 import { InkGroup } from './InkGroup';
 
@@ -56,6 +57,16 @@ export const ReviewTab: React.FC<ReviewTabProps> = ({
 
       {/* Comments Group */}
       <CommentsGroup
+        workbook={workbook}
+        selectedCells={selectedCells}
+        onCommand={onCommand}
+      />
+
+      {/* Divider */}
+      <div style={{ width: 1, height: 64, background: '#D9D9D9', margin: '4px 0' }} />
+
+      {/* Changes Group */}
+      <ChangesGroup
         workbook={workbook}
         selectedCells={selectedCells}
         onCommand={onCommand}
