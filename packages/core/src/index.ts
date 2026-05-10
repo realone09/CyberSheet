@@ -30,6 +30,7 @@ export * from './SelectionManager';
 export * from './FormattingController';
 export * from './FileOperations';
 export * from './DrawingLayer';
+export * from './commands/DrawingCommands';
 export * from './PageLayoutController';
 export * from './NameManager';
 export * from './CalculationController';

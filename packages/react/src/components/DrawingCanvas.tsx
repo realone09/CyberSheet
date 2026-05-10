@@ -140,6 +140,8 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
+  const [clipboard, setClipboard] = useState<DrawingObject[]>([]);
+  const [pasteCount, setPasteCount] = useState<number>(0);
 
   // ─── Render all objects ─────────────────────────────────
 
@@ -556,8 +558,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       if (hit.handle) {
         const obj = drawingLayer.getObject(hit.objectId!);
         if (obj) {
-          setSelectedIds([obj.id]);
-          drawingLayer.selectObject(obj.id);
+          // Don't change selection when grabbing a handle
           setDragState({
             objectId: obj.id,
             action: 'resize',
@@ -575,10 +576,26 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       }
 
       if (hit.objectId) {
-        setSelectedIds([hit.objectId]);
-        drawingLayer.selectObject(hit.objectId);
+        // Multi-select with Shift key
+        if (e.shiftKey) {
+          const currentSelection = drawingLayer.getSelectedIds();
+          if (currentSelection.includes(hit.objectId)) {
+            // Deselect if already selected
+            drawingLayer.deselectObject(hit.objectId);
+          } else {
+            // Add to selection
+            drawingLayer.selectObject(hit.objectId);
+          }
+          setSelectedIds(drawingLayer.getSelectedIds());
+        } else {
+          // Single select (clear others)
+          drawingLayer.deselectAll();
+          drawingLayer.selectObject(hit.objectId);
+          setSelectedIds([hit.objectId]);
+        }
+        
         const obj = drawingLayer.getObject(hit.objectId);
-        if (obj) {
+        if (obj && !e.shiftKey) {
           setDragState({
             objectId: hit.objectId,
             action: 'move',
@@ -592,8 +609,11 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           });
         }
       } else {
-        drawingLayer.deselectAll();
-        setSelectedIds([]);
+        // Click on empty space clears selection
+        if (!e.shiftKey) {
+          drawingLayer.deselectAll();
+          setSelectedIds([]);
+        }
       }
       onObjectChange?.();
     },
@@ -689,6 +709,98 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     drawingLayer.on('changed', onLayerChange);
     return () => (drawingLayer as any).off('changed', onLayerChange);
   }, [drawingLayer, render]);
+
+  // ─── Keyboard shortcuts ──────────────────────────────────
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle shortcuts if typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const selectedIds = drawingLayer.getSelectedIds();
+
+      // Delete or Backspace: Remove selected objects
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          selectedIds.forEach(id => drawingLayer.removeObject(id));
+          onObjectChange?.();
+        }
+      }
+
+      // Ctrl+C or Cmd+C: Copy selected objects
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          const objects = selectedIds
+            .map(id => drawingLayer.getObject(id))
+            .filter(Boolean) as DrawingObject[];
+          setClipboard(objects);
+          setPasteCount(0);
+          console.log(`Copied ${objects.length} object(s)`);
+        }
+      }
+
+      // Ctrl+V or Cmd+V: Paste objects from clipboard
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (clipboard.length > 0) {
+          e.preventDefault();
+          const newPasteCount = pasteCount + 1;
+          setPasteCount(newPasteCount);
+          
+          const offsetX = 20 * newPasteCount;
+          const offsetY = 20 * newPasteCount;
+          const pastedIds: string[] = [];
+
+          clipboard.forEach(source => {
+            const copy = JSON.parse(JSON.stringify(source)) as DrawingObject;
+            copy.id = `${source.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            copy.position.x += offsetX;
+            copy.position.y += offsetY;
+            copy.zIndex = drawingLayer.getAllObjects().length + 1;
+            drawingLayer.addObject(copy);
+            pastedIds.push(copy.id);
+          });
+
+          // Select the pasted objects
+          drawingLayer.deselectAll();
+          pastedIds.forEach(id => drawingLayer.selectObject(id));
+          onObjectChange?.();
+          console.log(`Pasted ${pastedIds.length} object(s) at offset (${offsetX}, ${offsetY})`);
+        }
+      }
+
+      // Ctrl+X or Cmd+X: Cut selected objects
+      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          const objects = selectedIds
+            .map(id => drawingLayer.getObject(id))
+            .filter(Boolean) as DrawingObject[];
+          setClipboard(objects);
+          setPasteCount(0);
+          selectedIds.forEach(id => drawingLayer.removeObject(id));
+          onObjectChange?.();
+          console.log(`Cut ${objects.length} object(s)`);
+        }
+      }
+
+      // Escape: Clear selection
+      if (e.key === 'Escape') {
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          drawingLayer.deselectAll();
+          onObjectChange?.();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [drawingLayer, clipboard, pasteCount, onObjectChange]);
 
   return (
     <canvas

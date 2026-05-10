@@ -33,6 +33,8 @@ import { EditingGroup } from './EditingGroup';
 import { InsertTab } from './insert/InsertTab';
 import { PageLayoutTab } from './pagelayout/PageLayoutTab';
 import { FormulasTab } from './formulas/FormulasTab';
+import { DataTab } from './data/DataTab';
+import { ViewTab } from './view/ViewTab';
 import './ribbon.css';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -506,6 +508,50 @@ export const ExcelRibbon: React.FC<ExcelRibbonProps> = ({
             console.log('Calculate Sheet (Shift+F9)');
           }}
           calculationMode={calculationController.getMode()}
+        />
+      ) : activeTab === 'data' ? (
+        <DataTab
+          workbook={workbook}
+          selectedCells={cells}
+          onCommand={(command) => {
+            console.log('Data tab command:', command);
+            // TODO: Wire to CommandManager for backend logic
+          }}
+        />
+      ) : activeTab === 'view' ? (
+        <ViewTab
+          workbook={workbook}
+          selectedCells={cells}
+          currentView="normal"
+          currentZoom={100}
+          showRuler={false}
+          showGridlines={true}
+          showFormulaBar={true}
+          showHeadings={true}
+          onViewChange={(view) => {
+            console.log('View changed:', view);
+            // TODO: Wire to ViewStateManager
+          }}
+          onZoomChange={(zoom) => {
+            console.log('Zoom changed:', zoom);
+            // TODO: Wire to ZoomController
+          }}
+          onToggleShow={(option, value) => {
+            console.log('Toggle show:', option, value);
+            // TODO: Wire to UIStateManager
+          }}
+          onZoomToSelection={() => {
+            console.log('Zoom to Selection');
+            // TODO: Calculate zoom based on selection size
+          }}
+          onCustomViews={() => {
+            console.log('Custom Views dialog');
+            // TODO: Open custom views manager
+          }}
+          onCommand={(command) => {
+            console.log('View tab command:', command);
+            // TODO: Wire to CommandManager for freeze/split/window operations
+          }}
         />
       ) : (
         <div style={placeholderStyle}>
