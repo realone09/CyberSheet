@@ -35,6 +35,7 @@ import { PageLayoutTab } from './pagelayout/PageLayoutTab';
 import { FormulasTab } from './formulas/FormulasTab';
 import { DataTab } from './data/DataTab';
 import { ViewTab } from './view/ViewTab';
+import { ReviewTab } from './review/ReviewTab';
 import './ribbon.css';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -516,6 +517,15 @@ export const ExcelRibbon: React.FC<ExcelRibbonProps> = ({
           onCommand={(command) => {
             console.log('Data tab command:', command);
             // TODO: Wire to CommandManager for backend logic
+          }}
+        />
+      ) : activeTab === 'review' ? (
+        <ReviewTab
+          workbook={workbook}
+          selectedCells={cells}
+          onCommand={(command) => {
+            console.log('Review tab command:', command);
+            // TODO: Wire to CommandManager for comments/protection/proofing
           }}
         />
       ) : activeTab === 'view' ? (
