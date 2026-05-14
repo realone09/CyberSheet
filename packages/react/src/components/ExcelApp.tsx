@@ -94,9 +94,6 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
   const [recentFillColors, setRecentFillColors] = useState<string[]>([]);
   const [recentFontColors, setRecentFontColors] = useState<string[]>([]);
   
-  // Store selection when context menu opens (to avoid closure staleness)
-  const contextMenuSelectionRef = useRef<any>(null);
-  
   // Refs for keyboard handler to avoid re-attaching listeners on every state change
   const selectedCellRef = useRef(selectedCell);
   const selectionRef = useRef(selection);
