@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Cut Operation Source Clearing (May 14, 2026)
+
+**Critical cut/paste behavior fix**
+- Fixed Ctrl+X cut operation to properly clear source cells after paste completes
+- Previously: ExcelApp was executing `ClearCellsCommand` immediately after creating cut payload, clearing source before paste
+- Result: Source cells were cleared prematurely, then PasteCommand's isCut logic couldn't clear them (already empty)
+- User observed: Ctrl+X behaved identically to Ctrl+C (copy), source cells remained populated after paste
+
+**Architecture Fix**
+- Removed premature `ClearCellsCommand` execution from ExcelApp Ctrl+X keyboard handler
+- Cut operation now follows proper transaction flow:
+  1. `clipboardService.cut()` creates payload with `isCut: true` flag
+  2. Source cells remain populated (not cleared yet)
+  3. User presses Ctrl+V to paste
+  4. `PasteCommand.execute()` writes to target cells first
+  5. `PasteCommand.execute()` then clears source cells atomically (Step 6: CUT SOURCE CLEARING)
+- This ensures undo/redo works correctly (single atomic command instead of two separate commands)
+
+**Impact**
+- Cut → Paste now properly moves data (clears source after successful paste)
+- Undo restores both source and target cells correctly in one operation
+- Cut is now truly atomic (paste + clear) as designed
+
+**Added Diagnostics**
+- Enhanced logging in PasteCommand Step 6 (Cut Source Clearing)
+- Shows source range dimensions, cell count, and clearing confirmation
+- Format: `✂️ [PasteCommand] Clearing N source cells from cut operation`
+
+### Fixed - Keyboard Layout Independence (May 14, 2026)
+
+**Critical internationalization fix**
+- Replaced `e.key` with `e.code` for all keyboard shortcuts to support different keyboard layouts
+- Previously: Shortcuts like Ctrl+C used `e.key === 'c'`, which checks the character output
+- Problem: On non-QWERTY layouts (AZERTY, Cyrillic, etc.), the C key produces different characters
+- Result: Keyboard shortcuts didn't work when user switched keyboard layout/language
+
+**Technical Details**
+- `e.key`: Character produced by key (layout-dependent: 'c' on QWERTY, 'ц' on Cyrillic)
+- `e.code`: Physical key position (layout-independent: 'KeyC' for C key regardless of layout)
+- Changed all letter key checks: `e.key === 'c'` → `e.code === 'KeyC'`
+- Changed number key checks: `e.key === '1'` → `e.code === 'Digit1'`
+- Special keys unchanged: 'Escape', 'Enter', 'Tab', 'Home', 'End', 'F2', 'Delete', 'Backspace' (e.key and e.code are identical)
+
+**Affected Shortcuts**
+- Ctrl+Z (Undo): `KeyZ`
+- Ctrl+Y / Ctrl+Shift+Z (Redo): `KeyY` / `KeyZ`
+- Ctrl+C (Copy): `KeyC`
+- Ctrl+X (Cut): `KeyX`
+- Ctrl+V (Paste): `KeyV`
+- Ctrl+B (Bold): `KeyB`
+- Ctrl+I (Italic): `KeyI`
+- Ctrl+U (Underline): `KeyU`
+- Ctrl+S (Save): `KeyS`
+- Ctrl+A (Select All): `KeyA`
+- Ctrl+1 (Format Cells): `Digit1`
+
+**Impact**
+- Keyboard shortcuts now work consistently across all keyboard layouts
+- Users can switch language/layout without losing shortcut functionality
+- Improved accessibility for international users
+
 ### Fixed - Context Menu Selection Race Condition (May 14, 2026)
 
 **Critical copy/paste bug fix**

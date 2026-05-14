@@ -438,6 +438,11 @@ export class PasteCommand implements Command {
     // This is the "source invalidation" phase of the cut transaction
     if (this.payload.isCut) {
       const { start, end } = this.payload.sourceRange;
+      const cellCount = (end.row - start.row + 1) * (end.col - start.col + 1);
+      console.log(`✂️ [PasteCommand] Clearing ${cellCount} source cells from cut operation`, {
+        sourceRange: `(${start.row},${start.col}) to (${end.row},${end.col})`,
+        dimensions: `${end.row - start.row + 1}x${end.col - start.col + 1}`
+      });
       
       // Clear all cells in source range
       for (let row = start.row; row <= end.row; row++) {
@@ -456,6 +461,7 @@ export class PasteCommand implements Command {
       
       // Clear source merges
       this.worksheet.cancelMerge(this.payload.sourceRange);
+      console.log('✅ [PasteCommand] Source cells cleared successfully');
     }
     
     // NOTE: Recomputation happens OUTSIDE this command via RecalcCoordinator

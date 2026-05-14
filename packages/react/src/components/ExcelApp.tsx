@@ -674,14 +674,14 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       // ===== SHORTCUTS THAT WORK IN INPUT FIELDS =====
       
       // Ctrl+Z (Undo) - works everywhere
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
         e.preventDefault();
         if (onUndo) onUndo();
         return;
       }
       
       // Ctrl+Y or Ctrl+Shift+Z (Redo) - works everywhere
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.shiftKey && e.code === 'KeyZ'))) {
         e.preventDefault();
         if (onRedo) onRedo();
         return;
@@ -753,7 +753,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       // --- Clipboard Operations ---
       
       // Ctrl+C (Copy)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC') {
         e.preventDefault();
         console.log('📋 Ctrl+C pressed, selection:', selection);
         if (selection) {
@@ -765,31 +765,22 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       }
       
       // Ctrl+X (Cut)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyX') {
         e.preventDefault();
         console.log('✂️ Ctrl+X pressed, selection:', selection);
         if (selection) {
           const range = { start: selection.start, end: selection.end };
           clipboardService.cut(sheet, range);
-          console.log('✅ Cut to clipboard');
+          console.log('✅ Cut to clipboard (source will be cleared after paste)');
           
-          // Clear source cells using command (for undo/redo)
-          const clearCmd = new ClearCellsCommand(sheet, range);
-          commandManager.execute(clearCmd);
-          
-          // Invalidate and redraw
-          const r1 = Math.min(range.start.row, range.end.row);
-          const r2 = Math.max(range.start.row, range.end.row);
-          const c1 = Math.min(range.start.col, range.end.col);
-          const c2 = Math.max(range.start.col, range.end.col);
-          renderer?.invalidateRange(r1, c1, r2, c2);
-          renderer?.scheduleRedraw();
+          // Note: Source cells are NOT cleared here.
+          // PasteCommand will handle clearing the source after paste completes (via isCut flag)
         }
         return;
       }
       
       // Ctrl+V (Paste)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
         e.preventDefault();
         const payload = clipboardService.getPayload();
         console.log('📄 [ExcelApp] Ctrl+V pressed', {
@@ -827,7 +818,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       // --- Formatting Operations ---
       
       // Ctrl+B (Bold)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyB') {
         e.preventDefault();
         if (selection) {
           const r1 = Math.min(selection.start.row, selection.end.row);
@@ -852,7 +843,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       }
       
       // Ctrl+I (Italic)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyI') {
         e.preventDefault();
         if (selection) {
           const r1 = Math.min(selection.start.row, selection.end.row);
@@ -877,7 +868,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       }
       
       // Ctrl+U (Underline)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyU') {
         e.preventDefault();
         if (selection) {
           const r1 = Math.min(selection.start.row, selection.end.row);
@@ -902,14 +893,14 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       }
       
       // Ctrl+S (Save)
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
         e.preventDefault();
         if (onSave) onSave();
         return;
       }
       
       // Ctrl+1 (Format Cells dialog)
-      if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'Digit1') {
         e.preventDefault();
         setIsFormatDialogOpen(true);
         return;
@@ -949,7 +940,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
       }
       
       // Ctrl+A (Select current region or all)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
         e.preventDefault();
         if (!selectedCell) return;
         
