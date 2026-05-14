@@ -1,0 +1,21 @@
+<svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
+          {/* ABC with checkmark icon */}
+          <text
+            x="2"
+            y="14"
+            fill="#0078D4"
+            fontSize="12"
+            fontWeight="bold"
+            fontFamily="Segoe UI"
+          >
+            ABC
+          </text>
+          <path
+            d="M14 4 L16 6 L19 3"
+            stroke="#107C10"
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>

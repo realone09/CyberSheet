@@ -1,3 +1,4 @@
+import { FillColorButtonIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { ColorGrid } from './ColorGrid';
 import { PatternGrid } from './PatternGrid';
@@ -211,13 +212,7 @@ export const FillColorButton: React.FC<FillColorButtonProps> = ({
     if (fill.type === 'pattern') {
       return (
         <div className="cs-fill-preview pattern" style={{ width: '20px', height: '16px' }}>
-          <svg width="20" height="16" xmlns="http://www.w3.org/2000/svg">
-            <rect width="20" height="16" fill={fill.background} />
-            {/* Simplified pattern preview */}
-            <text x="10" y="12" fontSize="10" textAnchor="middle" fill={fill.foreground}>
-              ⊞
-            </text>
-          </svg>
+          <FillColorButtonIcon1 />
         </div>
       );
     }

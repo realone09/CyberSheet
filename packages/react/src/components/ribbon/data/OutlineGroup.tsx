@@ -1,3 +1,4 @@
+import { OutlineGroupIcon4, OutlineGroupIcon3, OutlineGroupIcon2, OutlineGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook, Address, Range } from '@cyber-sheet/core';
 
@@ -108,20 +109,10 @@ export const OutlineGroup: React.FC<OutlineGroupProps> = ({ workbook, selectedCe
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
           >
-            <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-              {/* Group icon - bracket with lines */}
-              <path d="M4 3 L2 3 L2 13 L4 13" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-              <line x1="6" y1="5" x2="14" y2="5" stroke="#333" strokeWidth="1"/>
-              <line x1="6" y1="8" x2="14" y2="8" stroke="#333" strokeWidth="1"/>
-              <line x1="6" y1="11" x2="14" y2="11" stroke="#333" strokeWidth="1"/>
-              <circle cx="16" cy="8" r="2" fill="#0078D4"/>
-              <text x="15" y="10" fontSize="4" fill="#FFF" fontWeight="bold">-</text>
-            </svg>
+            <OutlineGroupIcon1 />
             <span style={{ fontSize: 9, marginTop: 2 }}>Group</span>
             <div style={{ position: 'absolute', bottom: 2, right: 2 }}>
-              <svg width="6" height="4" viewBox="0 0 6 4">
-                <path d="M0 0 L3 4 L6 0" fill="#333"/>
-              </svg>
+              <OutlineGroupIcon2 />
             </div>
           </button>
 
@@ -203,20 +194,10 @@ export const OutlineGroup: React.FC<OutlineGroupProps> = ({ workbook, selectedCe
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
           >
-            <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-              {/* Ungroup icon - open bracket */}
-              <path d="M4 3 L2 3 L2 13 L4 13" stroke="#999" strokeWidth="1.5" fill="none" strokeDasharray="2,1"/>
-              <line x1="6" y1="5" x2="14" y2="5" stroke="#333" strokeWidth="1"/>
-              <line x1="6" y1="8" x2="14" y2="8" stroke="#333" strokeWidth="1"/>
-              <line x1="6" y1="11" x2="14" y2="11" stroke="#333" strokeWidth="1"/>
-              <circle cx="16" cy="8" r="2" fill="#E83E3E"/>
-              <text x="14.5" y="10" fontSize="4" fill="#FFF" fontWeight="bold">+</text>
-            </svg>
+            <OutlineGroupIcon3 />
             <span style={{ fontSize: 9, marginTop: 2 }}>Ungroup</span>
             <div style={{ position: 'absolute', bottom: 2, right: 2 }}>
-              <svg width="6" height="4" viewBox="0 0 6 4">
-                <path d="M0 0 L3 4 L6 0" fill="#333"/>
-              </svg>
+              <OutlineGroupIcon4 />
             </div>
           </button>
 

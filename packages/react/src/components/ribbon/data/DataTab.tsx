@@ -1,3 +1,4 @@
+import { DataTabIcon1 } from '@cyber-sheet/icons/react';
 import React from 'react';
 import type { Workbook, Address } from '@cyber-sheet/core';
 import { GetTransformDataGroup } from './GetTransformDataGroup';
@@ -28,11 +29,7 @@ export const DataTab: React.FC<DataTabProps> = ({ workbook, selectedCells, onCom
           title="Workbook Links"
           className="ribbon-feature-button"
         >
-          <svg className="ribbon-feature-icon" width="20" height="16" viewBox="0 0 20 16" fill="none">
-            <path d="M6 8 L8 6 C9 5 11 5 12 6 L14 8 M14 8 L12 10 C11 11 9 11 8 10 L6 8" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <circle cx="6" cy="8" r="2" fill="#0078D4"/>
-            <circle cx="14" cy="8" r="2" fill="#0078D4"/>
-          </svg>
+          <DataTabIcon1 />
           <span>Workbook<br/>Links</span>
         </button>
         <div className="ribbon-tab-shell-title">Queries &amp; Connections</div>

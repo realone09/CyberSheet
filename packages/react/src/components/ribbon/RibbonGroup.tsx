@@ -1,3 +1,4 @@
+import { RibbonGroupIcon1 } from '@cyber-sheet/icons/react';
 import React from 'react';
 import './ribbon.css';
 
@@ -45,9 +46,7 @@ export const RibbonGroup: React.FC<RibbonGroupProps> = ({
             aria-label={`Open ${title} settings dialog`}
             type="button"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <path d="M11 11L7 7M7 7L3 3M7 7L11 3M7 7L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <RibbonGroupIcon1 />
           </button>
         )}
       </div>

@@ -1,0 +1,6 @@
+<svg width="20" height="16" viewBox="0 0 20 16" fill="none">
+            {/* Remove duplicates icon - two squares with X */}
+            <rect x="2" y="2" width="8" height="8" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
+            <rect x="10" y="6" width="8" height="8" stroke="#0078D4" strokeWidth="1.5" fill="none" opacity="0.5"/>
+            <path d="M4 4 L8 8 M8 4 L4 8" stroke="#E83E3E" strokeWidth="1.5"/>
+          </svg>

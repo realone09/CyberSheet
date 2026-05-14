@@ -5,6 +5,7 @@
  * Contains: Check Accessibility dropdown
  */
 
+import { AccessibilityGroupIcon2, AccessibilityGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 
@@ -63,41 +64,10 @@ export const AccessibilityGroup: React.FC<AccessibilityGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
-            {/* Accessibility person icon with checkmark */}
-            <circle cx="10" cy="5" r="2" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-            <path
-              d="M6 9 L10 7 L14 9"
-              stroke="#0078D4"
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-            />
-            <line x1="10" y1="7" x2="10" y2="12" stroke="#0078D4" strokeWidth="1.5" />
-            <path
-              d="M7 12 L10 12 L13 12"
-              stroke="#0078D4"
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-            />
-            <line x1="8" y1="12" x2="7" y2="16" stroke="#0078D4" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="12" y1="12" x2="13" y2="16" stroke="#0078D4" strokeWidth="1.5" strokeLinecap="round" />
-            {/* Checkmark */}
-            <path
-              d="M14 3 L15.5 4.5 L18 2"
-              stroke="#107C10"
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <AccessibilityGroupIcon1 />
           <span style={labelStyle}>Check</span>
           <span style={labelStyle}>Accessibility</span>
-          <svg width="8" height="5" viewBox="0 0 8 5" style={{ marginTop: 2 }}>
-            <path d="M0 0 L4 4 L8 0" fill="#333" />
-          </svg>
+          <AccessibilityGroupIcon2 />
         </button>
 
         {/* Dropdown Menu */}

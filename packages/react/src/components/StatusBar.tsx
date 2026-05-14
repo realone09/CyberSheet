@@ -4,6 +4,7 @@
  * Excel-style status bar with statistics and zoom controls
  */
 
+import { StatusBarIcon3, StatusBarIcon2, StatusBarIcon1 } from '@cyber-sheet/icons/react';
 import React from 'react';
 
 export interface StatusBarProps {
@@ -70,12 +71,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             title="Normal View"
             onClick={() => onViewModeChange?.('normal')}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="1" y="1" width="5" height="5"/>
-              <rect x="8" y="1" width="5" height="5"/>
-              <rect x="1" y="8" width="5" height="5"/>
-              <rect x="8" y="8" width="5" height="5"/>
-            </svg>
+            <StatusBarIcon1 />
           </button>
 
           <button
@@ -83,12 +79,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             title="Page Layout View"
             onClick={() => onViewModeChange?.('pageLayout')}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="2" y="1" width="10" height="12" fill="none" stroke="currentColor"/>
-              <line x1="4" y1="4" x2="10" y2="4" stroke="currentColor"/>
-              <line x1="4" y1="6" x2="10" y2="6" stroke="currentColor"/>
-              <line x1="4" y1="8" x2="10" y2="8" stroke="currentColor"/>
-            </svg>
+            <StatusBarIcon2 />
           </button>
 
           <button
@@ -96,11 +87,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             title="Page Break Preview"
             onClick={() => onViewModeChange?.('pageBreak')}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="1" y="1" width="12" height="12" fill="none" stroke="currentColor"/>
-              <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" strokeDasharray="2"/>
-              <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" strokeDasharray="2"/>
-            </svg>
+            <StatusBarIcon3 />
           </button>
         </div>
 

@@ -1,3 +1,4 @@
+import { PatternGridIcon1 } from '@cyber-sheet/icons/react';
 import React, { useRef, useEffect, useState } from 'react';
 import type { PatternType, PatternMetadata } from './fillTypes';
 import { PATTERN_TYPES } from './fillTypes';
@@ -130,22 +131,7 @@ export const PatternGrid: React.FC<PatternGridProps> = ({
 
     // Pattern with SVG
     return (
-      <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern
-            id={`pattern-${pattern.type}`}
-            x="0"
-            y="0"
-            width="8"
-            height="8"
-            patternUnits="userSpaceOnUse"
-          >
-            <rect width="8" height="8" fill={backgroundColor} />
-            <path d={pattern.svgPattern} stroke={foregroundColor} fill="none" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width="24" height="24" fill={`url(#pattern-${pattern.type})`} />
-      </svg>
+      <PatternGridIcon1 />
     );
   };
 

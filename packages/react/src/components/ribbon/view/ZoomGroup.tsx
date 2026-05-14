@@ -5,6 +5,7 @@
  * Contains: Zoom slider (10-400%), Zoom to Selection, 100% button
  */
 
+import { ZoomGroupIcon2, ZoomGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 
@@ -98,11 +99,7 @@ export const ZoomGroup: React.FC<ZoomGroupProps> = ({
           }}
           title="Zoom to Selection"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="3" y="3" width="14" height="14" stroke="#0078D4" strokeWidth="2" strokeDasharray="3 2" fill="none"/>
-            <circle cx="15" cy="15" r="3" fill="#0078D4"/>
-            <path d="M17 17 L19 19" stroke="#0078D4" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+          <ZoomGroupIcon1 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Zoom to<br/>Selection</span>
         </button>
 
@@ -118,10 +115,7 @@ export const ZoomGroup: React.FC<ZoomGroupProps> = ({
           }}
           title="100% Zoom"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <text x="10" y="14" textAnchor="middle" fill="#0078D4" fontSize="12" fontWeight="bold">100</text>
-            <text x="16" y="10" fill="#0078D4" fontSize="8">%</text>
-          </svg>
+          <ZoomGroupIcon2 />
           <span>100%</span>
         </button>
       </div>

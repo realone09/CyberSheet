@@ -1,0 +1,41 @@
+{
+  "name": "@cyber-sheet/icons",
+  "version": "1.0.0",
+  "description": "SVG icon components for cyber-sheet-excel (React, Vue, Svelte, Angular)",
+  "main": "react/index.ts",
+  "types": "react/index.ts",
+  "exports": {
+    "./react": {
+      "types": "./react/index.ts",
+      "import": "./react/index.ts"
+    },
+    "./vue": {
+      "types": "./vue/index.ts",
+      "import": "./vue/index.ts"
+    },
+    "./svelte": {
+      "types": "./svelte/index.ts",
+      "import": "./svelte/index.ts"
+    },
+    "./angular": {
+      "types": "./angular/index.ts",
+      "import": "./angular/index.ts"
+    }
+  },
+  "files": [
+    "react",
+    "vue",
+    "svelte",
+    "angular",
+    "svg"
+  ],
+  "keywords": [
+    "icons",
+    "svg",
+    "react",
+    "vue",
+    "svelte",
+    "angular"
+  ],
+  "license": "MIT"
+}

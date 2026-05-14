@@ -5,6 +5,7 @@
  * Contains: Freeze Panes dropdown, Split, Hide/Unhide, View Side by Side, Arrange All, New Window, Switch Windows
  */
 
+import { WindowGroupIcon10, WindowGroupIcon9, WindowGroupIcon8, WindowGroupIcon7, WindowGroupIcon6, WindowGroupIcon5, WindowGroupIcon4, WindowGroupIcon3, WindowGroupIcon2, WindowGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { Workbook, Address } from '@cyber-sheet/core';
 
@@ -152,15 +153,9 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
             }}
             title="Freeze Panes"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="2" y="2" width="16" height="16" stroke="#0078D4" strokeWidth="2" fill="none"/>
-              <line x1="2" y1="8" x2="18" y2="8" stroke="#0078D4" strokeWidth="2.5"/>
-              <line x1="8" y1="2" x2="8" y2="18" stroke="#0078D4" strokeWidth="2.5"/>
-            </svg>
+            <WindowGroupIcon1 />
             <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Freeze<br/>Panes</span>
-            <svg width="8" height="5" viewBox="0 0 8 5" style={{ position: 'absolute', bottom: 2, right: 2 }}>
-              <path d="M0 0 L4 4 L8 0" fill="#333"/>
-            </svg>
+            <WindowGroupIcon2 />
           </button>
 
           {showFreezePanesDropdown && (
@@ -230,12 +225,7 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
           }}
           title="Split Window"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="2" y="2" width="16" height="16" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <line x1="2" y1="10" x2="18" y2="10" stroke="#0078D4" strokeWidth="2"/>
-            <line x1="10" y1="2" x2="10" y2="18" stroke="#0078D4" strokeWidth="2"/>
-            <circle cx="10" cy="10" r="2" fill="#0078D4"/>
-          </svg>
+          <WindowGroupIcon3 />
           <span>Split</span>
         </button>
 
@@ -251,10 +241,7 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
           }}
           title="Hide Window"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="3" y="4" width="14" height="12" stroke="#888" strokeWidth="1.5" fill="none"/>
-            <line x1="2" y1="2" x2="18" y2="18" stroke="#888" strokeWidth="2"/>
-          </svg>
+          <WindowGroupIcon4 />
           <span>Hide</span>
         </button>
 
@@ -270,10 +257,7 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
           }}
           title="Unhide Window"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="3" y="4" width="14" height="12" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <circle cx="10" cy="10" r="3" fill="#E3F2FD" stroke="#0078D4" strokeWidth="1"/>
-          </svg>
+          <WindowGroupIcon5 />
           <span>Unhide</span>
         </button>
 
@@ -289,10 +273,7 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
           }}
           title="View Side by Side"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="2" y="3" width="7" height="14" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="11" y="3" width="7" height="14" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-          </svg>
+          <WindowGroupIcon6 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>View Side<br/>by Side</span>
         </button>
 
@@ -308,12 +289,7 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
           }}
           title="Arrange All Windows"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="2" y="2" width="6" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="10" y="2" width="6" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="2" y="10" width="6" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="10" y="10" width="6" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-          </svg>
+          <WindowGroupIcon7 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Arrange<br/>All</span>
         </button>
 
@@ -329,10 +305,7 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
           }}
           title="New Window"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="3" y="3" width="12" height="12" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="5" y="5" width="12" height="12" stroke="#0078D4" strokeWidth="1.5" fill="#E3F2FD"/>
-          </svg>
+          <WindowGroupIcon8 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>New<br/>Window</span>
         </button>
 
@@ -349,15 +322,9 @@ export const WindowGroup: React.FC<WindowGroupProps> = ({
             }}
             title="Switch Windows"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="2" y="4" width="10" height="8" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-              <rect x="8" y="8" width="10" height="8" stroke="#0078D4" strokeWidth="1.5" fill="#E3F2FD"/>
-              <path d="M15 10 L17 12 L15 14" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            </svg>
+            <WindowGroupIcon9 />
             <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Switch<br/>Windows</span>
-            <svg width="8" height="5" viewBox="0 0 8 5" style={{ position: 'absolute', bottom: 2, right: 2 }}>
-              <path d="M0 0 L4 4 L8 0" fill="#333"/>
-            </svg>
+            <WindowGroupIcon10 />
           </button>
 
           {showSwitchWindowsDropdown && (

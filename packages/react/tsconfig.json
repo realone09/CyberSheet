@@ -9,12 +9,14 @@
     "baseUrl": ".",
     "paths": {
       "@cyber-sheet/core": ["../core/src"],
-      "@cyber-sheet/renderer-canvas": ["../renderer-canvas/src"]
+      "@cyber-sheet/renderer-canvas": ["../renderer-canvas/src"],
+      "@cyber-sheet/icons/*": ["../icons/*"]
     }
   },
   "include": ["src"],
   "references": [
     { "path": "../core" },
-    { "path": "../renderer-canvas" }
+    { "path": "../renderer-canvas" },
+    { "path": "../icons" }
   ]
 }

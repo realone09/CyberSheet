@@ -13,6 +13,7 @@
  * Phase 2: Excel 365-Level Number Formatting
  */
 
+import { NumberFormatGroupIcon2, NumberFormatGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import type { Address } from '@cyber-sheet/core';
 import type { FormattingController } from '@cyber-sheet/core';
@@ -378,11 +379,7 @@ export const NumberFormatGroup: React.FC<NumberFormatGroupProps> = ({
             (e.target as HTMLElement).style.backgroundColor = '#fff';
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-            <circle cx="4" cy="14" r="1.5" />
-            <text x="7" y="13" fontSize="12" fontWeight="600">0</text>
-            <text x="12" y="11" fontSize="10" fontWeight="600" fill="#0066cc">+</text>
-          </svg>
+          <NumberFormatGroupIcon1 />
         </button>
 
         <button
@@ -396,11 +393,7 @@ export const NumberFormatGroup: React.FC<NumberFormatGroupProps> = ({
             (e.target as HTMLElement).style.backgroundColor = '#fff';
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-            <circle cx="4" cy="14" r="1.5" />
-            <text x="7" y="13" fontSize="12" fontWeight="600">0</text>
-            <text x="12" y="12" fontSize="10" fontWeight="600" fill="#cc0000">−</text>
-          </svg>
+          <NumberFormatGroupIcon2 />
         </button>
 
         {/* Decimal pulse indicator */}

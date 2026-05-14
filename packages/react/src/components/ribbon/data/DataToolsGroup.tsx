@@ -1,3 +1,4 @@
+import { DataToolsGroupIcon5, DataToolsGroupIcon4, DataToolsGroupIcon3, DataToolsGroupIcon2, DataToolsGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook, Address, Range } from '@cyber-sheet/core';
 
@@ -95,19 +96,12 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
           >
-            <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-              {/* Data validation icon - check mark with exclamation */}
-              <path d="M2 8 L6 12 L14 2" stroke="#00A859" strokeWidth="2" fill="none"/>
-              <circle cx="16" cy="12" r="3" fill="#E83E3E"/>
-              <text x="15.5" y="14.5" fontSize="5" fill="#FFF" fontWeight="bold">!</text>
-            </svg>
+            <DataToolsGroupIcon1 />
             <span style={{ fontSize: 8, marginTop: 2 }}>Data</span>
             <span style={{ fontSize: 8 }}>Validation</span>
             {/* Dropdown arrow */}
             <div style={{ position: 'absolute', bottom: 2, right: 2 }}>
-              <svg width="6" height="4" viewBox="0 0 6 4">
-                <path d="M0 0 L3 4 L6 0" fill="#333"/>
-              </svg>
+              <DataToolsGroupIcon2 />
             </div>
           </button>
 
@@ -206,13 +200,7 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-            {/* Text to columns icon - split arrow */}
-            <rect x="2" y="2" width="6" height="12" fill="#0078D4" opacity="0.3"/>
-            <path d="M10 4 L8 8 L10 8 L10 12 L12 8 L10 8 Z" fill="#0078D4"/>
-            <rect x="14" y="2" width="2" height="12" fill="#0078D4" opacity="0.5"/>
-            <rect x="17" y="2" width="1" height="12" fill="#0078D4" opacity="0.5"/>
-          </svg>
+          <DataToolsGroupIcon3 />
           <span style={{ fontSize: 8, marginTop: 2 }}>Text to</span>
           <span style={{ fontSize: 8 }}>Columns</span>
         </button>
@@ -240,10 +228,7 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-            {/* Flash fill icon - lightning bolt */}
-            <path d="M10 2 L6 8 L10 8 L8 14 L14 6 L10 6 L12 2 Z" fill="#FFB900" stroke="#333" strokeWidth="0.5"/>
-          </svg>
+          <DataToolsGroupIcon4 />
           <span style={{ fontSize: 8, marginTop: 2 }}>Flash</span>
           <span style={{ fontSize: 8 }}>Fill</span>
         </button>
@@ -271,12 +256,7 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-            {/* Remove duplicates icon - two squares with X */}
-            <rect x="2" y="2" width="8" height="8" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="10" y="6" width="8" height="8" stroke="#0078D4" strokeWidth="1.5" fill="none" opacity="0.5"/>
-            <path d="M4 4 L8 8 M8 4 L4 8" stroke="#E83E3E" strokeWidth="1.5"/>
-          </svg>
+          <DataToolsGroupIcon5 />
           <span style={{ fontSize: 8, marginTop: 2 }}>Remove</span>
           <span style={{ fontSize: 8 }}>Duplicates</span>
         </button>

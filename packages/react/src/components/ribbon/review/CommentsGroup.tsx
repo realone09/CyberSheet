@@ -5,6 +5,7 @@
  * Contains: New Comment, Delete, Previous, Next, Show Comments dropdown
  */
 
+import { CommentsGroupIcon6, CommentsGroupIcon5, CommentsGroupIcon4, CommentsGroupIcon3, CommentsGroupIcon2, CommentsGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import type { Workbook, Address } from '@cyber-sheet/core';
 
@@ -85,13 +86,7 @@ export const CommentsGroup: React.FC<CommentsGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
-            {/* Comment bubble with plus */}
-            <rect x="2" y="4" width="14" height="10" rx="2" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-            <path d="M8 14 L10 17 L12 14" fill="#0078D4" />
-            <line x1="9" y1="7" x2="9" y2="11" stroke="#0078D4" strokeWidth="1.5" />
-            <line x1="7" y1="9" x2="11" y2="9" stroke="#0078D4" strokeWidth="1.5" />
-          </svg>
+          <CommentsGroupIcon1 />
           <span style={labelStyle}>New</span>
           <span style={labelStyle}>Comment</span>
         </button>
@@ -108,14 +103,7 @@ export const CommentsGroup: React.FC<CommentsGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
-            {/* Trash can icon */}
-            <rect x="4" y="5" width="8" height="9" rx="1" fill="none" stroke="#D13438" strokeWidth="1.5" />
-            <line x1="3" y1="5" x2="13" y2="5" stroke="#D13438" strokeWidth="1.5" />
-            <path d="M6 3 L10 3" stroke="#D13438" strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="6.5" y1="7" x2="6.5" y2="12" stroke="#D13438" strokeWidth="1" />
-            <line x1="9.5" y1="7" x2="9.5" y2="12" stroke="#D13438" strokeWidth="1" />
-          </svg>
+          <CommentsGroupIcon2 />
           <span style={smallLabelStyle}>Delete</span>
         </button>
 
@@ -131,11 +119,7 @@ export const CommentsGroup: React.FC<CommentsGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
-            {/* Up arrow */}
-            <path d="M8 4 L8 12" stroke="#0078D4" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M5 7 L8 4 L11 7" stroke="#0078D4" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <CommentsGroupIcon3 />
           <span style={smallLabelStyle}>Previous</span>
         </button>
 
@@ -151,11 +135,7 @@ export const CommentsGroup: React.FC<CommentsGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" style={{ marginBottom: 2 }}>
-            {/* Down arrow */}
-            <path d="M8 4 L8 12" stroke="#0078D4" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M5 9 L8 12 L11 9" stroke="#0078D4" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <CommentsGroupIcon4 />
           <span style={smallLabelStyle}>Next</span>
         </button>
 
@@ -172,18 +152,10 @@ export const CommentsGroup: React.FC<CommentsGroupProps> = ({
               e.currentTarget.style.background = 'transparent';
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
-              {/* Comment bubble with eye */}
-              <rect x="2" y="5" width="14" height="10" rx="2" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-              <path d="M8 15 L10 18 L12 15" fill="#0078D4" />
-              <ellipse cx="8" cy="10" rx="2.5" ry="1.5" fill="none" stroke="#0078D4" strokeWidth="1" />
-              <circle cx="8" cy="10" r="0.8" fill="#0078D4" />
-            </svg>
+            <CommentsGroupIcon5 />
             <span style={labelStyle}>Show</span>
             <span style={labelStyle}>Comments</span>
-            <svg width="8" height="5" viewBox="0 0 8 5" style={{ marginTop: 1 }}>
-              <path d="M0 0 L4 4 L8 0" fill="#333" />
-            </svg>
+            <CommentsGroupIcon6 />
           </button>
 
           {/* Dropdown Menu */}

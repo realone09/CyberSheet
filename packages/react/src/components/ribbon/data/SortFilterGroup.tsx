@@ -1,3 +1,4 @@
+import { SortFilterGroupIcon5, SortFilterGroupIcon4, SortFilterGroupIcon3, SortFilterGroupIcon2, SortFilterGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook, Address, Range } from '@cyber-sheet/core';
 
@@ -142,12 +143,7 @@ export const SortFilterGroup: React.FC<SortFilterGroupProps> = ({ workbook, sele
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            {/* A→Z icon with up arrow */}
-            <text x="2" y="14" fontSize="10" fontWeight="bold" fill="#333">A</text>
-            <text x="2" y="6" fontSize="8" fill="#666">Z</text>
-            <path d="M15 12 L12 15 L15 12 L18 15 M15 5 L15 15" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-          </svg>
+          <SortFilterGroupIcon1 />
         </button>
 
         {/* Sort Descending Button */}
@@ -169,12 +165,7 @@ export const SortFilterGroup: React.FC<SortFilterGroupProps> = ({ workbook, sele
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            {/* Z→A icon with down arrow */}
-            <text x="2" y="6" fontSize="10" fontWeight="bold" fill="#333">Z</text>
-            <text x="2" y="14" fontSize="8" fill="#666">A</text>
-            <path d="M15 8 L12 5 L15 8 L18 5 M15 15 L15 5" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-          </svg>
+          <SortFilterGroupIcon2 />
         </button>
 
         {/* Custom Sort Button */}
@@ -196,13 +187,7 @@ export const SortFilterGroup: React.FC<SortFilterGroupProps> = ({ workbook, sele
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            {/* Multi-level sort icon */}
-            <rect x="3" y="3" width="14" height="2" fill="#333"/>
-            <rect x="5" y="7" width="12" height="2" fill="#666"/>
-            <rect x="7" y="11" width="10" height="2" fill="#999"/>
-            <rect x="9" y="15" width="8" height="2" fill="#BBB"/>
-          </svg>
+          <SortFilterGroupIcon3 />
         </button>
       </div>
 
@@ -234,9 +219,7 @@ export const SortFilterGroup: React.FC<SortFilterGroupProps> = ({ workbook, sele
             if (!filterActive) e.currentTarget.style.background = '#F0F0F0';
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 2 L6 8 L6 12 L8 13 L8 8 L13 2 Z" stroke="#333" strokeWidth="1" fill="none"/>
-          </svg>
+          <SortFilterGroupIcon4 />
           <span>Filter</span>
           {/* Dropdown Arrow */}
           <button
@@ -258,9 +241,7 @@ export const SortFilterGroup: React.FC<SortFilterGroupProps> = ({ workbook, sele
               justifyContent: 'center',
             }}
           >
-            <svg width="8" height="5" viewBox="0 0 8 5">
-              <path d="M0 0 L4 5 L8 0" fill="#333"/>
-            </svg>
+            <SortFilterGroupIcon5 />
           </button>
         </button>
 

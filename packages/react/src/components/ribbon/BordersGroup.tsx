@@ -13,6 +13,7 @@
  * Phase 3: Excel 365-Level Border Controls
  */
 
+import { BordersGroupIcon5, BordersGroupIcon4, BordersGroupIcon3, BordersGroupIcon2, BordersGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import type { Address, Range } from '@cyber-sheet/core';
 import type { FormattingController } from '@cyber-sheet/core';
@@ -294,45 +295,7 @@ export const BordersGroup: React.FC<BordersGroupProps> = ({
     );
 
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" style={{ marginRight: '8px' }}>
-        <rect x="4" y="4" width="16" height="16" fill="none" 
-          stroke={hasBorder('top') || hasBorder('bottom') || hasBorder('left') || hasBorder('right') ? '#ccc' : 'none'} 
-          strokeWidth="0.5" />
-        
-        {/* Top border */}
-        {hasBorder('top') && (
-          <line x1="4" y1="4" x2="20" y2="4" stroke="#000" 
-            strokeWidth={preset.borders.find(b => b.edge === 'top' || b.edge === 'all')?.style === 'thick' ? 2 : 1} />
-        )}
-        
-        {/* Bottom border */}
-        {hasBorder('bottom') && (
-          <line x1="4" y1="20" x2="20" y2="20" stroke="#000" 
-            strokeWidth={preset.borders.find(b => b.edge === 'bottom' || b.edge === 'all')?.style === 'thick' ? 2 : 1} />
-        )}
-        
-        {/* Left border */}
-        {hasBorder('left') && (
-          <line x1="4" y1="4" x2="4" y2="20" stroke="#000" 
-            strokeWidth={preset.borders.find(b => b.edge === 'left' || b.edge === 'all')?.style === 'thick' ? 2 : 1} />
-        )}
-        
-        {/* Right border */}
-        {hasBorder('right') && (
-          <line x1="20" y1="4" x2="20" y2="20" stroke="#000" 
-            strokeWidth={preset.borders.find(b => b.edge === 'right' || b.edge === 'all')?.style === 'thick' ? 2 : 1} />
-        )}
-        
-        {/* Inside horizontal */}
-        {preset.borders.some(b => b.edge === 'insideHorizontal') && (
-          <line x1="4" y1="12" x2="20" y2="12" stroke="#000" strokeWidth="1" />
-        )}
-        
-        {/* Inside vertical */}
-        {preset.borders.some(b => b.edge === 'insideVertical') && (
-          <line x1="12" y1="4" x2="12" y2="20" stroke="#000" strokeWidth="1" />
-        )}
-      </svg>
+      <BordersGroupIcon1 />
     );
   };
 
@@ -410,9 +373,7 @@ export const BordersGroup: React.FC<BordersGroupProps> = ({
             onClick={() => setShowBorderMenu(!showBorderMenu)}
             title="Borders"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" />
-            </svg>
+            <BordersGroupIcon2 />
             <span style={{ fontSize: '10px', marginLeft: '4px' }}>▼</span>
           </button>
 
@@ -500,10 +461,7 @@ export const BordersGroup: React.FC<BordersGroupProps> = ({
               (e.target as HTMLElement).style.backgroundColor = '#fff';
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16">
-              <rect x="2" y="2" width="12" height="10" fill="none" stroke="currentColor" strokeWidth="2" />
-              <rect x="2" y="13" width="12" height="2" fill={currentBorderColor} />
-            </svg>
+            <BordersGroupIcon3 />
           </button>
 
           {showColorPicker && (
@@ -562,10 +520,7 @@ export const BordersGroup: React.FC<BordersGroupProps> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M14 2l-12 12M13 1 l-1 1 1 1 1-1-1-1z"/>
-            <line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5"/>
-          </svg>
+          <BordersGroupIcon4 />
           <span style={{ marginLeft: '4px', fontSize: '11px' }}>Draw</span>
         </button>
 
@@ -584,9 +539,7 @@ export const BordersGroup: React.FC<BordersGroupProps> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M12 2L4 10l-2 4 4-2L14 4z M10 4l2 2"/>
-          </svg>
+          <BordersGroupIcon5 />
           <span style={{ marginLeft: '4px', fontSize: '11px' }}>Erase</span>
         </button>
       </div>

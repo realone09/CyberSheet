@@ -1,0 +1,6 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            {/* Z→A icon with down arrow */}
+            <text x="2" y="6" fontSize="10" fontWeight="bold" fill="#333">Z</text>
+            <text x="2" y="14" fontSize="8" fill="#666">A</text>
+            <path d="M15 8 L12 5 L15 8 L18 5 M15 15 L15 5" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
+          </svg>

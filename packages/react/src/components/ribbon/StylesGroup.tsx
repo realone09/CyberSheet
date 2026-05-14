@@ -13,6 +13,7 @@
  * Phase 3: Excel 365-Level Styles Controls
  */
 
+import { StylesGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import type { Address, Range } from '@cyber-sheet/core';
 import type { FormattingController } from '@cyber-sheet/core';
@@ -591,13 +592,7 @@ export const StylesGroup: React.FC<StylesGroupProps> = ({
             (e.target as HTMLElement).style.backgroundColor = '#fff';
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ marginRight: '4px' }}>
-            <rect x="2" y="2" width="12" height="3" fill="#4472C4" />
-            <rect x="2" y="5" width="12" height="2" fill="#D9E2F3" />
-            <rect x="2" y="7" width="12" height="2" fill="#FFFFFF" stroke="#ccc" strokeWidth="0.5" />
-            <rect x="2" y="9" width="12" height="2" fill="#D9E2F3" />
-            <rect x="2" y="11" width="12" height="2" fill="#FFFFFF" stroke="#ccc" strokeWidth="0.5" />
-          </svg>
+          <StylesGroupIcon1 />
           <span style={{ fontSize: '11px' }}>Format as</span>
           <span style={{ fontSize: '11px' }}>Table</span>
           <span style={{ fontSize: '10px', marginLeft: '4px' }}>▼</span>

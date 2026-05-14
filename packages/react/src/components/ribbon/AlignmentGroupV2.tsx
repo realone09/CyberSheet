@@ -13,6 +13,7 @@
  * Phase 2: Excel 365-Level Alignment Controls
  */
 
+import { AlignmentGroupV2Icon12, AlignmentGroupV2Icon11, AlignmentGroupV2Icon10, AlignmentGroupV2Icon9, AlignmentGroupV2Icon8, AlignmentGroupV2Icon7, AlignmentGroupV2Icon6, AlignmentGroupV2Icon5, AlignmentGroupV2Icon4, AlignmentGroupV2Icon3, AlignmentGroupV2Icon2, AlignmentGroupV2Icon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useRef, useEffect } from 'react';
 import type { Address, Range } from '@cyber-sheet/core';
 import type { FormattingController } from '@cyber-sheet/core';
@@ -232,9 +233,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2 3h10v2H2V3zm0 4h12v2H2V7zm0 4h10v2H2v-2z"/>
-          </svg>
+          <AlignmentGroupV2Icon1 />
         </button>
 
         <button
@@ -252,9 +251,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 3h8v2H4V3zm2 4h4v2H6V7zm2 4h4v2H8v-2z"/>
-          </svg>
+          <AlignmentGroupV2Icon2 />
         </button>
 
         <button
@@ -272,9 +269,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 3h10v2H4V3zm0 4h12v2H4V7zm0 4h10v2H4v-2z"/>
-          </svg>
+          <AlignmentGroupV2Icon3 />
         </button>
 
         <button
@@ -292,9 +287,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2 3h12v2H2V3zm0 4h12v2H2V7zm0 4h12v2H2v-2z"/>
-          </svg>
+          <AlignmentGroupV2Icon4 />
         </button>
       </div>
 
@@ -315,9 +308,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2 2h12v2H2V2zm2 4h8v2H4V6z"/>
-          </svg>
+          <AlignmentGroupV2Icon5 />
         </button>
 
         <button
@@ -335,9 +326,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 6h8v2H4V6z"/>
-          </svg>
+          <AlignmentGroupV2Icon6 />
         </button>
 
         <button
@@ -355,9 +344,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 10h8v2H4v-2zm-2 3h12v2H2v-2z"/>
-          </svg>
+          <AlignmentGroupV2Icon7 />
         </button>
 
         {/* Text Rotation Dropdown */}
@@ -377,9 +364,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
               }
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M10 2l4 4-4 4V7H6v6H4V7H2V5h8V2z"/>
-            </svg>
+            <AlignmentGroupV2Icon8 />
             <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
           </button>
 
@@ -470,9 +455,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2 3h12v2H2V3zm0 3h10c1.1 0 2 .9 2 2s-.9 2-2 2H9l2-2-2-2v4H7V7h3c.55 0 1-.45 1-1H2V6zm0 5h8v2H2v-2z"/>
-          </svg>
+          <AlignmentGroupV2Icon9 />
         </button>
 
         {/* Indent controls */}
@@ -492,9 +475,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             }
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2 3h12v2H2V3zm4 4h8v2H6V7zm0 4h8v2H6v-2zM2 6v6l3-3-3-3z"/>
-          </svg>
+          <AlignmentGroupV2Icon10 />
         </button>
 
         <button
@@ -508,9 +489,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
             (e.target as HTMLElement).style.backgroundColor = '#fff';
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2 3h12v2H2V3zm4 4h8v2H6V7zm0 4h8v2H6v-2zM2 6l3 3-3 3V6z"/>
-          </svg>
+          <AlignmentGroupV2Icon11 />
         </button>
 
         {/* Merge & Center Dropdown */}
@@ -526,9 +505,7 @@ export const AlignmentGroupV2: React.FC<AlignmentGroupV2Props> = ({
               (e.target as HTMLElement).style.backgroundColor = '#fff';
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M2 2v12h12V2H2zm10 10H4V4h8v8z"/>
-            </svg>
+            <AlignmentGroupV2Icon12 />
             <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
           </button>
 

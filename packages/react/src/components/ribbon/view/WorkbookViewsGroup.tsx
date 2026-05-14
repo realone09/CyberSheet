@@ -5,6 +5,7 @@
  * Contains: Normal, Page Break Preview, Page Layout, Custom Views
  */
 
+import { WorkbookViewsGroupIcon4, WorkbookViewsGroupIcon3, WorkbookViewsGroupIcon2, WorkbookViewsGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 
@@ -69,11 +70,7 @@ export const WorkbookViewsGroup: React.FC<WorkbookViewsGroupProps> = ({
           }}
           title="Normal View"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="4" y="4" width="16" height="16" stroke="#0078D4" strokeWidth="2" fill="none"/>
-            <line x1="4" y1="10" x2="20" y2="10" stroke="#0078D4" strokeWidth="1"/>
-            <line x1="10" y1="4" x2="10" y2="20" stroke="#0078D4" strokeWidth="1"/>
-          </svg>
+          <WorkbookViewsGroupIcon1 />
           <span>Normal</span>
         </button>
 
@@ -93,11 +90,7 @@ export const WorkbookViewsGroup: React.FC<WorkbookViewsGroupProps> = ({
           }}
           title="Page Break Preview"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" stroke="#0078D4" strokeWidth="2" fill="none"/>
-            <line x1="3" y1="12" x2="21" y2="12" stroke="#0078D4" strokeWidth="2" strokeDasharray="3 2"/>
-            <line x1="12" y1="3" x2="12" y2="21" stroke="#0078D4" strokeWidth="2" strokeDasharray="3 2"/>
-          </svg>
+          <WorkbookViewsGroupIcon2 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Page Break<br/>Preview</span>
         </button>
 
@@ -117,11 +110,7 @@ export const WorkbookViewsGroup: React.FC<WorkbookViewsGroupProps> = ({
           }}
           title="Page Layout View"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="4" y="2" width="16" height="20" stroke="#0078D4" strokeWidth="2" fill="none"/>
-            <rect x="6" y="4" width="12" height="14" fill="#E3F2FD"/>
-            <line x1="4" y1="18" x2="20" y2="18" stroke="#0078D4" strokeWidth="1"/>
-          </svg>
+          <WorkbookViewsGroupIcon3 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Page<br/>Layout</span>
         </button>
 
@@ -140,12 +129,7 @@ export const WorkbookViewsGroup: React.FC<WorkbookViewsGroupProps> = ({
           }}
           title="Custom Views"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="5" width="8" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="13" y="5" width="8" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="3" y="13" width="8" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            <rect x="13" y="13" width="8" height="6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-          </svg>
+          <WorkbookViewsGroupIcon4 />
           <span style={{ fontSize: 9, textAlign: 'center', lineHeight: 1.2 }}>Custom<br/>Views</span>
         </button>
       </div>

@@ -1,0 +1,22 @@
+<script lang="ts">
+  export let className: string = '';
+  export let style: string = '';
+  export let width: string | number = 20;
+  export let height: string | number = 20;
+  export let fill: string = 'currentColor';
+  export let stroke: string = '';
+</script>
+
+<svg
+  class={className}
+  {style}
+  {width}
+  {height}
+  {fill}
+  {stroke}
+  viewBox="0 0 20 20"
+  xmlns="http://www.w3.org/2000/svg"
+  {...$$restProps}
+>
+  {/* Magnifying glass over document icon */} <rect x="3" y="2" width="10" height="13" rx="1" fill="none" stroke="#0078D4" strokeWidth="1.5" /> <line x1="5" y1="5" x2="11" y2="5" stroke="#0078D4" strokeWidth="1" /> <line x1="5" y1="8" x2="9" y2="8" stroke="#0078D4" strokeWidth="1" /> <circle cx="13" cy="11" r="3" fill="none" stroke="#0078D4" strokeWidth="1.5" /> <line x1="15" y1="13" x2="17.5" y2="15.5" stroke="#0078D4" strokeWidth="1.5" strokeLinecap="round" />
+</svg>

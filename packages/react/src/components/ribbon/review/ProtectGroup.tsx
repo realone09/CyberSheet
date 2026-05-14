@@ -5,6 +5,7 @@
  * Contains: Protect Sheet, Protect Workbook, Allow Edit Ranges
  */
 
+import { ProtectGroupIcon3, ProtectGroupIcon2, ProtectGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 
@@ -71,24 +72,7 @@ export const ProtectGroup: React.FC<ProtectGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
-            {/* Shield with checkmark icon */}
-            <path
-              d="M10 2 L4 4 L4 10 Q4 14 10 18 Q16 14 16 10 L16 4 Z"
-              fill="none"
-              stroke="#0078D4"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M7 10 L9 12 L13 8"
-              stroke="#107C10"
-              strokeWidth="1.5"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ProtectGroupIcon1 />
           <span style={labelStyle}>Protect</span>
           <span style={labelStyle}>Sheet</span>
         </button>
@@ -105,15 +89,7 @@ export const ProtectGroup: React.FC<ProtectGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
-            {/* Workbook with lock icon */}
-            <rect x="3" y="2" width="12" height="15" rx="1" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-            <line x1="6" y1="5" x2="12" y2="5" stroke="#0078D4" strokeWidth="1" />
-            <line x1="6" y1="8" x2="10" y2="8" stroke="#0078D4" strokeWidth="1" />
-            {/* Lock */}
-            <rect x="13" y="11" width="5" height="6" rx="0.5" fill="#0078D4" />
-            <path d="M14 11 L14 9.5 Q14 8 15.5 8 Q17 8 17 9.5 L17 11" fill="none" stroke="#0078D4" strokeWidth="1.2" />
-          </svg>
+          <ProtectGroupIcon2 />
           <span style={labelStyle}>Protect</span>
           <span style={labelStyle}>Workbook</span>
         </button>
@@ -130,15 +106,7 @@ export const ProtectGroup: React.FC<ProtectGroupProps> = ({
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" style={{ marginBottom: 4 }}>
-            {/* Grid cells with unlock icon */}
-            <rect x="3" y="3" width="6" height="6" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-            <rect x="11" y="3" width="6" height="6" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-            <rect x="3" y="11" width="6" height="6" fill="none" stroke="#0078D4" strokeWidth="1.5" />
-            {/* Unlocked padlock */}
-            <rect x="12" y="13" width="4" height="4" rx="0.5" fill="#107C10" />
-            <path d="M13 13 L13 11.5 Q13 10.5 14 10.5 Q15 10.5 15 11.5 L15 12" fill="none" stroke="#107C10" strokeWidth="1.2" />
-          </svg>
+          <ProtectGroupIcon3 />
           <span style={labelStyle}>Allow Edit</span>
           <span style={labelStyle}>Ranges</span>
         </button>

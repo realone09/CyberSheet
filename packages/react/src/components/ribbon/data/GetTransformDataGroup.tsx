@@ -1,3 +1,4 @@
+import { GetTransformDataGroupIcon5, GetTransformDataGroupIcon4, GetTransformDataGroupIcon3, GetTransformDataGroupIcon2, GetTransformDataGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 
@@ -57,15 +58,10 @@ export const GetTransformDataGroup: React.FC<GetTransformDataGroupProps> = ({ wo
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
           >
-            <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-              <rect x="2" y="2" width="16" height="12" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-              <path d="M6 6 L10 10 L14 6" stroke="#0078D4" strokeWidth="1.5" fill="none"/>
-            </svg>
+            <GetTransformDataGroupIcon1 />
             <span style={{ fontSize: 9, marginTop: 2 }}>Get Data</span>
             <div style={{ position: 'absolute', bottom: 2, right: 2 }}>
-              <svg width="6" height="4" viewBox="0 0 6 4">
-                <path d="M0 0 L3 4 L6 0" fill="#333"/>
-              </svg>
+              <GetTransformDataGroupIcon2 />
             </div>
           </button>
 
@@ -199,9 +195,7 @@ export const GetTransformDataGroup: React.FC<GetTransformDataGroupProps> = ({ wo
             onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
             onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
           >
-            <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-              <path d="M10 3 L10 7 L6 7 M10 3 C7 3 5 5 5 7 M10 13 L10 9 L14 9 M10 13 C13 13 15 11 15 9" stroke="#00A859" strokeWidth="1.5" fill="none"/>
-            </svg>
+            <GetTransformDataGroupIcon3 />
             <span style={{ fontSize: 9, marginTop: 2 }}>Refresh All</span>
             <button
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
@@ -222,9 +216,7 @@ export const GetTransformDataGroup: React.FC<GetTransformDataGroupProps> = ({ wo
                 justifyContent: 'center',
               }}
             >
-              <svg width="6" height="4" viewBox="0 0 6 4">
-                <path d="M0 0 L3 4 L6 0" fill="#333"/>
-              </svg>
+              <GetTransformDataGroupIcon4 />
             </button>
           </button>
 
@@ -339,11 +331,7 @@ export const GetTransformDataGroup: React.FC<GetTransformDataGroupProps> = ({ wo
           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#E0E0E0'}
           onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.background = '#F0F0F0'}
         >
-          <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-            <rect x="2" y="2" width="6" height="12" stroke="#0078D4" strokeWidth="1" fill="none"/>
-            <rect x="12" y="2" width="6" height="12" stroke="#0078D4" strokeWidth="1" fill="none"/>
-            <path d="M8 8 L12 8" stroke="#00A859" strokeWidth="1.5"/>
-          </svg>
+          <GetTransformDataGroupIcon5 />
           <span style={{ fontSize: 8, marginTop: 2, textAlign: 'center', lineHeight: 1.2 }}>Queries &<br/>Connections</span>
         </button>
       </div>

@@ -5,6 +5,7 @@
  * Displays shape categories with thumbnails in a grid layout.
  */
 
+import { ShapeGalleryIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState } from 'react';
 
 interface ShapeGalleryProps {
@@ -178,5 +179,5 @@ const ShapeThumbnail: React.FC<{ type: string; size: number }> = ({ type, size }
     }
   };
 
-  return <div dangerouslySetInnerHTML={{ __html: `<svg width="${s}" height="${s}">${getPath()}</svg>` }} />;
+  return <div dangerouslySetInnerHTML={{ __html: `<ShapeGalleryIcon1 />` }} />;
 };
