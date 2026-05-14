@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Paste Command Merge Anchor Resolution (May 14, 2026)
+
+**Critical undo bug fix**
+- Fixed `PasteCommand` snapshot capture to resolve merge anchors before saving state.
+- Previously, pasting into non-anchor cells of a merged region captured snapshots at the literal target address but wrote to the resolved anchor address, causing undo to corrupt state.
+- Added deduplication logic to avoid capturing the same merge anchor multiple times when target range spans multiple merged cells.
+- Added regression test: "Paste into non-anchor merged cell and undo preserves original value".
+
+**Impact**
+- Resolves user-reported issue where copy/paste followed by undo resulted in blank/empty cells.
+- Paste/undo operations now correctly preserve values when working with merged cell regions.
+- Fixes state corruption that occurred when pasting into or cutting from merged cells.
+
 ### Fixed - Paste Command Merge Topology Preservation (May 14, 2026)
 
 **Paste behavior fixes**

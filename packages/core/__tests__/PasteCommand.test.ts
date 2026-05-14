@@ -1115,6 +1115,49 @@ describe('PasteCommand - Phase 0.3 (Steps 1-6 COMPLETE: Full Clipboard Architect
         end: { row: 8, col: 5 }
       });
     });
+
+    test('Paste into non-anchor merged cell and undo preserves original value', () => {
+      // Create merged region with anchor at (5,5) extending to (8,5)
+      worksheet.setCellValue({ row: 5, col: 5 }, 'OriginalMerged');
+      worksheet.mergeCells({
+        start: { row: 5, col: 5 },
+        end: { row: 8, col: 5 }
+      });
+
+      // Create source cell to copy
+      worksheet.setCellValue({ row: 0, col: 0 }, 'NewValue');
+
+      const payload = clipboard.copy(worksheet, {
+        start: { row: 0, col: 0 },
+        end: { row: 0, col: 0 }
+      });
+
+      // Paste into NON-ANCHOR cell (7,5) of the merged region
+      const cmd = new PasteCommand(worksheet, payload, { row: 7, col: 5 });
+      cmd.execute();
+
+      // Value should be written to anchor (5,5)
+      expect(worksheet.getCellValue({ row: 5, col: 5 })).toBe('NewValue');
+      
+      // Merge should still exist
+      const mergeAfterPaste = worksheet.getMergedRangeForCell({ row: 5, col: 5 });
+      expect(mergeAfterPaste).toEqual({
+        start: { row: 5, col: 5 },
+        end: { row: 8, col: 5 }
+      });
+
+      // CRITICAL: Undo should restore original value at anchor
+      cmd.undo();
+
+      expect(worksheet.getCellValue({ row: 5, col: 5 })).toBe('OriginalMerged');
+      
+      // Merge should still exist after undo
+      const mergeAfterUndo = worksheet.getMergedRangeForCell({ row: 5, col: 5 });
+      expect(mergeAfterUndo).toEqual({
+        start: { row: 5, col: 5 },
+        end: { row: 8, col: 5 }
+      });
+    });
     
     test('Paste with mixed content and merges', () => {
       // Create comprehensive source: values + formulas + styles + merges

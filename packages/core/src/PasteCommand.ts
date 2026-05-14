@@ -106,24 +106,42 @@ export class PasteCommand implements Command {
    * Must happen in constructor (before execute) to ensure we can undo.
    * Stores canonical pointers only — no cloning.
    * 
-   * @invariant Captures ALL affected cells
+   * CRITICAL: Resolves merge anchors to ensure paste/undo symmetry.
+   * If target cell is part of a merge, we capture the anchor's state.
+   * 
+   * @invariant Captures ALL affected cells (resolved to anchors)
    * @invariant Stores canonical pointers (not clones)
+   * @invariant Deduplicates anchors (same merge captured once)
    */
   private captureState(): void {
     // Calculate affected range
     const endRow = this.targetAnchor.row + this.payload.height - 1;
     const endCol = this.targetAnchor.col + this.payload.width - 1;
     
+    // Track captured anchors to avoid duplicates
+    const capturedKeys = new Set<string>();
+    
     // Capture all cells in target range
     for (let row = this.targetAnchor.row; row <= endRow; row++) {
       for (let col = this.targetAnchor.col; col <= endCol; col++) {
         const addr: Address = { row, col };
         
-        // Capture current state
-        const cell = this.worksheet.getCell(addr);
+        // Resolve to merge anchor if this cell is part of a merged region
+        const mergeRange = this.worksheet.getMergedRangeForCell(addr);
+        const resolvedAddr = mergeRange ? mergeRange.start : addr;
+        
+        // Skip if we already captured this anchor
+        const key = `${resolvedAddr.row}:${resolvedAddr.col}`;
+        if (capturedKeys.has(key)) {
+          continue;
+        }
+        capturedKeys.add(key);
+        
+        // Capture current state at RESOLVED address
+        const cell = this.worksheet.getCell(resolvedAddr);
         
         this.snapshots.push({
-          addr,
+          addr: resolvedAddr,
           value: cell?.value ?? null,
           formula: cell?.formula,
           style: cell?.style  // Canonical pointer
@@ -138,22 +156,40 @@ export class PasteCommand implements Command {
    * Stores original state of source cells so undo can restore them.
    * Only called when payload.isCut = true.
    * 
-   * @invariant Captures ALL affected source cells
+   * CRITICAL: Resolves merge anchors to ensure cut/undo symmetry.
+   * If source cell is part of a merge, we capture the anchor's state.
+   * 
+   * @invariant Captures ALL affected source cells (resolved to anchors)
    * @invariant Stores canonical pointers (not clones)
+   * @invariant Deduplicates anchors (same merge captured once)
    */
   private captureSourceState(): void {
     const { start, end } = this.payload.sourceRange;
+    
+    // Track captured anchors to avoid duplicates
+    const capturedKeys = new Set<string>();
     
     // Capture all cells in source range
     for (let row = start.row; row <= end.row; row++) {
       for (let col = start.col; col <= end.col; col++) {
         const addr: Address = { row, col };
         
-        // Capture current state
-        const cell = this.worksheet.getCell(addr);
+        // Resolve to merge anchor if this cell is part of a merged region
+        const mergeRange = this.worksheet.getMergedRangeForCell(addr);
+        const resolvedAddr = mergeRange ? mergeRange.start : addr;
+        
+        // Skip if we already captured this anchor
+        const key = `${resolvedAddr.row}:${resolvedAddr.col}`;
+        if (capturedKeys.has(key)) {
+          continue;
+        }
+        capturedKeys.add(key);
+        
+        // Capture current state at RESOLVED address
+        const cell = this.worksheet.getCell(resolvedAddr);
         
         this.sourceSnapshots.push({
-          addr,
+          addr: resolvedAddr,
           value: cell?.value ?? null,
           formula: cell?.formula,
           style: cell?.style  // Canonical pointer
