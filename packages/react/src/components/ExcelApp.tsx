@@ -345,19 +345,15 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
             };
             console.log('✂️ [ExcelApp] Calling clipboardService.cut with range:', `(${range.start.row},${range.start.col}) to (${range.end.row},${range.end.col})`);
             clipboardService.cut(sheet, range);
-            console.log('✅ [ExcelApp] Cut to clipboard completed');
+            const payload = clipboardService.getPayload();
+            console.log('✅ [ExcelApp] Cut to clipboard completed (source will be cleared after paste)', {
+              payloadCells: payload?.cells.length,
+              isCut: payload?.isCut,
+            });
             
-            // Clear source cells using command (for undo/redo)
-            const clearCmd = new ClearCellsCommand(sheet, range);
-            commandManager.execute(clearCmd);
-            
-            // Invalidate and redraw
-            const r1 = Math.min(range.start.row, range.end.row);
-            const r2 = Math.max(range.start.row, range.end.row);
-            const c1 = Math.min(range.start.col, range.end.col);
-            const c2 = Math.max(range.start.col, range.end.col);
-            renderer?.invalidateRange(r1, c1, r2, c2);
-            renderer?.scheduleRedraw();
+            // Note: Source cells are NOT cleared here.
+            // PasteCommand will handle clearing the source after paste completes (via isCut flag)
+            // This ensures undo/redo works correctly as a single atomic operation
           }
         },
       },
@@ -797,33 +793,44 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
           ctrlKey: e.ctrlKey,
           metaKey: e.metaKey,
           selection,
+          hasSheet: !!sheet,
+          sheetValue: sheet,
         });
-        if (selection) {
-          const range = { start: selection.start, end: selection.end };
-          
-          // IMPORTANT: Log cell data BEFORE cutting
-          console.log('📊 [ExcelApp] Cell data BEFORE cut:', {
-            sourceCell: `(${range.start.row},${range.start.col})`,
-            cellValue: sheet.getCellValue(range.start),
-            cellFormula: sheet.getCellFormula(range.start),
-            cellDisplay: sheet.getCellDisplayValue(range.start),
-          });
-          
-          clipboardService.cut(sheet, range);
-          const payload = clipboardService.getPayload();
-          console.log('✅ [ExcelApp] Cut to clipboard (source will be cleared after paste)', {
-            payloadCells: payload?.cells.length,
-            payloadDimensions: payload ? `${payload.width}x${payload.height}` : 'none',
-            isCut: payload?.isCut,
-            firstCellValue: payload?.cells[0]?.value,
-            firstCellFormula: payload?.cells[0]?.formula,
-          });
-          
-          // Note: Source cells are NOT cleared here.
-          // PasteCommand will handle clearing the source after paste completes (via isCut flag)
-        } else {
-          console.log('❌ [ExcelApp] Cannot cut - no selection');
+        
+        if (!sheet) {
+          console.log('❌ [ExcelApp] Cannot cut - sheet is null/undefined!');
+          return;
         }
+        
+        if (!selection) {
+          console.log('❌ [ExcelApp] Cannot cut - no selection');
+          return;
+        }
+        
+        console.log('🔍 [ExcelApp] Cut checks passed, executing cut logic...');
+        
+        const range = { start: selection.start, end: selection.end };
+        
+        // IMPORTANT: Log cell data BEFORE cutting
+        console.log('📊 [ExcelApp] Cell data BEFORE cut:', {
+          sourceCell: `(${range.start.row},${range.start.col})`,
+          cellValue: sheet.getCellValue(range.start),
+          cellFormula: sheet.getCellFormula(range.start),
+          cellDisplay: sheet.getCellDisplayValue(range.start),
+        });
+        
+        clipboardService.cut(sheet, range);
+        const payload = clipboardService.getPayload();
+        console.log('✅ [ExcelApp] Cut to clipboard (source will be cleared after paste)', {
+          payloadCells: payload?.cells.length,
+          payloadDimensions: payload ? `${payload.width}x${payload.height}` : 'none',
+          isCut: payload?.isCut,
+          firstCellValue: payload?.cells[0]?.value,
+          firstCellFormula: payload?.cells[0]?.formula,
+        });
+        
+        // Note: Source cells are NOT cleared here.
+        // PasteCommand will handle clearing the source after paste completes (via isCut flag)
         return;
       }
       
