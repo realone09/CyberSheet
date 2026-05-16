@@ -172,8 +172,8 @@ export const ENTER_EDIT_MODE_SHORTCUT: ShortcutDefinition = {
 /**
  * Clipboard shortcuts (integration only, observe but don't override)
  * 
- * IMPORTANT: We don't preventDefault these - browser handles natively
- * We only observe for UI updates (showing clipboard state)
+ * IMPORTANT: We preventDefault these to avoid conflicts with browser's native clipboard
+ * The actual clipboard operations are handled by ExcelApp's keyboard handler
  */
 
 export const COPY_SHORTCUT: ShortcutDefinition = {
@@ -182,9 +182,9 @@ export const COPY_SHORTCUT: ShortcutDefinition = {
   keys: 'Ctrl+C',
   contexts: ['grid'],
   priority: 5,
-  preventDefault: false, // Let browser handle natively
+  preventDefault: true, // Prevent browser clipboard to avoid conflicts
   handler: (ctx: ShortcutContext) => {
-    // Observe only - don't prevent default
+    // Observe only - actual operation handled by ExcelApp
     console.log('[Shortcut] Copy (observed)', ctx.selection);
     
     // TODO: Update UI state (show "Copied" indicator)
@@ -197,9 +197,9 @@ export const CUT_SHORTCUT: ShortcutDefinition = {
   keys: 'Ctrl+X',
   contexts: ['grid'],
   priority: 5,
-  preventDefault: false, // Let browser handle natively
+  preventDefault: true, // Prevent browser clipboard to avoid conflicts
   handler: (ctx: ShortcutContext) => {
-    // Observe only
+    // Observe only - actual operation handled by ExcelApp
     console.log('[Shortcut] Cut (observed)', ctx.selection);
     
     // TODO: Update UI state (show "Cut" indicator with marching ants)
@@ -212,9 +212,9 @@ export const PASTE_SHORTCUT: ShortcutDefinition = {
   keys: 'Ctrl+V',
   contexts: ['grid'],
   priority: 5,
-  preventDefault: false, // Let browser handle natively
+  preventDefault: true, // Prevent browser clipboard to avoid conflicts
   handler: (ctx: ShortcutContext) => {
-    // Observe only
+    // Observe only - actual operation handled by ExcelApp
     console.log('[Shortcut] Paste (observed)', ctx.selection);
     
     // TODO: Process clipboard data, execute PasteCommand

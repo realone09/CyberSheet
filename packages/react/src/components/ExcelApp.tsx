@@ -857,8 +857,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
             console.log('📊 [ExcelApp] Source cell data:', {
               sourceCell: `(${range.start.row},${range.start.col})`,
               cellValue: sheet.getCellValue(range.start),
-              cellFormula: sheet.getCellFormula(range.start),
-              cellDisplay: sheet.getCellDisplayValue(range.start),
+              cellFormula: sheet.getCell(range.start)?.formula,
             });
           } catch (cellError) {
             console.warn('⚠️ [ExcelApp] Could not read cell data:', cellError);
