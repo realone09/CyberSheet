@@ -444,7 +444,8 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
               console.log('✅ [ExcelApp] Context menu cut range cleared after paste');
             }
             
-            renderer?.scheduleRedraw();
+            // Force immediate redraw to update screen
+            renderer?.redraw();
           } else {
             console.log('❌ [ExcelApp] Cannot paste from context menu - selection:', !!selection, 'sheet:', !!sheet, 'payload:', !!payload);
           }
@@ -958,7 +959,9 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
             console.log('✅ [ExcelApp] Cut range cleared after paste');
           }
           
-          renderer?.scheduleRedraw();
+          // Force immediate redraw to update screen
+          renderer?.redraw();
+          console.log('🎨 [ExcelApp] Forced immediate redraw after paste');
         } else {
           console.log('❌ [ExcelApp] Cannot paste - selection:', !!selection, 'payload:', !!payload);
         }
