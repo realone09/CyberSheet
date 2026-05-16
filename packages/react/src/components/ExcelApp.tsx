@@ -18,6 +18,7 @@ import { SheetTabs } from '../SheetTabs';
 import { StatusBar } from './StatusBar';
 import { DrawingCanvas } from './DrawingCanvas';
 import { CellEditOverlay } from './CellEditOverlay';
+import { CutRangeOverlay } from './CutRangeOverlay';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { MiniToolbar } from './MiniToolbar';
 import FormatCellsDialog, { FormattingChanges } from './dialogs/FormatCellsDialog/FormatCellsDialog';
@@ -93,6 +94,9 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
   // Recent colors tracking (up to 10 each)
   const [recentFillColors, setRecentFillColors] = useState<string[]>([]);
   const [recentFontColors, setRecentFontColors] = useState<string[]>([]);
+  
+  // Cut range tracking (for visual indication with marching ants border)
+  const [cutRange, setCutRange] = useState<{ start: { row: number; col: number }; end: { row: number; col: number } } | null>(null);
   
   // Refs for keyboard handler to avoid re-attaching listeners on every state change
   const selectedCellRef = useRef(selectedCell);
@@ -427,6 +431,15 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
             const r2 = targetAnchor.row + payload.height - 1;
             const c2 = targetAnchor.col + payload.width - 1;
             renderer?.invalidateRange(targetAnchor.row, targetAnchor.col, r2, c2);
+            
+            // If it was a cut operation, also invalidate source and clear cut range
+            if (payload.isCut) {
+              const { start, end } = payload.sourceRange;
+              renderer?.invalidateRange(start.row, start.col, end.row, end.col);
+              setCutRange(null);
+              console.log('✅ [ExcelApp] Context menu cut range cleared after paste');
+            }
+            
             renderer?.scheduleRedraw();
           } else {
             console.log('❌ [ExcelApp] Cannot paste from context menu - selection:', !!selection, 'sheet:', !!sheet, 'payload:', !!payload);
@@ -821,6 +834,10 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
           clipboardService.cut(sheet, range);
           console.log('✅ [ExcelApp] clipboardService.cut() completed');
           
+          // Set cut range for visual indication (marching ants border)
+          setCutRange(range);
+          console.log('✅ [ExcelApp] Cut range set for visual indication:', range);
+          
           // Get and verify payload
           const payload = clipboardService.getPayload();
           console.log('✅ [ExcelApp] Cut to clipboard (source will be cleared after paste)', {
@@ -936,6 +953,10 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
             const { start, end } = payload.sourceRange;
             console.log('🔄 [ExcelApp] Invalidating source range for redraw:', `(${start.row},${start.col}) to (${end.row},${end.col})`);
             renderer?.invalidateRange(start.row, start.col, end.row, end.col);
+            
+            // Clear cut range visual indication after paste
+            setCutRange(null);
+            console.log('✅ [ExcelApp] Cut range cleared after paste');
           }
           
           renderer?.scheduleRedraw();
@@ -1460,6 +1481,15 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
           commandManager={commandManager}
           onObjectChange={() => {}}
         />
+
+        {/* Cut Range Visual Indication */}
+        {cutRange && renderer && (
+          <CutRangeOverlay
+            cutRange={cutRange}
+            renderer={renderer}
+            zoom={zoom / 100}
+          />
+        )}
 
         {/* In-Cell Edit Overlay */}
         {inCellEdit && (
