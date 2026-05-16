@@ -1,1 +1,0 @@
-<svg width="${s}" height="${s}">${getPath()}</svg>

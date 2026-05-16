@@ -68,7 +68,6 @@ export { default as ProtectGroupIcon1 } from './ProtectGroupIcon1';
 export { default as ProtectGroupIcon2 } from './ProtectGroupIcon2';
 export { default as ProtectGroupIcon3 } from './ProtectGroupIcon3';
 export { default as RibbonGroupIcon1 } from './RibbonGroupIcon1';
-export { default as ShapeGalleryIcon1 } from './ShapeGalleryIcon1';
 export { default as SortFilterGroupIcon1 } from './SortFilterGroupIcon1';
 export { default as SortFilterGroupIcon2 } from './SortFilterGroupIcon2';
 export { default as SortFilterGroupIcon3 } from './SortFilterGroupIcon3';
