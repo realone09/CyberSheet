@@ -946,6 +946,7 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
           
           const r2 = targetAnchor.row + payload.height - 1;
           const c2 = targetAnchor.col + payload.width - 1;
+          console.log('🔄 [ExcelApp] Invalidating target range:', `(${targetAnchor.row},${targetAnchor.col}) to (${r2},${c2})`);
           renderer?.invalidateRange(targetAnchor.row, targetAnchor.col, r2, c2);
           
           // Also invalidate source range if it was a cut
@@ -960,8 +961,9 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
           }
           
           // Force immediate redraw to update screen
+          console.log('🎨 [ExcelApp] About to call renderer.redraw()...');
           renderer?.redraw();
-          console.log('🎨 [ExcelApp] Forced immediate redraw after paste');
+          console.log('🎨 [ExcelApp] Forced immediate redraw after paste - redraw() call completed');
         } else {
           console.log('❌ [ExcelApp] Cannot paste - selection:', !!selection, 'payload:', !!payload);
         }
