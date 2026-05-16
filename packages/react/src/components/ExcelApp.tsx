@@ -355,6 +355,10 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
               isCut: payload?.isCut,
             });
             
+            // Set cut range for visual indication
+            setCutRange(range);
+            console.log('✅ [ExcelApp] Context menu cut range set for visual indication:', range);
+            
             // Note: Source cells are NOT cleared here.
             // PasteCommand will handle clearing the source after paste completes (via isCut flag)
             // This ensures undo/redo works correctly as a single atomic operation
