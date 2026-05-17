@@ -221,6 +221,19 @@ export const PASTE_SHORTCUT: ShortcutDefinition = {
   },
 };
 
+export const SELECT_ALL_SHORTCUT: ShortcutDefinition = {
+  id: 'selection.selectAll',
+  label: 'Select All',
+  keys: 'Ctrl+A',
+  contexts: ['grid'],
+  priority: 5,
+  preventDefault: true,
+  handler: (ctx: ShortcutContext) => {
+    // Observe only - actual operation handled by ExcelApp
+    console.log('[Shortcut] Select All (observed)', ctx.selection);
+  },
+};
+
 /**
  * All standard shortcuts (for batch registration)
  */
@@ -243,6 +256,9 @@ export const STANDARD_SHORTCUTS: ShortcutDefinition[] = [
   COPY_SHORTCUT,
   CUT_SHORTCUT,
   PASTE_SHORTCUT,
+  
+  // Selection
+  SELECT_ALL_SHORTCUT,
 ];
 
 /**

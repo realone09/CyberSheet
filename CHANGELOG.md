@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Insert/Delete Cell Operations with Undo Support (May 17, 2026)
+
+**Complete Insert/Delete cell functionality**
+- Implemented Insert and Delete context menu operations with proper Command Pattern integration
+- Added `InsertCellsCommand` for inserting cells with shift-down behavior
+- Added `DeleteCellsCommand` for deleting cells with shift-up behavior
+- Both commands support full undo/redo functionality via CommandManager
+- Commands capture complete before/after snapshots of all affected cells
+- Exported commands from `@cyber-sheet/core` for use in React components
+
+**Implementation Details**
+- Insert operation: Shifts cells down, copies values/formulas/styles, clears inserted range
+- Delete operation: Shifts cells up, copies values/formulas/styles, clears bottom range
+- Atomic operations: Single command captures entire state change for proper undo
+- Invalidates affected ranges for immediate visual updates
+
+**User Impact**
+- Right-click context menu Insert/Delete options now fully functional
+- Ctrl+Z properly restores original state after Insert/Delete operations
+- No data loss when undoing cell insertion/deletion
+
+### Added - System Clipboard Integration (May 17, 2026)
+
+**Native clipboard manager support**
+- Integrated `navigator.clipboard.writeText()` for all cut/copy operations
+- Cut (Ctrl+X) and Copy (Ctrl+C) now write to both custom and system clipboard
+- Enables external paste operations (paste into other applications)
+- Clipboard data visible in system clipboard managers (e.g., Manjaro clipboard manager)
+
+**Implementation Details**
+- Custom clipboard service maintains metadata (isCut flag, styles, formulas)
+- System clipboard receives plain text representation for external compatibility
+- Both keyboard shortcuts and context menu operations write to system clipboard
+- Error handling with warnings if system clipboard write fails
+
+**User Impact**
+- Can copy from spreadsheet and paste into external applications
+- Clipboard managers now show copied cell values
+- Seamless integration with OS clipboard functionality
+
+### Fixed - Context Menu Selection Race Condition (May 17, 2026)
+
+**Critical selection capture fix**
+- Fixed context menu operations receiving null selection on right-click
+- Previously: Context menu handler captured React state before setSelection() completed
+- Result: Insert/Delete/Clear operations had no target selection, operations failed silently
+
+**Architecture Fix**
+- Right-click handler now reads selection directly from `renderer.getSelections()`
+- Bypasses React state to access renderer's internal selection immediately
+- Fallback chain: `rendererSelections[0]` → `renderer.selection` → React state
+- Eliminates race condition between DOM event and React state update
+
+**Impact**
+- Context menu operations (Insert/Delete/Cut/Copy/Paste/Clear) work reliably on first click
+- No need to right-click twice or select cell before right-clicking
+- Consistent behavior across all context menu actions
+
+### Added - Select Entire Sheet (Ctrl+A) (May 17, 2026)
+
+**Complete sheet selection**
+- Implemented Ctrl+A keyboard shortcut to select entire sheet
+- Selects from cell (0,0) to last cell in sheet dimensions
+- Works from any cell position
+- Added `SELECT_ALL_SHORTCUT` to keyboard shortcut registry
+
+**Implementation Details**
+- Uses `sheet.rowCount` and `sheet.colCount` for sheet boundaries
+- Updates both React selection state and renderer selection
+- Logged selection range for debugging
+- Integrated with existing keyboard shortcut system
+
+**User Impact**
+- Standard Excel behavior: Ctrl+A selects all cells
+- Enables bulk operations on entire sheet (formatting, clearing, etc.)
+- Consistent with user expectations from other spreadsheet applications
+
 ### Fixed - Keyboard Shortcut Registry Layout Independence (May 14, 2026)
 
 **Critical registry system fix**

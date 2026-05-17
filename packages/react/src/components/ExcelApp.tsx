@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 import type { CanvasRenderer } from '@cyber-sheet/renderer-canvas';
-import { CommandManager, DrawingLayer, ClipboardService, PasteCommand, ClearCellsCommand, FormulaEngine } from '@cyber-sheet/core';
+import { CommandManager, DrawingLayer, ClipboardService, PasteCommand, ClearCellsCommand, InsertCellsCommand, DeleteCellsCommand, FormulaEngine } from '@cyber-sheet/core';
 import { TitleBar } from './TitleBar';
 import { RibbonTabs } from './RibbonTabs';
 import { Ribbon } from '../components/ribbon/Ribbon';
@@ -481,6 +481,20 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
         onClick: () => {
           const selection = contextMenuSelectionRef.current;
           debugMenu('Insert clicked');
+          if (selection && sheet) {
+            // Create and execute InsertCellsCommand for proper undo/redo support
+            const insertCmd = new InsertCellsCommand(sheet, { start: selection.start, end: selection.end });
+            commandManager.execute(insertCmd);
+            
+            // Invalidate and redraw affected area
+            const r1 = Math.min(selection.start.row, selection.end.row);
+            const c1 = Math.min(selection.start.col, selection.end.col);
+            const c2 = Math.max(selection.start.col, selection.end.col);
+            const lastRow = sheet.rowCount - 1;
+            renderer?.invalidateRange(r1, c1, lastRow, c2);
+            renderer?.redraw();
+            console.log('✅ [ExcelApp] Insert cells completed with undo support');
+          }
         },
       },
       {
@@ -491,6 +505,20 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
         onClick: () => {
           const selection = contextMenuSelectionRef.current;
           debugMenu('Delete clicked');
+          if (selection && sheet) {
+            // Create and execute DeleteCellsCommand for proper undo/redo support
+            const deleteCmd = new DeleteCellsCommand(sheet, { start: selection.start, end: selection.end });
+            commandManager.execute(deleteCmd);
+            
+            // Invalidate and redraw affected area
+            const r1 = Math.min(selection.start.row, selection.end.row);
+            const c1 = Math.min(selection.start.col, selection.end.col);
+            const c2 = Math.max(selection.start.col, selection.end.col);
+            const lastRow = sheet.rowCount - 1;
+            renderer?.invalidateRange(r1, c1, lastRow, c2);
+            renderer?.redraw();
+            console.log('✅ [ExcelApp] Delete cells completed with undo support');
+          }
         },
       },
       {
@@ -574,13 +602,16 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      // CRITICAL: Capture and freeze selection at the moment context menu is opened
-      // This prevents race conditions where selection changes between open and click
-      const frozenSelection = selection;
+      // CRITICAL: Get selection directly from renderer to avoid React state race condition
+      // Right-click triggers selection change, but context menu handler may run before
+      // setSelection completes, so we read from renderer's internal state instead
+      const rendererSelections = renderer.getSelections();
+      const frozenSelection = rendererSelections.length > 0 ? rendererSelections[0] : renderer['selection'] || selection;
       contextMenuSelectionRef.current = frozenSelection;
       
       console.log('🖱️ [ExcelApp] Context menu opened, frozen selection:', frozenSelection ? `(${frozenSelection.start.row},${frozenSelection.start.col})` : 'null', {
         selection: frozenSelection,
+        rendererSelections: rendererSelections.length,
         timestamp: Date.now()
       });
       
@@ -1135,91 +1166,24 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
         return;
       }
       
-      // Ctrl+A (Select current region or all)
+      // Ctrl+A (Select entire sheet)
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
         e.preventDefault();
-        if (!selectedCell) return;
         
-        // Excel behavior: First press selects current region, second press selects all
-        const lastRow = sheet.rowCount || 1000;
-        const lastCol = sheet.colCount || 100;
+        // Select entire sheet
+        const lastRow = (sheet.rowCount || 1000) - 1;
+        const lastCol = (sheet.colCount || 100) - 1;
         
-        // Helper to check if cell is empty
-        const isEmpty = (r: number, c: number): boolean => {
-          if (r < 0 || c < 0 || r >= lastRow || c >= lastCol) return true;
-          const value = sheet.getCellValue({ row: r, col: c });
-          return value === null || value === undefined || value === '';
-        };
+        console.log('📋 [ExcelApp] Ctrl+A - Selecting entire sheet:', `(0,0) to (${lastRow},${lastCol})`);
         
-        // Find current region bounds (contiguous data around selected cell)
-        const startRow = selectedCell.row;
-        const startCol = selectedCell.col;
-        
-        // If starting cell is empty, just select all
-        if (isEmpty(startRow, startCol)) {
-          setSelection({
-            start: { row: 0, col: 0 },
-            end: { row: lastRow - 1, col: lastCol - 1 }
-          });
-          renderer?.setSelection({ 
-            start: { row: 0, col: 0 }, 
-            end: { row: lastRow - 1, col: lastCol - 1 } 
-          });
-          return;
-        }
-        
-        // Expand upward to find top boundary
-        let topRow = startRow;
-        while (topRow > 0 && !isEmpty(topRow - 1, startCol)) {
-          topRow--;
-        }
-        
-        // Expand downward to find bottom boundary
-        let bottomRow = startRow;
-        while (bottomRow < lastRow - 1 && !isEmpty(bottomRow + 1, startCol)) {
-          bottomRow++;
-        }
-        
-        // Expand leftward to find left boundary
-        let leftCol = startCol;
-        while (leftCol > 0 && !isEmpty(startRow, leftCol - 1)) {
-          leftCol--;
-        }
-        
-        // Expand rightward to find right boundary
-        let rightCol = startCol;
-        while (rightCol < lastCol - 1 && !isEmpty(startRow, rightCol + 1)) {
-          rightCol++;
-        }
-        
-        // Check if current selection is already the detected region
-        const isRegionSelected = selection &&
-          selection.start.row === topRow &&
-          selection.start.col === leftCol &&
-          selection.end.row === bottomRow &&
-          selection.end.col === rightCol;
-        
-        if (isRegionSelected) {
-          // Second press: select all
-          setSelection({
-            start: { row: 0, col: 0 },
-            end: { row: lastRow - 1, col: lastCol - 1 }
-          });
-          renderer?.setSelection({ 
-            start: { row: 0, col: 0 }, 
-            end: { row: lastRow - 1, col: lastCol - 1 } 
-          });
-        } else {
-          // First press: select current region
-          setSelection({
-            start: { row: topRow, col: leftCol },
-            end: { row: bottomRow, col: rightCol }
-          });
-          renderer?.setSelection({ 
-            start: { row: topRow, col: leftCol }, 
-            end: { row: bottomRow, col: rightCol } 
-          });
-        }
+        setSelection({
+          start: { row: 0, col: 0 },
+          end: { row: lastRow, col: lastCol }
+        });
+        renderer?.setSelection({ 
+          start: { row: 0, col: 0 }, 
+          end: { row: lastRow, col: lastCol } 
+        });
         return;
       }
       
