@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Selection Statistics in Status Bar (May 18, 2026)
+
+**Dynamic cell selection analytics**
+- Status bar now displays real-time statistics for selected cells
+- Shows **Sum**, **Average**, and **Count** when numeric cells are selected
+- Shows **Count** only for non-numeric selections
+- Intelligent numeric detection: converts string numbers to values for calculation
+- Professional number formatting with commas and up to 2 decimal places
+
+**Implementation Details**
+- Uses `React.useMemo` for efficient calculation (only recalculates on selection change)
+- Iterates through selected range from `(r1,c1)` to `(r2,c2)`
+- Filters out null/undefined/empty values
+- Attempts numeric conversion with `parseFloat()` and validates with `isNaN()` and `isFinite()`
+- Conditional rendering: shows all stats for numeric data, count-only for text
+
+**User Experience**
+- Excel-like status bar behavior: instantly see selection aggregates
+- Helpful for quickly analyzing data without formulas
+- Works with any selection size (single cell to full sheet)
+- Transparent when no selection exists
+
+**Technical Changes**
+- Added `workbook` prop to `StatusBar` component
+- Added typed `selection` interface with start/end addresses
+- Integrated with existing Excel-style status bar styling
+
 ### Added - Insert/Delete Cell Operations with Undo Support (May 17, 2026)
 
 **Complete Insert/Delete cell functionality**
