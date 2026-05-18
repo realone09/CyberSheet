@@ -17,8 +17,8 @@
  */
 
 import * as React from 'react';
-import { FindService, FindServiceOptions } from '@cyber-sheet/core/src/search/FindService';
-import type { Address } from '@cyber-sheet/core';
+import { FindService } from '@cyber-sheet/core';
+import type { Address, FindServiceOptions } from '@cyber-sheet/core';
 import type { Worksheet } from '@cyber-sheet/core/src/worksheet';
 
 type FindReplaceTab = 'find' | 'replace';

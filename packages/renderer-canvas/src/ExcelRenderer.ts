@@ -666,7 +666,7 @@ export class ExcelRenderer {
     const py = y + (h - size) / 2;
 
     // Use proper Excel icon rendering
-    renderIconOnCanvas(ctx, icon.iconSet, icon.iconIndex, px, py, size
+    renderIconOnCanvas(ctx, icon.iconSet, icon.iconIndex, px, py, size);
     ctx.restore();
   }
 

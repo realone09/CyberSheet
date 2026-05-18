@@ -49,6 +49,7 @@ export * from './icon-sets';
 export * from './cell-styles-presets';
 export * from './DataValidationEngine';
 export * from './DataValidationRenderer.tsx';
+export * from './search/FindService';
 export * from './models/ChartObject';
 export * from './models/AdvancedChartOptions';
 
