@@ -1,6 +1,7 @@
 import { DataToolsGroupIcon5, DataToolsGroupIcon4, DataToolsGroupIcon3, DataToolsGroupIcon2, DataToolsGroupIcon1 } from '@cyber-sheet/icons/react';
 import React, { useState, useCallback } from 'react';
 import type { Workbook, Address, Range } from '@cyber-sheet/core';
+import { DataValidationDialog } from '@cyber-sheet/react';
 
 interface DataToolsGroupProps {
   workbook: Workbook;
@@ -268,14 +269,11 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
       </div>
 
       {/* Data Validation Dialog */}
-      {showDataValidationDialog && (
+      {showDataValidationDialog && selectedCells.length > 0 && (
         <DataValidationDialog
-          workbook={workbook}
-          selectedCells={selectedCells}
+          isOpen={showDataValidationDialog}
           onClose={() => setShowDataValidationDialog(false)}
           onApply={(rule) => {
-            if (selectedCells.length === 0) return;
-
             const selection: Range = {
               start: selectedCells[0],
               end: selectedCells[selectedCells.length - 1],
@@ -289,6 +287,11 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
             onCommand?.(command);
             setShowDataValidationDialog(false);
           }}
+          selectedRange={{
+            start: selectedCells[0],
+            end: selectedCells[selectedCells.length - 1],
+          }}
+          existingRule={undefined}
         />
       )}
 
@@ -341,233 +344,6 @@ export const DataToolsGroup: React.FC<DataToolsGroupProps> = ({ workbook, select
           }}
         />
       )}
-    </div>
-  );
-};
-
-// Data Validation Dialog
-interface DataValidationDialogProps {
-  workbook: Workbook;
-  selectedCells: Address[];
-  onClose: () => void;
-  onApply: (rule: any) => void;
-}
-
-const DataValidationDialog: React.FC<DataValidationDialogProps> = ({ workbook, selectedCells, onClose, onApply }) => {
-  const [validationType, setValidationType] = useState<string>('list');
-  const [operator, setOperator] = useState<string>('between');
-  const [value1, setValue1] = useState<string>('');
-  const [value2, setValue2] = useState<string>('');
-  const [listSource, setListSource] = useState<string>('');
-  const [inputMessage, setInputMessage] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [ignoreBlank, setIgnoreBlank] = useState(true);
-  const [showInputMessage, setShowInputMessage] = useState(false);
-  const [showErrorAlert, setShowErrorAlert] = useState(true);
-
-  const handleApply = () => {
-    const rule = {
-      type: validationType,
-      operator,
-      value1,
-      value2,
-      listSource,
-      inputMessage: showInputMessage ? inputMessage : undefined,
-      errorMessage: showErrorAlert ? errorMessage : undefined,
-      ignoreBlank,
-    };
-    onApply(rule);
-  };
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0,0,0,0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
-        style={{
-          background: '#FFFFFF',
-          borderRadius: 4,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-          width: 520,
-          maxHeight: '80vh',
-          overflow: 'auto',
-          fontFamily: 'Segoe UI, sans-serif',
-        }}
-      >
-        {/* Header */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>Data Validation</h3>
-          <button onClick={onClose} style={{ border: 'none', background: 'transparent', fontSize: 18, cursor: 'pointer', color: '#666' }}>×</button>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: 16 }}>
-          {/* Settings Tab */}
-          <div style={{ marginBottom: 16 }}>
-            <h4 style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Validation criteria</h4>
-            
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Allow:</label>
-              <select
-                value={validationType}
-                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setValidationType(e.target.value)}
-                style={{ width: '100%', padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11 }}
-              >
-                <option value="any">Any value</option>
-                <option value="whole">Whole number</option>
-                <option value="decimal">Decimal</option>
-                <option value="list">List</option>
-                <option value="date">Date</option>
-                <option value="time">Time</option>
-                <option value="textLength">Text length</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-
-            {validationType === 'list' ? (
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Source:</label>
-                <input
-                  type="text"
-                  value={listSource}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setListSource(e.target.value)}
-                  placeholder="Enter values separated by commas"
-                  style={{ width: '100%', padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11 }}
-                />
-                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
-                  Enter a comma-separated list or a range reference (e.g., $A$1:$A$10)
-                </div>
-              </div>
-            ) : validationType !== 'any' ? (
-              <>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Data:</label>
-                  <select
-                    value={operator}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setOperator(e.target.value)}
-                    style={{ width: '100%', padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11 }}
-                  >
-                    <option value="between">between</option>
-                    <option value="notBetween">not between</option>
-                    <option value="equal">equal to</option>
-                    <option value="notEqual">not equal to</option>
-                    <option value="greater">greater than</option>
-                    <option value="less">less than</option>
-                    <option value="greaterOrEqual">greater than or equal to</option>
-                    <option value="lessOrEqual">less than or equal to</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>
-                      {operator === 'between' || operator === 'notBetween' ? 'Minimum:' : 'Value:'}
-                    </label>
-                    <input
-                      type="text"
-                      value={value1}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setValue1(e.target.value)}
-                      style={{ width: '100%', padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11 }}
-                    />
-                  </div>
-                  {(operator === 'between' || operator === 'notBetween') && (
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Maximum:</label>
-                      <input
-                        type="text"
-                        value={value2}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setValue2(e.target.value)}
-                        style={{ width: '100%', padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11 }}
-                      />
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : null}
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11 }}>
-              <input type="checkbox" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIgnoreBlank(e.target.checked)} />
-              Ignore blank
-            </label>
-          </div>
-
-          {/* Input Message */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 8 }}>
-              <input type="checkbox" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShowInputMessage(e.target.checked)} />
-              <strong>Show input message when cell is selected</strong>
-            </label>
-            {showInputMessage && (
-              <textarea
-                value={inputMessage}
-                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setInputMessage(e.target.value)}
-                placeholder="Enter message to display when cell is selected"
-                style={{ width: '100%', height: 60, padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11, resize: 'vertical' }}
-              />
-            )}
-          </div>
-
-          {/* Error Alert */}
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, marginBottom: 8 }}>
-              <input type="checkbox" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setShowErrorAlert(e.target.checked)} />
-              <strong>Show error alert after invalid data is entered</strong>
-            </label>
-            {showErrorAlert && (
-              <textarea
-                value={errorMessage}
-                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setErrorMessage(e.target.value)}
-                placeholder="Enter error message to display"
-                style={{ width: '100%', height: 60, padding: '4px 8px', border: '1px solid #D9D9D9', borderRadius: 2, fontSize: 11, resize: 'vertical' }}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #E0E0E0', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '6px 16px',
-              border: '1px solid #D9D9D9',
-              background: '#F0F0F0',
-              borderRadius: 2,
-              cursor: 'pointer',
-              fontSize: 11,
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleApply}
-            style={{
-              padding: '6px 16px',
-              border: '1px solid #0078D4',
-              background: '#0078D4',
-              color: '#FFFFFF',
-              borderRadius: 2,
-              cursor: 'pointer',
-              fontSize: 11,
-              fontWeight: 600,
-            }}
-          >
-            OK
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
