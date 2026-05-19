@@ -8,7 +8,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Workbook } from '@cyber-sheet/core';
 import type { CanvasRenderer } from '@cyber-sheet/renderer-canvas';
-import { CommandManager, DrawingLayer, ClipboardService, PasteCommand, ClearCellsCommand, InsertCellsCommand, DeleteCellsCommand, FormulaEngine } from '@cyber-sheet/core';
+import { CommandManager, DrawingLayer, ClipboardService, PasteCommand, ClearCellsCommand, InsertCellsCommand, DeleteCellsCommand, FormulaEngine, DropdownList } from '@cyber-sheet/core';
 import { TitleBar } from './TitleBar';
 import { RibbonTabs } from './RibbonTabs';
 import { Ribbon } from '../components/ribbon/Ribbon';
@@ -102,6 +102,14 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
   
   // Cut range tracking (for visual indication with marching ants border)
   const [cutRange, setCutRange] = useState<{ start: { row: number; col: number }; end: { row: number; col: number } } | null>(null);
+  
+  // Data validation dropdown state
+  const [validationDropdown, setValidationDropdown] = useState<{
+    items: string[];
+    cellAddress: { row: number; col: number };
+    cellBounds: { x: number; y: number; width: number; height: number };
+    currentValue: string;
+  } | null>(null);
   
   // Refs for keyboard handler to avoid re-attaching listeners on every state change
   const selectedCellRef = useRef(selectedCell);
@@ -1208,6 +1216,29 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
         return;
       }
       
+      // Alt+ArrowDown (Show validation dropdown for list validation)
+      if (e.altKey && e.key === 'ArrowDown' && !isInInput && selectedCell) {
+        e.preventDefault();
+        const validationEngine = (renderer as any)?.getValidationEngine?.();
+        if (validationEngine) {
+          const items = validationEngine.getDropdownItems(selectedCell);
+          if (items && items.length > 0) {
+            // Get cell bounds for positioning dropdown
+            const cellBounds = (renderer as any)?.rectForCell?.(selectedCell.row, selectedCell.col);
+            if (cellBounds) {
+              const currentValue = sheet.getCellValue(selectedCell)?.toString() || '';
+              setValidationDropdown({
+                items,
+                cellAddress: selectedCell,
+                cellBounds,
+                currentValue,
+              });
+            }
+          }
+        }
+        return;
+      }
+      
       // Ctrl+Arrow keys (Jump to edge of data region)
       if ((e.ctrlKey || e.metaKey) && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.shiftKey) {
         e.preventDefault();
@@ -1833,6 +1864,27 @@ export const ExcelApp: React.FC<ExcelAppProps> = ({
               { row: selection.start.row, col: selection.start.col }
             ) || {}
           )}
+        />
+      )}
+
+      {/* Data Validation Dropdown */}
+      {validationDropdown && (
+        <DropdownList
+          items={validationDropdown.items}
+          value={validationDropdown.currentValue}
+          onSelect={(value) => {
+            const sheet = workbook.activeSheet;
+            if (sheet) {
+              sheet.setCellValue(validationDropdown.cellAddress, value);
+              renderer?.scheduleRedraw();
+            }
+            setValidationDropdown(null);
+          }}
+          onClose={() => setValidationDropdown(null)}
+          cellX={validationDropdown.cellBounds.x}
+          cellY={validationDropdown.cellBounds.y}
+          cellWidth={validationDropdown.cellBounds.width}
+          cellHeight={validationDropdown.cellBounds.height}
         />
       )}
     </div>

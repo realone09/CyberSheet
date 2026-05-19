@@ -12,7 +12,7 @@
  * ✅ Dirty rectangle optimization for partial redraws
  */
 
-import { Worksheet, Address, CellStyle, resolveExcelColor, ExcelColorSpec, ConditionalFormattingEngine, ConditionalFormattingRule, ConditionalFormattingResult, DataBarRender, IconRender, computeVerticalOffset, renderIconOnCanvas } from '@cyber-sheet/core';
+import { Worksheet, Address, CellStyle, resolveExcelColor, ExcelColorSpec, ConditionalFormattingEngine, ConditionalFormattingRule, ConditionalFormattingResult, DataBarRender, IconRender, computeVerticalOffset, renderIconOnCanvas, DataValidationEngine, DataValidationRenderer } from '@cyber-sheet/core';
 import { MultiLayerCanvas, CanvasLayerType, ExcelBorderRenderer, ExcelBorderStyle } from './MultiLayerCanvas';
 import { TextMeasureCache } from './TextMeasureCache';
 import { FormatCache } from './FormatCache';
@@ -58,6 +58,8 @@ export class ExcelRenderer {
   private rafId: number | null = null;
   private cfEngine = new ConditionalFormattingEngine();
   private cachedCFRules: ConditionalFormattingRule[] = [];
+  private validationEngine = new DataValidationEngine();
+  private validationRenderer: DataValidationRenderer;
   private _lastRenderMs = 0;
 
   constructor(container: HTMLElement, sheet: Worksheet, options: ExcelRendererOptions = {}) {
@@ -79,6 +81,7 @@ export class ExcelRenderer {
 
     this.theme = mergeTheme(ExcelLightTheme, this.options.theme);
     this.formatCache = new FormatCache(this.options.locale);
+    this.validationRenderer = new DataValidationRenderer(this.validationEngine);
 
     // Map antialiasing option to quality
     const aaQuality = this.options.antialiasing === 'high' ? 'high' 
@@ -176,6 +179,16 @@ export class ExcelRenderer {
 
   getSelections(): { start: Address; end: Address }[] {
     return this.selections.slice();
+  }
+
+  getValidationEngine(): DataValidationEngine {
+    return this.validationEngine;
+  }
+
+  rectForCell(row: number, col: number): { x: number; y: number; width: number; height: number } | null {
+    const rect = this.rectForRange(row, col, row, col);
+    if (!rect) return null;
+    return { x: rect.x, y: rect.y, width: rect.w, height: rect.h };
   }
 
   setTheme(theme: Partial<Theme>) {
@@ -460,6 +473,14 @@ export class ExcelRenderer {
         // Icons overlay (after text to keep on top)
         if (cfResult?.icon) {
           this.renderIcon(ctx, x, y, cw, rh, cfResult.icon);
+        }
+
+        // Data validation UI elements
+        if (this.validationRenderer.shouldShowDropdown(addr)) {
+          this.validationRenderer.renderDropdownArrow(ctx, x, y, cw, rh);
+        }
+        if (value !== null && value !== undefined && value !== '' && this.validationRenderer.isInvalid(addr, value)) {
+          this.validationRenderer.renderInvalidIndicator(ctx, x, y, cw, rh);
         }
 
         // Plugin after-render hook
